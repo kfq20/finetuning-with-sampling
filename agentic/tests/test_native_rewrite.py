@@ -11,6 +11,7 @@ from append_rewrite.terminus.native import NativeRewriteLLM
 
 class Renderer:
     chat_template = "fixture-template"
+    identity = "fixture-tokenizer"
 
     def encode(self, text, add_special_tokens=False):
         return list(text.encode())
