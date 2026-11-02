@@ -61,7 +61,11 @@ task. This changes conditioning and gets a new study identity.
 Portable fork/restore for arbitrary live tmux/process state needs a sandbox
 snapshot adapter and independent restore controls. The live hook supports holding
 the original session; it is not a portable snapshot implementation. Backend
-forced input/candidate likelihood also remains unavailable on tested Mint routes.
+forced input/candidate likelihood is now available through native `/generate`,
+per the user-provided HTTP200 probe (request ID
+`ddc230ee77594e54bc21557b02ffde91`). `terminus.scoring` implements the native
+request and exact token-ID/boundary checks. Generation/scoring tokenizer and
+chat-template parity still require binding before candidate selection.
 Therefore this release enables native rollout and boundary integration, **not a
 claim that end-to-end MCMC selection and arbitrary checkpoint branching are done**.
 The old `tool_blocks` file fixture remains a separate legacy regression suite.

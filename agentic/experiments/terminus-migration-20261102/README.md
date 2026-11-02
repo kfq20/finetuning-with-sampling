@@ -8,7 +8,9 @@ User requested replacing the rewrite harness with Terminus-2. Implementation:
 Old Claude Code paired trials, original paper scripts, frozen sources and original
 scores are preserved. No model replay or new API inference is part of this change.
 Native integration is scripted against the installed pinned Harbor and isolated
-tmux on MindLab. Capability hold: candidate/input logprob scoring. Environment
+tmux on MindLab. Native `/generate` input logprob capability is confirmed by the user probe;
+`terminus.scoring` now handles the route. Tokenizer/template parity remains an
+integration gate. Environment
 hold: portable arbitrary tmux/process snapshot adapter. These are not hidden by a
 protocol rename. A first new live provider trial needs its own frozen admission.
 
