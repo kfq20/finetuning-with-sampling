@@ -4,6 +4,45 @@ Research extension of the original text-only sampling project. The initial
 experiment is **one complete append task per sample**, not one tool call and not
 the consolidated cold single-step. No training or MCMC claim is made here.
 
+
+## Selected protocol: native Claude Code (2026-11-02)
+
+New paired studies use the same pinned Claude Code 2.1.207 binary and Harbor
+ClaudeCode implementation for DeepSeek and Qwen. `claude_agent.UnifiedClaudeCode`
+reuses the frozen tb4-foundry `OfflineClaudeCode` adapter. The former OpenAI
+`execute` loop in `run.py` is retained only as a historical harness.
+
+`claude_protocol` imports a mainline, observable-only native JSONL with a new,
+source-bound session ID. Hidden thinking/signatures are removed; original role,
+tool-use IDs, feedback and public text are retained. The CLI loads this file via
+native `load`/`--resume`; the historical transcript is no longer a user JSON blob.
+The current expert reference, when present, is a tagged section of the new user
+instruction. Both models use this same derived public-import protocol; old expert
+runs with opaque original native state remain historical evidence.
+
+The real pinned CLI and shared Harbor agent passed four deterministic loopback
+provider cases (DeepSeek/Qwen x reference/no-reference), including restoration of
+49 historical tool pairs and an actual Bash execution/feedback round. These checks
+use zero model generations and do not test real provider inference compatibility.
+Prepared profiles and admission receipts live in external study storage.
+
+Compacted histories, sidechains, unbound images or unknown native project keys
+require explicit adapters; preparation fails closed. Never flatten them silently.
+Native Bash timeout uses milliseconds, as defined by Claude Code. Requested CLI
+context/output hints must still be checked against each provider's capacities.
+
+```sh
+python -m append_rewrite.claude_protocol --inventory EXTERNAL_INVENTORY \
+  --sample SAMPLE_ID --qwen-model SERVED_ALIAS --output NEW_PROTOCOL_DIR
+# Uses an operator-pinned shared tb4-foundry source snapshot on PYTHONPATH:
+python -m append_rewrite.claude_preflight --prepared NEW_PROTOCOL_DIR \
+  --sandbox-credentials PRIVATE_SDK_ENV --output NEW_OFFLINE_CHECK_DIR
+```
+
+The prepared protocol has live inference disabled. A later provider compatibility
+probe and new reference/no-reference experiment need explicit selection. The
+legacy Qwen scores cannot be mixed with native-CLI scores as one protocol.
+
 ## Data
 
 `append_rewrite.collect` indexes existing DeepSeek continuation receipts, checks
@@ -21,7 +60,7 @@ Files stay in external private storage. `source_indexed` is not runtime admissio
 Missing parent sessions, unsupported service-state restoration and post-hoc score
 corrections remain explicit holds. No old model attempts are repeated.
 
-## Execution
+## Historical custom-harness execution
 
 `append_rewrite.run` restores an owned network-restricted cloud sandbox and runs
 Qwen through Fleet from the controller. The model calls `execute`; each feedback

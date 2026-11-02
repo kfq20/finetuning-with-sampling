@@ -113,6 +113,25 @@ class NativeProtocol(unittest.TestCase):
                 ]
             )
 
+    def test_compacted_history_is_not_silently_linearized(self):
+        with tempfile.TemporaryDirectory() as root:
+            source = Path(root) / "-app-project" / (str(uuid.uuid4()) + ".jsonl")
+            source.parent.mkdir()
+            source.write_text(
+                json.dumps(
+                    {
+                        "type": "user",
+                        "uuid": "summary",
+                        "parentUuid": None,
+                        "isCompactSummary": True,
+                        "message": {"role": "user", "content": "summary"},
+                    }
+                )
+                + "\n"
+            )
+            with self.assertRaisesRegex(ValueError, "compaction adapter"):
+                import_history(source, Path(root) / "import")
+
     def test_new_instruction_has_no_serialized_parent_history(self):
         self.assertEqual(append_instruction("task"), "task")
         expert = [{"role": "assistant", "content": "public answer"}]

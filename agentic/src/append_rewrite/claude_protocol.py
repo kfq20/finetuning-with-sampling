@@ -74,6 +74,12 @@ def import_history(source: Path, output: Path, session_id=None):
     records = [
         json.loads(line) for line in source.read_text().splitlines() if line.strip()
     ]
+    if any(
+        r.get("isCompactSummary")
+        or (r.get("type") == "system" and "compact" in str(r.get("subtype", "")))
+        for r in records
+    ):
+        raise ValueError("Compacted native history needs a reviewed compaction adapter")
     nodes = {r["uuid"]: r for r in records if r.get("uuid")}
     marker = next(
         (r for r in reversed(records) if r.get("type") == "last-prompt"), None
