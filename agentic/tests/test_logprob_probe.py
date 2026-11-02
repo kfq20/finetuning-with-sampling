@@ -58,3 +58,21 @@ class ForcedScores(unittest.TestCase):
         self.assertFalse(
             analyze_echo(response, "Q:\n", "9")["teacher_forced_target_score_available"]
         )
+
+    def test_unknown_negative_offset_is_not_a_prompt_position(self):
+        response = {
+            "choices": [
+                {
+                    "text": "Q:\n9x",
+                    "logprobs": {
+                        "tokens": ["x"],
+                        "token_logprobs": [-0.2],
+                        "text_offset": [-1],
+                    },
+                }
+            ],
+            "usage": {"prompt_tokens": 3},
+        }
+        value = analyze_echo(response, "Q:\n", "9")
+        self.assertEqual(value["input_prefix_logprobs"], [])
+        self.assertFalse(value["teacher_forced_target_score_available"])

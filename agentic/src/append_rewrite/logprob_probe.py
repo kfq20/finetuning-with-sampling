@@ -38,7 +38,7 @@ def analyze_echo(response, prefix, target):
     valid_arrays = (
         len(offsets) == len(values) == len(tokens)
         and bool(offsets)
-        and all(type(x) is int for x in offsets)
+        and all(type(x) is int and x >= 0 for x in offsets)
     )
     text = c.get("text") or ""
     target_indices = (

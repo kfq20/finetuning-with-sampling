@@ -162,3 +162,11 @@ For existing public traces, catalog only (no model/environment execution):
 PYTHONPATH=agentic/src python -m append_rewrite.tool_blocks.cli catalog \
   --messages PUBLIC_MESSAGES.json --prefix-count N --output NEW_CATALOG_DIR
 ```
+
+## Real scoring capability check
+
+The2026-11-02 minimal API check found generated-token logprobs, but the tested
+completions/echo and prompt-logprob extensions did not expose supplied candidate
+input probabilities. `Scorer` therefore remains an unconnected production
+interface; fixture scores must never be promoted to model scores. See the
+[probe evidence summary](../experiments/logprob-capability-20261102/README.md).
