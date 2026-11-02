@@ -138,3 +138,27 @@ class NativeProtocol(unittest.TestCase):
         result = append_instruction("task", expert)
         self.assertTrue(result.startswith("task\n\n<expert_reference"))
         self.assertNotIn("PUBLIC HISTORICAL CONTEXT", result)
+
+
+class LiveGatewayContract(unittest.TestCase):
+    def test_scoped_gateway_rejects_other_models_and_paths(self):
+        from append_rewrite.claude_gateway import validate_request
+
+        validate_request(
+            "/v1/messages?beta=true", {"model": "selected", "stream": True}, "selected"
+        )
+        for path, body in [
+            ("/v1/messages", {"model": "other", "stream": True}),
+            ("/v1/completions", {"model": "selected", "stream": True}),
+            ("/v1/messages", {"model": "selected", "stream": False}),
+        ]:
+            with self.assertRaises(ValueError):
+                validate_request(path, body, "selected")
+
+    def test_stream_parser_requires_real_native_terminal_record(self):
+        from append_rewrite.claude_live_probe import terminal
+
+        self.assertEqual(terminal('not json\n{"type":"assistant"}\n'), [])
+        self.assertEqual(
+            len(terminal('{"type":"result","is_error":false,"subtype":"success"}\n')), 1
+        )
