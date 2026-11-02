@@ -42,5 +42,55 @@ class EpisodeProtocol(unittest.TestCase):
             aggregate_scores([])
 
 
+class UnitGates(unittest.IsolatedAsyncioTestCase):
+    async def test_teacher_error_prevents_student_dispatch(self):
+        import tempfile
+        from pathlib import Path
+        from types import SimpleNamespace
+        from unittest.mock import AsyncMock, patch
+        from append_rewrite.terminus import unit
+
+        with tempfile.TemporaryDirectory() as temp:
+            args = SimpleNamespace(
+                **{
+                    k: Path(temp) / k
+                    for k in (
+                        "output",
+                        "source_protocol",
+                        "teacher_config",
+                        "sandbox_credentials",
+                        "runtime_assets",
+                        "tokenizer",
+                        "fleet_config",
+                    )
+                }
+            )
+            with (
+                patch.object(
+                    unit.owned_mvp,
+                    "run",
+                    AsyncMock(side_effect=RuntimeError("teacher stopped")),
+                ),
+                patch.object(unit.episode, "run", AsyncMock()) as student,
+            ):
+                with self.assertRaises(RuntimeError):
+                    await unit.run(args)
+                student.assert_not_awaited()
+            self.assertTrue((args.output / "status.json").exists())
+
+    async def test_new_unit_cannot_reuse_existing_output(self):
+        import tempfile
+        from pathlib import Path
+        from types import SimpleNamespace
+        from unittest.mock import AsyncMock, patch
+        from append_rewrite.terminus import unit
+
+        with tempfile.TemporaryDirectory() as temp:
+            with patch.object(unit.owned_mvp, "run", AsyncMock()) as teacher:
+                with self.assertRaises(FileExistsError):
+                    await unit.run(SimpleNamespace(output=Path(temp)))
+                teacher.assert_not_awaited()
+
+
 if __name__ == "__main__":
     unittest.main()

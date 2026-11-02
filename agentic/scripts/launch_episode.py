@@ -13,6 +13,11 @@ def main():
     parser = argparse.ArgumentParser(__doc__)
     parser.add_argument("--launch-record", type=Path, required=True)
     parser.add_argument("--source-commit", required=True)
+    parser.add_argument(
+        "--module",
+        choices=("append_rewrite.terminus.episode", "append_rewrite.terminus.unit"),
+        default="append_rewrite.terminus.episode",
+    )
     parser.add_argument("episode_args", nargs=argparse.REMAINDER)
     args = parser.parse_args()
     forwarded = args.episode_args
@@ -35,7 +40,7 @@ def main():
         os.chmod(log, 0o600)
         env = dict(os.environ, PYTHONPATH=str(source / "agentic/src"))
         process = subprocess.Popen(
-            [sys.executable, "-m", "append_rewrite.terminus.episode", *forwarded],
+            [sys.executable, "-m", args.module, *forwarded],
             cwd=source,
             env=env,
             stdin=subprocess.DEVNULL,
@@ -48,7 +53,7 @@ def main():
         state="launched",
         pid=process.pid,
         start_ticks=stat[stat.rfind(")") + 2 :].split()[19],
-        command_module="append_rewrite.terminus.episode",
+        command_module=args.module,
         log=str(log),
     )
     args.launch_record.write_text(json.dumps(record, indent=2) + "\n")
