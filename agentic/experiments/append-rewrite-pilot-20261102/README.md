@@ -53,3 +53,26 @@ output directory. No original DeepSeek attempts were replayed. This study does
 not run SFT or MCMC; generated input with privileged reference is not training
 admitted. Future training exports must remove that reference and mask conditioning
 prefixes/tool observations according to their chosen objective.
+
+## Paired no-reference control
+
+A single no-reference condition on the same Coq append retained the parent
+history, state, requirement, tools and sampling parameters. The original expert
+prompt was reconstructed byte-identically; only its current-append expert section
+was removed. The top-level API input is one system message and one user message:
+parent history and expert continuation are JSON reference text within that user
+message, not native replayed assistant/tool conversation turns.
+
+The user stopped the no-reference run after100 complete API responses and100
+actual tool calls (21.81 minutes). One failing proof command was repeated91 times.
+The current output directory had no submitted artifact, and the five /app files
+retained their initial bytes/modes. The stopped snapshot scored0; independent fresh
+world restoration also scored0. Both owned sandboxes were retired. Logs, app state
+and scratch proof directory were preserved. One additional generation was in
+flight at termination; its usage is unknown and is not reported as zero.
+
+This is an operator-stopped trajectory with a scored snapshot, not a normal
+completed model-zero trajectory. The observed pair does not establish a success
+probability or training benefit. No paid retry, rescue hint, scale-up or training
+was performed. Full prompt structure and paired review are retained in the study
+review directory for user approval before scale-up.
