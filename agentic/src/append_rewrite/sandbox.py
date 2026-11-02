@@ -130,20 +130,45 @@ def capture(sb, artifacts, target):
         if not path.startswith("/app/") or ".." in Path(path).parts:
             raise ValueError("Unexpected artifact scope")
         allowed.append(path.lstrip("/"))
-    command = "tar czf /tmp/append-submission.tgz -C / " + " ".join(
+    cmd = "tar czf /tmp/append-submission.tgz -C / " + " ".join(
         shlex.quote(p) for p in allowed
     )
-    r = command(sb, command, user="root", timeout=120)
+    r = command(sb, cmd, user="root", timeout=120)
     if r.exit_code:
         raise RuntimeError("CaptureFailed")
     target.write_bytes(
         sb.files.read("/tmp/append-submission.tgz", format="bytes", user="root")
     )
     target.chmod(0o600)
-    return {"archive_sha256": digest(target), "artifact_paths": artifacts}
+    return {
+        "archive_sha256": digest(target),
+        "artifact_paths": artifacts,
+        "files": archive_manifest(target),
+    }
 
 
-def restore_archive(sb, path):
+def archive_manifest(path):
+    manifest = {}
+    with tarfile.open(path, mode="r:gz") as t:
+        for member in t.getmembers():
+            p = Path(member.name)
+            if (
+                p.is_absolute()
+                or ".." in p.parts
+                or not member.name.startswith("app/")
+                or member.issym()
+                or member.islnk()
+            ):
+                raise RuntimeError("UnsafeCaptureMember")
+            if member.isfile():
+                manifest[p.as_posix()] = {
+                    "mode": member.mode & 511,
+                    "sha256": hashlib.sha256(t.extractfile(member).read()).hexdigest(),
+                }
+    return manifest
+
+
+def restore_archive(sb, path, artifacts):
     with tarfile.open(path, mode="r:gz") as t:
         for m in t.getmembers():
             p = Path(m.name)
@@ -155,6 +180,12 @@ def restore_archive(sb, path):
                 or m.islnk()
             ):
                 raise RuntimeError("UnsafeCaptureMember")
+    for artifact in artifacts:
+        if not artifact.startswith("/app/") or ".." in Path(artifact).parts:
+            raise ValueError("UnexpectedArtifactScope")
+        q = command(sb, "rm -rf " + shlex.quote(artifact), user="root", timeout=30)
+        if q.exit_code:
+            raise RuntimeError("RestoreResetFailed")
     sb.files.write("/tmp/append-submission.tgz", path.read_bytes(), user="root")
     r = command(sb, "tar xzf /tmp/append-submission.tgz -C /", user="root", timeout=120)
     if r.exit_code:

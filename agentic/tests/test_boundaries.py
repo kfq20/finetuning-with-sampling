@@ -4,11 +4,37 @@ from pathlib import Path
 import tempfile
 import unittest
 from append_rewrite.collect import observable, project
-from append_rewrite.sandbox import command, pack
+from append_rewrite.sandbox import archive_manifest, capture, command, pack
+import io
+import tarfile
 from types import SimpleNamespace
 
 
 class Boundaries(unittest.TestCase):
+    def test_capture_executes_shell_and_preserves_file_modes(self):
+        b = io.BytesIO()
+        with tarfile.open(fileobj=b, mode="w:gz") as t:
+            m = tarfile.TarInfo("app/project/a.py")
+            m.size = 3
+            m.mode = 0o750
+            t.addfile(m, io.BytesIO(b"abc"))
+        commands = []
+
+        def run(text, **kw):
+            commands.append(text)
+            return SimpleNamespace(exit_code=0)
+
+        sb = SimpleNamespace(
+            commands=SimpleNamespace(run=run),
+            files=SimpleNamespace(read=lambda *a, **kw: b.getvalue()),
+        )
+        with tempfile.TemporaryDirectory() as root:
+            p = Path(root) / "capture.tgz"
+            meta = capture(sb, ["/app/project"], p)
+            self.assertTrue(commands[0].startswith("tar czf"))
+            self.assertEqual(meta["files"]["app/project/a.py"]["mode"], 0o750)
+            self.assertEqual(meta["files"], archive_manifest(p))
+
     def test_failed_shell_is_observation_but_transport_error_is_not(self):
         class CommandExitException(Exception):
             exit_code = 1

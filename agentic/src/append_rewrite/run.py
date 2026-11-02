@@ -220,7 +220,12 @@ def run(inventory, sample_id, fleet_config, sandbox_credentials, output, mode):
                 "projection-agent-20261102-fresh-" + sample_id,
             )
             sandbox.prepare(sb, state)
-            sandbox.restore_archive(sb, output / "submission.tgz")
+            sandbox.restore_archive(sb, output / "submission.tgz", artifacts)
+            fresh_capture = sandbox.capture(
+                sb, artifacts, output / "fresh-submission.tgz"
+            )
+            if fresh_capture["files"] != result["capture"]["files"]:
+                raise RuntimeError("FreshCaptureBytesOrModesMismatch")
             result["fresh_score"] = sandbox.grade(sb, task)
             if result["score"]["reward"] != result["fresh_score"]["reward"]:
                 raise RuntimeError("FreshScoreMismatch")
