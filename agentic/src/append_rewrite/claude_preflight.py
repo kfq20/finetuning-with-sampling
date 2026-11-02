@@ -114,7 +114,11 @@ async def check_case(profile, prepared, credentials, output, model, condition):
             version=CLI_VERSION,
             reasoning_effort="max",
             load_trajectory=profile["load_trajectory"]["path"],
-            extra_env=profile["common_runtime"]["CLI_environment"],
+            extra_env={
+                k: v
+                for k, v in profile["common_runtime"]["CLI_environment"].items()
+                if k != "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"
+            },
         )
         if condition == "expert":
             opts.update(
