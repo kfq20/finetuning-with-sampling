@@ -167,6 +167,48 @@ class Boundaries(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "checkpoint_source_missing"):
                 plan(task, Path(root) / "missing-native.jsonl")
 
+    def test_sse_requires_done_and_joins_real_tool_fragments(self):
+        from append_rewrite.fleet import assemble_stream, FleetError
+
+        events = [
+            {
+                "choices": [
+                    {
+                        "delta": {
+                            "tool_calls": [
+                                {
+                                    "index": 0,
+                                    "id": "tool1",
+                                    "function": {
+                                        "name": "execute",
+                                        "arguments": '{"command":',
+                                    },
+                                }
+                            ]
+                        }
+                    }
+                ]
+            },
+            {
+                "choices": [
+                    {
+                        "delta": {
+                            "tool_calls": [
+                                {"index": 0, "function": {"arguments": '"ls"}'}}
+                            ]
+                        },
+                        "finish_reason": "tool_calls",
+                    }
+                ]
+            },
+        ]
+        with self.assertRaisesRegex(FleetError, "IncompleteSSE"):
+            assemble_stream(events)
+        response = assemble_stream(events + [None])
+        call = response["choices"][0]["message"]["tool_calls"][0]
+        self.assertEqual(call["function"]["arguments"], '{"command":"ls"}')
+        self.assertEqual(call["function"]["name"], "execute")
+
     def test_state_pack_rejects_symlinks(self):
         with tempfile.TemporaryDirectory() as root:
             p = Path(root)

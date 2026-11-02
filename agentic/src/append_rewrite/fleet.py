@@ -55,6 +55,8 @@ class Fleet:
             journal / "intent.json",
             {"status": "submission_started", "automatic_retry": False},
         )
+        if self.config.get("inference_transport") == "sse":
+            return self.stream(body, journal, deadline)
         accepted = self.request("/control/jobs", {"requests": [body]})
         dump(journal / "accepted.json", accepted)
         job_id = accepted["job_id"]
@@ -104,3 +106,87 @@ class Fleet:
             )
             time.sleep(3)
         raise TimeoutError("DurableJobDeadline:" + job_id)
+
+    def stream(self, body, journal, deadline):
+        body = dict(body, stream=True, stream_options={"include_usage": True})
+        req = Request(
+            self.endpoint + "/chat/completions",
+            data=json.dumps(body).encode(),
+            headers={
+                "x-api-key": self.config["api_key"],
+                "Content-Type": "application/json",
+            },
+        )
+        try:
+            with urlopen(
+                req, timeout=min(1800, max(1, deadline - time.time()))
+            ) as response:
+                with (journal / "events.jsonl").open("x") as log:
+
+                    def events():
+                        for raw in response:
+                            if time.time() > deadline:
+                                raise TimeoutError("SourceTaskAgentTimeout")
+                            line = raw.decode().strip()
+                            if not line.startswith("data:"):
+                                continue
+                            payload = line[5:].strip()
+                            if payload == "[DONE]":
+                                yield None
+                                return
+                            event = json.loads(payload)
+                            log.write(json.dumps(event) + "\n")
+                            log.flush()
+                            yield event
+
+                    return assemble_stream(events())
+        except HTTPError as exc:
+            raise FleetError("HTTP_" + str(exc.code)) from None
+
+
+def assemble_stream(events):
+    content = []
+    calls = {}
+    finish = None
+    done = False
+    usage = {}
+    identity = {}
+    for event in events:
+        if event is None:
+            done = True
+            break
+        if event.get("error"):
+            raise FleetError("StreamProviderError")
+        identity.update({k: event[k] for k in ("id", "model") if k in event})
+        if event.get("usage"):
+            usage = event["usage"]
+        for choice in event.get("choices", []):
+            if choice.get("index", 0) != 0:
+                raise FleetError("UnexpectedMultipleChoices")
+            if choice.get("finish_reason"):
+                finish = choice["finish_reason"]
+            delta = choice.get("delta", {})
+            if delta.get("content"):
+                content.append(delta["content"])
+            for part in delta.get("tool_calls") or []:
+                dst = calls.setdefault(
+                    part["index"],
+                    {
+                        "id": "",
+                        "type": "function",
+                        "function": {"name": "", "arguments": ""},
+                    },
+                )
+                if part.get("id"):
+                    dst["id"] += part["id"]
+                for key in ("name", "arguments"):
+                    dst["function"][key] += part.get("function", {}).get(key, "") or ""
+    if not done or not finish:
+        raise FleetError("IncompleteSSE")
+    message = {"role": "assistant", "content": "".join(content) or None}
+    if calls:
+        message["tool_calls"] = [calls[k] for k in sorted(calls)]
+    return identity | {
+        "choices": [{"index": 0, "message": message, "finish_reason": finish}],
+        "usage": usage,
+    }
