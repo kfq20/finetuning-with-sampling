@@ -86,6 +86,8 @@ def run(inventory, sample_id, fleet_config, sandbox_credentials, output, mode):
         row = next(r for r in data["rows"] if r["sample_id"] == sample_id)
         if row["admission"] != "source_indexed":
             raise ValueError("Source not ready")
+        if mode == "student" and row.get("requires_multimodal_runtime"):
+            raise ValueError("MultimodalRuntimeAdapterRequired")
         task = Path(row["task_path"])
         state = Path(row["state_path"])
         for key in (

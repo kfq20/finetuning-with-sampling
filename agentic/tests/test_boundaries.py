@@ -231,6 +231,28 @@ class Boundaries(unittest.TestCase):
         )
         self.assertEqual(validate_call(call)["timeout"], 300)
 
+    def test_public_screenshot_is_bound_to_exact_asset_bytes(self):
+        import base64
+
+        with tempfile.TemporaryDirectory() as root:
+            out = observable(
+                [
+                    {
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": "image/png",
+                            "data": base64.b64encode(b"public-image").decode(),
+                        },
+                    }
+                ],
+                Path(root),
+            )
+            self.assertEqual(
+                Path(out[0]["asset"]["path"]).read_bytes(), b"public-image"
+            )
+            self.assertEqual(out[0]["media_type"], "image/png")
+
     def test_state_pack_rejects_symlinks(self):
         with tempfile.TemporaryDirectory() as root:
             p = Path(root)

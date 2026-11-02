@@ -23,7 +23,7 @@ def plan(task: Path, parent_native: Path):
             raise ValueError("checkpoint_manifest_missing")
         manifests = {root: manifest}
     parent_trial = next(
-        (p for p in parent_native.parents if (p / "result.json").is_file()), None
+        (p for p in parent_native.parents if (p / "artifacts/app").is_dir()), None
     )
     sources = [p for p in public.rglob("*") if p.is_file() and not p.is_symlink()]
     if parent_trial:

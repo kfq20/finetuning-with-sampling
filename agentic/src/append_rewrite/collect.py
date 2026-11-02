@@ -7,6 +7,7 @@ Raw source paths remain external to Git. Missing provenance is an admission hold
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import json
 from pathlib import Path
@@ -32,7 +33,7 @@ def dump(p: Path, value: object) -> None:
     p.chmod(0o600)
 
 
-def observable(content):
+def observable(content, assets=None):
     if isinstance(content, str):
         return content
     out = []
@@ -51,19 +52,35 @@ def observable(content):
                 {
                     "type": "tool_result",
                     "tool_use_id": block.get("tool_use_id"),
-                    "content": observable(block.get("content", [])),
+                    "content": observable(block.get("content", []), assets),
                     "is_error": block.get("is_error", False),
                 }
             )
         elif kind == "image":
-            out.append(
-                {"type": "image", "availability": "requires_public_asset_binding"}
-            )
+            source = block.get("source", {})
+            if assets is not None and source.get("type") == "base64":
+                data = base64.b64decode(source["data"], validate=True)
+                key = hashlib.sha256(data).hexdigest()
+                assets.mkdir(parents=True, exist_ok=True)
+                target = assets / key
+                target.write_bytes(data)
+                target.chmod(0o600)
+                out.append(
+                    {
+                        "type": "image",
+                        "asset": ref(target),
+                        "media_type": source.get("media_type"),
+                    }
+                )
+            else:
+                out.append(
+                    {"type": "image", "availability": "requires_public_asset_binding"}
+                )
         # thinking/redacted_thinking/signatures and opaque internal records omitted.
     return out
 
 
-def project(path):
+def project(path, assets=None):
     messages = []
     for line in path.read_text().splitlines():
         try:
@@ -72,13 +89,13 @@ def project(path):
             continue
         m = r.get("message")
         if isinstance(m, dict) and m.get("role") in ("user", "assistant"):
-            body = observable(m.get("content", []))
+            body = observable(m.get("content", []), assets)
             if body:
                 messages.append({"role": m["role"], "content": body})
     return messages
 
 
-def inspect_receipt(path, workspace):
+def inspect_receipt(path, workspace, assets=None):
     try:
         r = json.loads(path.read_text())
     except (OSError, json.JSONDecodeError):
@@ -163,8 +180,8 @@ def inspect_receipt(path, workspace):
         expert = matched[0]
         item["expert_native"] = ref(expert)
         item["parent_native"] = ref(Path(seed))
-        prefix = project(Path(seed))
-        full = project(expert)
+        prefix = project(Path(seed), assets)
+        full = project(expert, assets)
         # Native runtimes can inject new metadata, but observable messages must retain exact prefix.
         if full[: len(prefix)] != prefix:
             item["holds"].append("observable_prefix_mismatch")
@@ -172,6 +189,9 @@ def inspect_receipt(path, workspace):
         item["expert_messages"] = len(full) - len(prefix)
         if "requires_public_asset_binding" in json.dumps(prefix + full[len(prefix) :]):
             item["holds"].append("image_asset_binding_missing")
+        item["requires_multimodal_runtime"] = bool(
+            '"type": "image"' in json.dumps(prefix + full[len(prefix) :])
+        )
         item["_context"] = prefix
         item["_expert"] = full[len(prefix) :]
     item["admission"] = "source_indexed" if not item["holds"] else "hold"
@@ -181,7 +201,9 @@ def inspect_receipt(path, workspace):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--output", type=Path, required=True)
+    p.add_argument("--state-adapters", type=Path)
     a = p.parse_args()
+    adapters = json.loads(a.state_adapters.read_text()) if a.state_adapters else {}
     base = Path("/vePFS-Mindverse/user/intern/fanqi")
     root = base / "tb4-evolution-goals"
     workspaces = []
@@ -224,13 +246,39 @@ def main():
             ]
         for folder in folders:
             for path in sorted(folder.glob("*.json")):
-                row = inspect_receipt(path, ws)
+                asset_dir = (
+                    a.output
+                    / "samples"
+                    / hashlib.sha256(str(path).encode()).hexdigest()[:20]
+                    / "assets"
+                )
+                row = inspect_receipt(path, ws, asset_dir)
                 if not row:
                     continue
                 identity = row["receipt"]["sha256"]
                 if identity in seen:
                     continue
                 seen.add(identity)
+                adapter = adapters.get(row["sample_id"])
+                if (
+                    adapter
+                    and row["holds"] == ["needs_domain_state_adapter"]
+                    and adapter["status"] == "snapshot_complete"
+                ):
+                    task = Path(row["task_path"])
+                    assert adapter["task_path"] == str(task)
+                    assert adapter["runtime_binding_sha256"] == sha(
+                        task / "runtime-binding.json"
+                    )
+                    assert adapter["environment_files"] == {
+                        str(q.relative_to(task / "environment")): sha(q)
+                        for q in (task / "environment").rglob("*")
+                        if q.is_file()
+                    }
+                    row["initial_public_state_path"] = adapter["state_path"]
+                    row["state_adapter"] = ref(a.state_adapters)
+                    row["holds"] = []
+                    row["admission"] = "source_indexed"
                 context = row.pop("_context", None)
                 expert = row.pop("_expert", None)
                 if context is not None:
@@ -244,9 +292,18 @@ def main():
 
                         state = dest / "start_state"
                         try:
-                            mapping = plan(
-                                Path(row["task_path"]), Path(row["parent_native_path"])
-                            )
+                            if row.get("state_adapter"):
+                                mapping = {}
+                                for name, meta in adapter["files"].items():
+                                    source = Path(adapter["state_path"]) / name
+                                    if sha(source) != meta["sha256"]:
+                                        raise ValueError("adapter_state_changed")
+                                    mapping[name] = (source, meta["mode"])
+                            else:
+                                mapping = plan(
+                                    Path(row["task_path"]),
+                                    Path(row["parent_native_path"]),
+                                )
                             for name, (source, mode) in mapping.items():
                                 target = state / name
                                 target.parent.mkdir(parents=True, exist_ok=True)
