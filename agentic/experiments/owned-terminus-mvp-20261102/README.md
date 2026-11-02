@@ -66,3 +66,23 @@ Model-free checks additionally verified candidate ranking with reference only in
 generation, actual pinned-HF template SFT masking, and teacher SSE privacy/closure.
 Final dataset export includes token IDs and assistant-only labels; reference is
 not in public messages. Original/fresh semantic success is required for export.
+
+## Student parser recovery (no completed model generation repeated)
+
+The first student executed its initial read-only decision and generated four
+candidates. Both turn-2 candidates had public prose before valid JSON. Harbor
+accepted them, but our strict validator rejected them. This is a protocol error,
+not model failure or provider error. Raw generations, scores and original error
+remain immutable. The parser now accepts the same public JSON surroundings while
+preserving exact raw candidate bytes for likelihood and training. Hidden thinking
+wrappers remain excluded.
+
+Selected continuation: `data/owned-terminus-coq-qwen-mvp-recovery-v1`, frozen source
+`source-owned-terminus-student-v4`, commit `9f5c17a`. This is a narrow recovery
+after only cat/ls commands: original project hashes/modes restored and verified;
+no arbitrary process snapshot claim. Actual historical observations are retained
+as history, not manufactured as new feedback. Both cached candidates' complete
+generation input token sequences matched the reconstructed prefix. They were
+rescored and one executed; no old generation was repeated. Later requests are
+new continuation decisions. `recovery-binding.json` and the original run's
+`RECOVERY-PREFLIGHT.json` bind evidence. Prior usage/cost remains charged once.
