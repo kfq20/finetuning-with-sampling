@@ -4,10 +4,30 @@ from pathlib import Path
 import tempfile
 import unittest
 from append_rewrite.collect import observable, project
-from append_rewrite.sandbox import pack
+from append_rewrite.sandbox import command, pack
+from types import SimpleNamespace
 
 
 class Boundaries(unittest.TestCase):
+    def test_failed_shell_is_observation_but_transport_error_is_not(self):
+        class CommandExitException(Exception):
+            exit_code = 1
+            stdout = "test failed"
+            stderr = ""
+
+        def fail(*args, **kwargs):
+            raise CommandExitException()
+
+        sb = SimpleNamespace(commands=SimpleNamespace(run=fail))
+        self.assertEqual(command(sb, "false").exit_code, 1)
+
+        def timeout(*args, **kwargs):
+            raise TimeoutError()
+
+        sb.commands.run = timeout
+        with self.assertRaises(TimeoutError):
+            command(sb, "test")
+
     def test_private_thinking_is_removed_but_real_tools_remain(self):
         blocks = [
             {"type": "thinking", "thinking": "private"},

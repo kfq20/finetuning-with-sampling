@@ -181,8 +181,8 @@ def run(inventory, sample_id, fleet_config, sandbox_credentials, output, mode):
                     if type(timeout) is not int or not 1 <= timeout <= 600:
                         raise RuntimeError("InvalidToolTimeout")
                     # Private grader remains physically absent throughout this loop.
-                    q = sb.commands.run(
-                        "cd /app && " + command, user="root", timeout=timeout
+                    q = sandbox.command(
+                        sb, "cd /app && " + command, user="root", timeout=timeout
                     )
                     observation = {
                         "role": "tool",

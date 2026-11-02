@@ -7,6 +7,19 @@ import json
 from pathlib import Path
 import shlex
 import tarfile
+from types import SimpleNamespace
+
+
+def command(sb, text, **kwargs):
+    """Nonzero shell exits are tool observations, not SDK transport failures."""
+    try:
+        return sb.commands.run(text, **kwargs)
+    except Exception as exc:
+        if type(exc).__name__ != "CommandExitException":
+            raise
+        return SimpleNamespace(
+            exit_code=exc.exit_code, stdout=exc.stdout, stderr=exc.stderr
+        )
 
 
 def digest(path):
@@ -26,7 +39,8 @@ def pack(root):
 
 def upload(sb, root, destination):
     sb.files.write("/tmp/append-rewrite-upload.tgz", pack(root), user="root")
-    r = sb.commands.run(
+    r = command(
+        sb,
         "mkdir -p "
         + shlex.quote(destination)
         + " && tar xzf /tmp/append-rewrite-upload.tgz -C "
@@ -59,7 +73,8 @@ def create(task, credential_file, owner):
 
 
 def prepare(sb, state):
-    r = sb.commands.run(
+    r = command(
+        sb,
         "rm -rf /tests /solution /logs/verifier && mkdir -p /app",
         user="root",
         timeout=30,
@@ -69,8 +84,8 @@ def prepare(sb, state):
     for child in Path(state).iterdir():
         if child.name in (".", "..") or "/" in child.name:
             raise ValueError("InvalidStateRoot")
-        r = sb.commands.run(
-            "rm -rf " + shlex.quote("/app/" + child.name), user="root", timeout=30
+        r = command(
+            sb, "rm -rf " + shlex.quote("/app/" + child.name), user="root", timeout=30
         )
         if r.exit_code:
             raise RuntimeError("StateResetFailed")
@@ -79,7 +94,8 @@ def prepare(sb, state):
 
 def grade(sb, task):
     # Only after the agent has stopped. Grader is never visible during rollout.
-    r = sb.commands.run(
+    r = command(
+        sb,
         "rm -rf /tests /solution /logs/verifier && mkdir -p /logs/verifier",
         user="root",
         timeout=30,
@@ -87,7 +103,7 @@ def grade(sb, task):
     if r.exit_code:
         raise RuntimeError("GraderSetupFailed")
     upload(sb, task / "tests", "/tests")
-    r = sb.commands.run("cd /app && bash /tests/test.sh", user="root", timeout=900)
+    r = command(sb, "cd /app && bash /tests/test.sh", user="root", timeout=900)
     if r.exit_code:
         raise RuntimeError("GraderInfrastructureError")
     value = float(sb.files.read("/logs/verifier/reward.txt", user="root").strip())
@@ -100,9 +116,7 @@ def grade(sb, task):
         "review-checks.json",
         "reconcile-checks.json",
     ):
-        exists = sb.commands.run(
-            "test -f /logs/verifier/" + name, user="root", timeout=10
-        )
+        exists = command(sb, "test -f /logs/verifier/" + name, user="root", timeout=10)
         if exists.exit_code == 0:
             details[name] = json.loads(
                 sb.files.read("/logs/verifier/" + name, user="root")
@@ -119,7 +133,7 @@ def capture(sb, artifacts, target):
     command = "tar czf /tmp/append-submission.tgz -C / " + " ".join(
         shlex.quote(p) for p in allowed
     )
-    r = sb.commands.run(command, user="root", timeout=120)
+    r = command(sb, command, user="root", timeout=120)
     if r.exit_code:
         raise RuntimeError("CaptureFailed")
     target.write_bytes(
@@ -142,8 +156,6 @@ def restore_archive(sb, path):
             ):
                 raise RuntimeError("UnsafeCaptureMember")
     sb.files.write("/tmp/append-submission.tgz", path.read_bytes(), user="root")
-    r = sb.commands.run(
-        "tar xzf /tmp/append-submission.tgz -C /", user="root", timeout=120
-    )
+    r = command(sb, "tar xzf /tmp/append-submission.tgz -C /", user="root", timeout=120)
     if r.exit_code:
         raise RuntimeError("RestoreFailed")
