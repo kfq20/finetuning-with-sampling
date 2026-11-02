@@ -128,3 +128,13 @@ expert-conditioned input is reconstructed byte-for-byte and the requirement,
 state manifest and verifier hashes match. It removes only the current append's
 expert continuation section. Historical parent context and starting files remain
 unchanged. This is a distinct experimental condition, not an automatic retry.
+
+
+## Review-stage tool-boundary core
+
+Branch `research/tool-boundary-rewrite` adds a model-free prototype in
+`src/append_rewrite/tool_blocks/`. It segments complete tool batches, evaluates
+fresh-state branches with their own observations, keeps expert reference separate
+from student scoring, and exports continuous SFT-window previews. Read the
+[design and remaining native integrations](docs/tool-boundary-rewrite.md). This
+does not change the selected production harness or run new models.
