@@ -22,11 +22,13 @@ Execution stages:
    score independently and bind both scores. Model zero is distinct from API,
    incomplete-generation and capture failures.
 
-The first frozen catalog contains 125 source receipts, of which 83 are
-source-indexed, representing 82 unique context/state/requirement units. 22 records
-need image/state adapters or missing checkpoint provenance; 20 are not original
-normal full successes and need outcome-specific review before positive admission.
-Source-indexed status does not imply sandbox or training admission.
+The selected frozen catalog contains125 source receipts. All105 original normal
+full-success records have context, requirement, observable expert continuation and
+bound starting files; they represent104 unique append units. Three include bound
+historical screenshots and require a multimodal student execution adapter.
+Eighteen audio records include original-template startup snapshots. Twenty other
+records require outcome-specific derived review before positive admission.
+Source indexing does not imply sandbox or training admission.
 
 Integration checks established complete Chat SSE with parsed Qwen tool calls.
 Fleet Jobs rejected the very model alias that its deployment and models endpoint

@@ -71,3 +71,13 @@ lanes restore to `/app/project`, others to `/app`, and some restore multiple
 roots. Every restored file must match an expected hash/mode, obtained only from
 the published pre-append package or captured parent trial. Missing bindings,
 multimodal assets and service-state adapters remain holds before student dispatch.
+
+
+The initial study and completed whole-append pilot are documented in
+[append-rewrite-pilot-20261102](experiments/append-rewrite-pilot-20261102/README.md).
+Historical screenshot bytes are stored as hashed external assets. The text
+controller explicitly holds multimodal samples rather than passing image paths
+as if they were visual observations. `audio_state` reproduces the original audio
+environment startup without solver calls and materializes a reusable state index.
+`collect --receipt-inventory ... --state-adapters ...` fixes source membership
+while incorporating those states. `catalog` groups equivalent append units.
