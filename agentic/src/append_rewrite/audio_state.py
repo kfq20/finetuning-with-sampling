@@ -5,6 +5,7 @@ import argparse
 import json
 from pathlib import Path
 import tarfile
+import shutil
 from . import sandbox
 from .collect import dump, sha
 
@@ -14,6 +15,7 @@ def main():
     p.add_argument("--inventory", type=Path, required=True)
     p.add_argument("--sandbox-credentials", type=Path, required=True)
     p.add_argument("--output", type=Path, required=True)
+    p.add_argument("--reuse", type=Path)
     a = p.parse_args()
     a.output.mkdir(parents=True, exist_ok=False, mode=0o700)
     entries = {}
@@ -39,14 +41,24 @@ def main():
             },
         }
         try:
-            sb = sandbox.create(
-                task, a.sandbox_credentials, "projection-audio-source-" + sid
-            )
-            # The original AudioEnvironment.start creates writable mounts, then
-            # uploads environment_dir to /app in the selected frozen template.
-            sandbox.command(sb, "mkdir -p /app/output", user="root", timeout=30)
-            sandbox.upload(sb, task / "environment", "/app")
-            meta = sandbox.capture(sb, ["/app/"], dest / "source-state.tgz")
+            prior = a.reuse / sid / "source-state.tgz" if a.reuse else None
+            if prior and prior.is_file():
+                files = sandbox.archive_manifest(prior)
+                shutil.copy2(prior, dest / "source-state.tgz")
+                meta = {
+                    "archive_sha256": sha(prior),
+                    "files": files,
+                    "reused_from": str(prior),
+                }
+            else:
+                sb = sandbox.create(
+                    task, a.sandbox_credentials, "projection-audio-source-" + sid
+                )
+                # Mirrors AudioEnvironment.start: writable mounts, then upload
+                # environment_dir to /app in the original selected template.
+                sandbox.command(sb, "mkdir -p /app/output", user="root", timeout=30)
+                sandbox.upload(sb, task / "environment", "/app")
+                meta = sandbox.capture(sb, ["/app/"], dest / "source-state.tgz")
             state = dest / "start_state"
             state.mkdir()
             with tarfile.open(dest / "source-state.tgz") as archive:
@@ -78,7 +90,14 @@ def main():
                 ],
             )
         except Exception as exc:
-            entry.update(status="hold", error_type=type(exc).__name__)
+            entry.update(
+                status="hold",
+                error_type=type(exc).__name__,
+                error_code=str(exc)
+                if str(exc)
+                in ("UnsafeCaptureMember", "CaptureFailed", "StateUploadFailed")
+                else None,
+            )
         finally:
             if sb is not None:
                 sb.kill()

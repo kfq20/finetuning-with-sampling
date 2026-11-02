@@ -156,7 +156,10 @@ def archive_manifest(path):
             if (
                 p.is_absolute()
                 or ".." in p.parts
-                or not member.name.startswith("app/")
+                or (
+                    not member.name.startswith("app/")
+                    and not (member.name == "app" and member.isdir())
+                )
                 or member.issym()
                 or member.islnk()
             ):
@@ -176,7 +179,10 @@ def restore_archive(sb, path, artifacts):
             if (
                 p.is_absolute()
                 or ".." in p.parts
-                or not m.name.startswith("app/")
+                or (
+                    not m.name.startswith("app/")
+                    and not (m.name == "app" and m.isdir())
+                )
                 or m.issym()
                 or m.islnk()
             ):

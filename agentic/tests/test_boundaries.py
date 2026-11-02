@@ -253,6 +253,22 @@ class Boundaries(unittest.TestCase):
             )
             self.assertEqual(out[0]["media_type"], "image/png")
 
+    def test_app_root_directory_is_safe_but_root_symlink_is_not(self):
+        with tempfile.TemporaryDirectory() as root:
+            p = Path(root) / "app.tgz"
+            with tarfile.open(p, "w:gz") as t:
+                m = tarfile.TarInfo("app")
+                m.type = tarfile.DIRTYPE
+                t.addfile(m)
+            self.assertEqual(archive_manifest(p), {})
+            with tarfile.open(p, "w:gz") as t:
+                m = tarfile.TarInfo("app")
+                m.type = tarfile.SYMTYPE
+                m.linkname = "/"
+                t.addfile(m)
+            with self.assertRaisesRegex(RuntimeError, "UnsafeCaptureMember"):
+                archive_manifest(p)
+
     def test_state_pack_rejects_symlinks(self):
         with tempfile.TemporaryDirectory() as root:
             p = Path(root)
