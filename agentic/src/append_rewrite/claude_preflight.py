@@ -135,7 +135,7 @@ async def check_case(profile, prepared, credentials, output, model, condition):
             sb, "/usr/local/bin/claude --version", user="root", timeout=20
         )
         result["cli_version"] = actual_cli.stdout.strip()
-        await agent.run(
+        await agent.load(
             Path(row["requirement_copy"]["path"]).read_text(), env, AgentContext()
         )
         raw = sb.files.read("/logs/agent/claude-code.txt", user="root")
