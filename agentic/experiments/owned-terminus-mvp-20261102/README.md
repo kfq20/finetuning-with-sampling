@@ -41,3 +41,28 @@ matched all input IDs; generation-side checks remain per-request. Candidate
 selection is explicitly a greedy blockwise MVP, not full MH/MCMC. Real terminal
 feedback is required at every step; only actually successful, independently
 restored outputs can become SFT candidates.
+
+## Teacher accepted; student dispatched
+
+Fresh DeepSeek teacher completed 29 native model decisions / 46 shell commands.
+Original reward1 and independent restored reward1. Coq compilation, all nine
+closed-assumption checks and coqchk passed. No private grader/solution path hits
+were found in observable commands. Review: selected teacher root/TEACHER-REVIEW.json.
+Teacher receipt SHA256:
+`991e2e4d4645624f200fc9a9b6cf800d2cb2b460017cb7b3df4724cce8a6eb8a`.
+Teacher history SHA256:
+`7e540b9a3d9bd27e43ef76d6bfbe38db161c61527525c48a5446888ed2912033`.
+
+One Qwen student now selected at `data/owned-terminus-coq-qwen-mvp-v1`; launch
+identity in the adjacent `-launch.json`. Frozen source:
+`source-owned-terminus-student-v3`, commit `46cea8a`.
+Entry: `python -m append_rewrite.terminus.owned_student`.
+Tokenizer: `tokenizers/qwen38-27b-1d4bf0f`.
+No old student attempts are replayed. Exact served deployment identity was
+rechecked. First native generation is an actual provider request, not a configured
+claim. Later outcome is authoritative only in receipt.json or error.json.
+
+Model-free checks additionally verified candidate ranking with reference only in
+generation, actual pinned-HF template SFT masking, and teacher SSE privacy/closure.
+Final dataset export includes token IDs and assistant-only labels; reference is
+not in public messages. Original/fresh semantic success is required for export.
