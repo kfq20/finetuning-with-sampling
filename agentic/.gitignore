@@ -1,0 +1,8 @@
+data/
+private/
+artifacts/
+*.jsonl
+*.sqlite*
+*.tgz
+__pycache__/
+.venv/
