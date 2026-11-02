@@ -98,7 +98,9 @@ class Fleet:
                     and entries[0].get("status") == "completed"
                     and entries[0].get("response")
                 ):
-                    return entries[0]["response"]
+                    response = entries[0]["response"]
+                    self.verify_model(response)
+                    return response
                 raise FleetError("JobTerminal:" + str(status))
             dump(
                 journal / "progress.json",
@@ -106,6 +108,10 @@ class Fleet:
             )
             time.sleep(3)
         raise TimeoutError("DurableJobDeadline:" + job_id)
+
+    def verify_model(self, response):
+        if response.get("model") != self.config["model_id"]:
+            raise FleetError("ModelIdentityMismatch")
 
     def stream(self, body, journal, deadline):
         body = dict(body, stream=True, stream_options={"include_usage": True})
@@ -139,7 +145,9 @@ class Fleet:
                             log.flush()
                             yield event
 
-                    return assemble_stream(events())
+                    result = assemble_stream(events())
+                    self.verify_model(result)
+                    return result
         except HTTPError as exc:
             raise FleetError("HTTP_" + str(exc.code)) from None
 

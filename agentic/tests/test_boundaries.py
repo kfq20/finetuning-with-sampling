@@ -121,7 +121,12 @@ class Boundaries(unittest.TestCase):
                 raise IncompleteRead(b"")
             return {
                 "status": "completed",
-                "results": [{"status": "completed", "response": {"choices": []}}],
+                "results": [
+                    {
+                        "status": "completed",
+                        "response": {"choices": [], "model": "owned-model"},
+                    }
+                ],
             }
 
         client.request = request
@@ -131,7 +136,7 @@ class Boundaries(unittest.TestCase):
         ):
             journal = Path(root) / "request"
             result = client.chat([], journal=journal, deadline=time.time() + 60)
-            self.assertEqual(result, {"choices": []})
+            self.assertEqual(result, {"choices": [], "model": "owned-model"})
             self.assertEqual(routes.count("/control/jobs"), 1)
             self.assertTrue((journal / "accepted.json").is_file())
             with self.assertRaises(FileExistsError):
