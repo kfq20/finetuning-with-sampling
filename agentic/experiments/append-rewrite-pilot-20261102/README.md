@@ -38,7 +38,12 @@ The first Bio trial completed 12 generations and 11 actual tool calls before the
 old harness rejected a milliseconds-valued timeout. The original record is
 preserved unscored; it is not evidence of task failure. The revised harness reports
 schema errors back to the student and saves partial state on exceptional exit.
-A different Coq append tests the corrected end-to-end path.
+The corrected Coq append3 completed: original expert control1, initial0, Qwen1,
+fresh-restored1. Seven API rounds and seven real tool calls, 2.66 agent minutes
+(3.68 total minutes), peak input55,496 tokens, cumulative input367,651 tokens,
+output2,519 tokens. The single submitted source artifact retained identical bytes
+and modes after fresh restoration. Observable commands used no private grader
+paths. This is one feasibility result, not a success-rate or training-gain claim.
 
 Execution, credentials, corpora and trajectories remain in private persistent
 storage, outside Git. Each attempt pins its code commit and uses an exclusive
