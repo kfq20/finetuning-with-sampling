@@ -203,3 +203,15 @@ class NativeTrialMetricsTests(unittest.TestCase):
             self.assertEqual(actual["tool_calls"], 1)
             self.assertTrue(actual["tool_pairs_complete"])
             self.assertEqual(actual["tools"][0]["name"], "Read")
+
+
+class CopyAuditTests(unittest.TestCase):
+    def test_exact_nontrivial_proof_is_reported(self):
+        from append_rewrite.claude_review import source_overlap
+
+        expert = b"Theorem sample : True. Proof. exact I. Qed.\n"
+        audit = source_overlap(expert, expert)
+        self.assertTrue(audit["entire_file_byte_identical"])
+        self.assertEqual(
+            audit["matching_proof_bodies_ignoring_whitespace"][0]["name"], "sample"
+        )

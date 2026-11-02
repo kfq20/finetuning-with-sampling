@@ -131,6 +131,7 @@ def grade(sb, task):
     details = {}
     for name in (
         "checks.json",
+        "grade.json",
         "details.json",
         "append-checks.json",
         "review-checks.json",

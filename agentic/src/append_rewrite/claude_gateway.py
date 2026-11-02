@@ -173,6 +173,25 @@ def serve(config_file, root, port):
                             if line.startswith(b"data:"):
                                 data = json.loads(line[5:].strip())
                                 if data.get("type") == "error":
+                                    # Private diagnostic only: preserve the actual provider
+                                    # error frame, never hidden reasoning or auth headers.
+                                    raw_error = json.dumps(data).encode()
+                                    (root / (rid + "-sse-error.json")).write_bytes(
+                                        raw_error
+                                    )
+                                    event(
+                                        {
+                                            "id": rid,
+                                            "phase": "provider_sse_error",
+                                            "provider_error_type": data.get(
+                                                "error", {}
+                                            ).get("type"),
+                                            "error_sha256": hashlib.sha256(
+                                                raw_error
+                                            ).hexdigest(),
+                                            "elapsed": time.time() - started,
+                                        }
+                                    )
                                     raise RuntimeError("ProviderSSEError")
                                 msg = data.get("message") or {}
                                 reported = data.get("model") or msg.get("model")
