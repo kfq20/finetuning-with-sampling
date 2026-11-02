@@ -118,7 +118,8 @@ context and a contiguous target window. Only assistant messages in that window
 have loss enabled. Historical assistant messages and tool results remain context
 with loss disabled. Complete tool observations stay in the conversation so later
 actions see real feedback. Expert-reference markers in history fail closed;
-there is no silent removal or moving answers into attachments.
+there is no silent removal or moving answers into attachments. This marker
+check does not detect unmarked answer leakage; semantic/copy review is separate.
 
 The loss flags are MESSAGE-level specifications, not tokenizer-aligned masks.
 The output stays `training_admitted=false` pending tokenizer alignment, task/trace

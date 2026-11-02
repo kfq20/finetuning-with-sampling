@@ -19,3 +19,22 @@ local contract gates; lineage integrity and contiguous message loss masks. Keep
 all exported examples `training_admitted=false`. Native CC boundary pausing,
 full environment snapshot adapters and real logprob scoring remain explicit
 integration tasks for a later reviewed experiment.
+
+## Read-only acceptance observed
+
+Frozen implementation2760a9e passed the file-fork demo both locally and on
+MindLab. The existing Coq append3 public traces also match native CLI counts:
+
+| Existing continuation | Interaction blocks | Tool calls | New execution |
+|---|---:|---:|---|
+| DeepSeek expert | 11 (10 exchanges + final reply) | 10 | None |
+| Qwen no-reference student | 23 (22 exchanges + final reply) | 22 | None |
+
+The115-message shared prefix is context, not counted as this continuation.
+Neither historical catalog claims to have per-tool environment snapshots.
+External evidence is under `data/tool-boundary-review-v1/` in the existing
+projection-agent study root; no real trajectory contents are committed here.
+
+Agentic regression suite:52pass, including23new boundary/branch/SFT checks;
+Ruff and diff whitespace checks pass. Fixture scores are not model logprobs.
+The review stage is ready for source review, not production rollout/training.
