@@ -224,6 +224,10 @@ def evaluate_action(
         # Verifier is a trusted external control. Its private report is not fed
         # back into student history or included as a training target.
         state = session.snapshot()
+        if state.environment_id != parent.state.environment_id:
+            raise BoundaryError(
+                "Execution changed the pinned runtime environment identity"
+            )
         verdict = verifier.check(session, trace)
         if type(verdict.passed) is not bool or not verdict.verifier_id:
             raise BoundaryError("Malformed verifier outcome")

@@ -370,6 +370,36 @@ class BranchTests(unittest.TestCase):
         self.assertEqual(candidate.status, "execution_hold")
         self.assertTrue(candidate.error_type.startswith("CleanupError"))
 
+    def test_runtime_identity_cannot_change_during_a_candidate(self):
+        base = self.runtime
+
+        class SwitchingRuntime:
+            def fork(self, state, branch_id):
+                session = base.fork(state, branch_id)
+                snapshot, execute = session.snapshot, session.execute
+                switched = [False]
+
+                def current_state():
+                    value = snapshot()
+                    return (
+                        replace(value, environment_id="another-runtime")
+                        if switched[0]
+                        else value
+                    )
+
+                def run_calls(calls):
+                    value = execute(calls)
+                    switched[0] = True
+                    return replace(value, after=current_state())
+
+                session.snapshot = current_state
+                session.execute = run_calls
+                return session
+
+        candidate = self.evaluate("correct", runtime=SwitchingRuntime())
+        self.assertEqual(candidate.status, "execution_hold")
+        self.assertIn("runtime environment identity", candidate.error_code)
+
     def test_corrupted_snapshot_blob_prevents_execution(self):
         blob = next((self.runtime.store.root / "blobs").iterdir())
         blob.write_bytes(b"corruption")

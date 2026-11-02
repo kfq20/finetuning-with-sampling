@@ -35,6 +35,6 @@ Neither historical catalog claims to have per-tool environment snapshots.
 External evidence is under `data/tool-boundary-review-v1/` in the existing
 projection-agent study root; no real trajectory contents are committed here.
 
-Agentic regression suite:52pass, including23new boundary/branch/SFT checks;
+Agentic regression suite:53pass, including24new boundary/branch/SFT checks;
 Ruff and diff whitespace checks pass. Fixture scores are not model logprobs.
 The review stage is ready for source review, not production rollout/training.
