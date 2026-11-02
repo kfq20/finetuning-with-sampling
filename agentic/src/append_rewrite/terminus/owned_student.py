@@ -17,6 +17,7 @@ from .native import NativeRewriteLLM
 from .tokenizer import PinnedTokenizer
 from .protocol import public_messages
 from .export import export_row
+from .resume import ResumeRewriteLLM, restore_read_boundary
 
 
 async def run(args):
@@ -86,12 +87,15 @@ async def run(args):
             args.runtime_assets,
         )
         dump(out / "sandbox.json", {"sandbox_id": sb.sandbox_id})
-        backend = NativeRewriteLLM(
+        backend_class = ResumeRewriteLLM if args.resume_from else NativeRewriteLLM
+        extra = {"previous": args.resume_from} if args.resume_from else {}
+        backend = backend_class(
             args.fleet_config,
             tokenizer,
             out / "candidates",
             json.dumps(reference, ensure_ascii=False),
             proposals=2,
+            **extra,
         )
         agent = make_agent(out / "agent", backend.model_name, backend=backend)
         env = SDKEnvironment(sb, "/app/project")
@@ -99,9 +103,21 @@ async def run(args):
         await agent._session.send_keys("cd /app/project\n", min_timeout_sec=0.1)
         ctx = AgentContext()
         try:
-            await asyncio.wait_for(
-                agent.run((source / "instruction.md").read_text(), env, ctx), 28800
-            )
+            instruction = (source / "instruction.md").read_text()
+            if args.resume_from:
+                expected = {
+                    name[len("state/") :]: meta
+                    for name, meta in identity["files"].items()
+                    if name.startswith("state/")
+                }
+                await asyncio.wait_for(
+                    restore_read_boundary(
+                        agent, env, ctx, args.resume_from, instruction, expected, out
+                    ),
+                    28800,
+                )
+            else:
+                await asyncio.wait_for(agent.run(instruction, env, ctx), 28800)
         finally:
             if agent._chat:
                 dump(
@@ -213,6 +229,7 @@ def main():
         "output",
     ]:
         p.add_argument("--" + x, type=Path, required=True)
+    p.add_argument("--resume-from", type=Path)
     asyncio.run(run(p.parse_args()))
 
 

@@ -39,7 +39,7 @@ def public_messages(messages):
 
 
 def action(raw):
-    """Strict admissible JSON subset; execution still uses Harbor's native parser."""
+    """Native public action JSON; surrounding prose is retained byte-for-byte."""
 
     def unique(pairs):
         d = {}
@@ -49,7 +49,27 @@ def action(raw):
             d[k] = v
         return d
 
-    v = json.loads(raw, object_pairs_hook=unique)
+    if any(tag in raw for tag in ("<think>", "</think>", "<thinking>", "</thinking>")):
+        raise ValueError("Hidden reasoning wrapper is not a public action")
+    try:
+        v = json.loads(raw, object_pairs_hook=unique)
+    except json.JSONDecodeError:
+        # Native Harbor tolerates public prose/fences around its action JSON.
+        # Keep ORIGINAL bytes for scoring/history/SFT; extract only for validation.
+        decoder = json.JSONDecoder(object_pairs_hook=unique)
+        v = None
+        for index, character in enumerate(raw):
+            if character != "{":
+                continue
+            try:
+                candidate, _ = decoder.raw_decode(raw[index:])
+            except json.JSONDecodeError:
+                continue
+            if isinstance(candidate, dict) and "commands" in candidate:
+                v = candidate
+                break
+        if v is None:
+            raise ValueError("No native action JSON found")
     if not isinstance(v, dict) or set(v) - {
         "analysis",
         "plan",

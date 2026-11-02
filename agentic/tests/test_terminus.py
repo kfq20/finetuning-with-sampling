@@ -81,6 +81,14 @@ class TerminusProtocol(unittest.TestCase):
         self.assertEqual(v["messages"][-1]["content"], RAW)
         self.assertFalse(v["training_admitted"])
 
+    def test_native_prose_and_fences_preserve_raw_scoring(self):
+        for raw in ("Visible status note.\n" + RAW, "```json\n" + RAW + "\n```"):
+            self.assertEqual(action(raw), action(RAW))
+            _, scored = scoring_input(self.parent(), raw)
+            self.assertEqual(scored, raw)
+        with self.assertRaises(ValueError):
+            action("<think>hidden</think>" + RAW)
+
     def test_invalid_actions_rejected(self):
         for raw in (
             '{"commands":[],"commands":[]}',
