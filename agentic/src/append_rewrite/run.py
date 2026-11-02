@@ -25,7 +25,12 @@ TOOLS = [
                 "type": "object",
                 "properties": {
                     "command": {"type": "string"},
-                    "timeout": {"type": "integer", "minimum": 1, "maximum": 600},
+                    "timeout": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 600,
+                        "description": "Seconds, never milliseconds",
+                    },
                 },
                 "required": ["command"],
                 "additionalProperties": False,
@@ -40,6 +45,25 @@ def check(ref):
     if sha(p) != ref["sha256"]:
         raise ValueError("Source identity changed: " + p.name)
     return p
+
+
+def validate_call(call):
+    if call.get("function", {}).get("name") != "execute":
+        raise ValueError("Unknown tool. Available tool: execute")
+    try:
+        args = json.loads(call["function"]["arguments"])
+    except (json.JSONDecodeError, KeyError):
+        raise ValueError("Arguments must be a JSON object") from None
+    if not isinstance(args, dict) or not isinstance(args.get("command"), str):
+        raise ValueError("command must be a string")
+    if set(args) - {"command", "timeout"}:
+        raise ValueError("Only command and timeout arguments are accepted")
+    timeout = args.get("timeout", 120)
+    if type(timeout) is not int or not 1 <= timeout <= 600:
+        raise ValueError(
+            "timeout must be an integer number of SECONDS between 1 and 600; command was not executed"
+        )
+    return args
 
 
 def run(inventory, sample_id, fleet_config, sandbox_credentials, output, mode):
@@ -181,29 +205,27 @@ def run(inventory, sample_id, fleet_config, sandbox_credentials, output, mode):
                 if not calls:
                     break
                 for call in calls:
-                    function = call["function"]
-                    if function["name"] != "execute":
-                        raise RuntimeError("InvalidToolName")
-                    args = json.loads(function["arguments"])
-                    command = args["command"]
-                    timeout = args.get("timeout", 120)
-                    if type(timeout) is not int or not 1 <= timeout <= 600:
-                        raise RuntimeError("InvalidToolTimeout")
-                    # Private grader remains physically absent throughout this loop.
-                    q = sandbox.command(
-                        sb, "cd /app && " + command, user="root", timeout=timeout
-                    )
+                    try:
+                        args = validate_call(call)
+                    except ValueError as exc:
+                        feedback = {"error": str(exc), "command_executed": False}
+                    else:
+                        # Private grader remains physically absent throughout this loop.
+                        q = sandbox.command(
+                            sb,
+                            "cd /app && " + args["command"],
+                            user="root",
+                            timeout=args.get("timeout", 120),
+                        )
+                        feedback = {
+                            "exit_code": q.exit_code,
+                            "stdout": q.stdout,
+                            "stderr": q.stderr,
+                        }
                     observation = {
                         "role": "tool",
                         "tool_call_id": call["id"],
-                        "content": json.dumps(
-                            {
-                                "exit_code": q.exit_code,
-                                "stdout": q.stdout,
-                                "stderr": q.stderr,
-                            },
-                            ensure_ascii=False,
-                        ),
+                        "content": json.dumps(feedback, ensure_ascii=False),
                     }
                     messages.append(observation)
                     trace.append(observation)
@@ -250,6 +272,19 @@ def run(inventory, sample_id, fleet_config, sandbox_credentials, output, mode):
         )
         # No provider bodies, credentials, or raw expert reasoning in diagnostic summaries.
         result["error_location"] = traceback.extract_tb(exc.__traceback__)[-1].name
+        if mode == "student":
+            result.update(
+                rounds=locals().get("rounds", 0),
+                tool_calls=locals().get("tools", 0),
+                usage=locals().get("usage", []),
+            )
+            if sb is not None and "artifacts" in locals():
+                try:
+                    result["partial_capture"] = sandbox.capture(
+                        sb, artifacts, output / "partial-submission.tgz"
+                    )
+                except Exception as capture_exc:
+                    result["partial_capture_error_type"] = type(capture_exc).__name__
     finally:
         if sb is not None:
             try:

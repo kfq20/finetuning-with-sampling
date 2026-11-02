@@ -209,6 +209,23 @@ class Boundaries(unittest.TestCase):
         self.assertEqual(call["function"]["arguments"], '{"command":"ls"}')
         self.assertEqual(call["function"]["name"], "execute")
 
+    def test_tool_argument_errors_are_reportable_without_running_command(self):
+        from append_rewrite.run import validate_call
+        import json
+
+        call = {
+            "function": {
+                "name": "execute",
+                "arguments": json.dumps({"command": "echo ok", "timeout": 300000}),
+            }
+        }
+        with self.assertRaisesRegex(ValueError, "SECONDS"):
+            validate_call(call)
+        call["function"]["arguments"] = json.dumps(
+            {"command": "echo ok", "timeout": 300}
+        )
+        self.assertEqual(validate_call(call)["timeout"], 300)
+
     def test_state_pack_rejects_symlinks(self):
         with tempfile.TemporaryDirectory() as root:
             p = Path(root)
