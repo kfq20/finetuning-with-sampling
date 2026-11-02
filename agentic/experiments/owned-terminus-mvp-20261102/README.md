@@ -1,5 +1,11 @@
 # Owned environment: fresh Terminus teacher → student rewrite MVP
 
+**Final selected run:** `data/owned-coq-block-mvp-v2`. Technical block MVP passed.
+Two student proposals passed original + independent restored verification (1/1
+each). One masked SFT row exported: 33,846 tokens / 382 supervised tokens.
+Delivery: `data/owned-coq-block-mvp-delivery-v1`. Prior free-rollout roots below
+are preserved history, not selected or running.
+
 User redirected the MVP from OpenThoughts back to our existing environments.
 Public SFT records alone do not establish interactive feedback or restorable
 states. No OpenThoughts student rollout was launched. Its acquisition/audit data
@@ -86,3 +92,55 @@ generation input token sequences matched the reconstructed prefix. They were
 rescored and one executed; no old generation was repeated. Later requests are
 new continuation decisions. `recovery-binding.json` and the original run's
 `RECOVERY-PREFLIGHT.json` bind evidence. Prior usage/cost remains charged once.
+
+## Final grounded block MVP
+
+Free continuous rollout exposed a method defect: selecting syntactically valid
+high-mean-LP actions without feasibility/progress admission repeatedly selected
+identical reads. It was intentionally stopped via SIGINT; its in-flight response
+was allowed to finish and all old responses/usage were preserved. This is not
+labelled a Coq model failure.
+
+The final MVP uses the originally discussed one-tool-batch unit: replay the first
+24 expert tool decisions into an owned sandbox (zero expert model replay), freeze
+its actual files and quiescent shell scope, then rewrite expert decision25.
+Each candidate forks that checkpoint, executes through native Terminus, and runs
+the original later delivery tools with its OWN real observations. Original and
+fresh verifier success are required BEFORE likelihood-based selection. Teacher
+future observations are never substituted for new observations.
+
+Controls: initial0; original expert block1/fresh1; no-op replacement0/fresh0. The
+first prepared block run stopped unpaid on an incomplete no-op response schema;
+its checkpoint and successful expert control were reused by source/hash binding.
+Final frozen implementation: `source-owned-block-mvp-v2`, commit `82d9646`.
+
+| Action | Tokens | Mean student logprob, no current expert reference | Original / fresh |
+|---|---:|---:|---|
+| Original expert block | 413 | -0.272218 | 1 / 1 |
+| Student candidate0 | 418 | -0.265378 | 1 / 1 |
+| Student candidate1, selected | 381 | -0.248373 | 1 / 1 |
+
+The training row supervises ONLY selected student block1 (381 raw action tokens
+plus one end-of-turn token). All 49 teacher-prefix messages are context and fully
+masked. Native forced-score input IDs exactly equal the matching SFT input prefix;
+candidate start equals the first loss position. No current expert-reference
+prompt or private provider reasoning is exported. The selected action has no
+dangling attribution to an unseen expert/reference.
+
+The final Submission.v is byte-identical to the expert's: this proves compatible
+proof repair, not new independent mathematical discovery. The selected action is
+a replacement inside an expert prefix/suffix, not an autonomous full student
+episode. This is executable greedy block rewrite; full MH proposal/acceptance
+correction and learning-benefit/no-reference studies remain separate research.
+
+`FINAL-REVIEW.json`, `receipt.json`, `baseline-expert-score/score.json` and both
+candidate verdicts bind raw outcomes. The complete technical block run took
+481.665 seconds, excluding earlier preserved prototype failures/preparation.
+No model training or rollout scale-up was launched.
+
+Validate the delivery without model requests:
+
+```sh
+PYTHONPATH=agentic/src python -m append_rewrite.terminus.validate \
+  /persistent/owned-coq-block-mvp-delivery-v1/train.jsonl
+```

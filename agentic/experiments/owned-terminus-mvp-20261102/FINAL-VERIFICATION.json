@@ -1,0 +1,149 @@
+{
+  "delivery_manifest": {
+    "created_at": "2026-11-02T15:23:55.930915+00:00",
+    "source_commit": "82d9646",
+    "source_runtime": "/vePFS-Mindverse/user/intern/fanqi/tb4-research/projection-agent-20261102/source-owned-block-mvp-v2",
+    "source_run": "/vePFS-Mindverse/user/intern/fanqi/tb4-research/projection-agent-20261102/data/owned-coq-block-mvp-v2",
+    "teacher_run": "/vePFS-Mindverse/user/intern/fanqi/tb4-research/projection-agent-20261102/data/owned-terminus-coq-mvp-v2",
+    "checkpoint_uri": "/vePFS-Mindverse/user/intern/fanqi/tb4-research/projection-agent-20261102/data/owned-coq-block-mvp-v1/checkpoint.tgz",
+    "checkpoint_sha256": "9872ed14e9dc1cd8bbf54f98df84c5c8b9fc792c57d19db1eefe573e1592750a",
+    "tokenizer_uri": "/vePFS-Mindverse/user/intern/fanqi/tb4-research/projection-agent-20261102/tokenizers/qwen38-27b-1d4bf0f",
+    "tokenizer_identity": "6212f739cd88998dfef7e3639160a679aa50cbd95bd9e252619271f1649702d8",
+    "sample_unit": "one student replacement command batch, with teacher prefix masked",
+    "rows": 1,
+    "total_tokens": 33846,
+    "supervised_tokens": 382,
+    "private_reasoning_or_credentials_exported": false,
+    "raw_failed_experiments_preserved": true,
+    "files": {
+      "teacher-review.json": "a6dbc547b2b64253aa716f3d04e8692456edc7b18ca37dfd812e087d3c228b2f",
+      "review.json": "4ccea0f3c2493b8bc269d29ac21ba45a9af20774fce36c24761d432d8b23f836",
+      "train.jsonl": "0f395b8b5177c9242a334d7471081c21a34b9832620c469fae8c65b32e7d20da",
+      "scoring.json": "f7721367620da0eeb314bbefc4af0a0e6ddf8b3768baff353d3a820008dbbdce",
+      "controls.json": "1cafc24be9a199c86a15521c4c0db78f298a21c312f6211d51bd8327229c3e43",
+      "selected-candidate-verdict.json": "8cd59ebe6c0a5dbc48585cdb550d5851db065c88869e7e34b8a11d3742657301",
+      "README.md": "432d16fbdcfaa324af55588057bc7719e1ceb66669a6ed78af8dca0f7d0bc85a",
+      "receipt.json": "d98ee3a0caa782cc690c0b4583610d857d9de95ab47b2d828f8fbfad8861e47a"
+    },
+    "model_registry": "Qwen/Qwen3.8-27B",
+    "served_model_alias": "Qwen-Qwen3.8-27B-base-15160e906848-3",
+    "generation_route": "/generate",
+    "scoring_route": "/generate",
+    "implementation": "grounded greedy single-block rewrite; no MH acceptance correction"
+  },
+  "controls": {
+    "initial_reward": 0,
+    "original_expert_block": {
+      "original": 1,
+      "fresh": 1
+    },
+    "noop_block": {
+      "original": 0,
+      "fresh": 0
+    },
+    "candidate_0": {
+      "original": 1,
+      "fresh": 1
+    },
+    "candidate_1": {
+      "original": 1,
+      "fresh": 1
+    }
+  },
+  "block_receipt": {
+    "algorithm": "grounded_greedy_block_rewrite_mvp",
+    "expert_decision": 25,
+    "teacher_receipt_sha256": "991e2e4d4645624f200fc9a9b6cf800d2cb2b460017cb7b3df4724cce8a6eb8a",
+    "checkpoint_sha256": "9872ed14e9dc1cd8bbf54f98df84c5c8b9fc792c57d19db1eefe573e1592750a",
+    "initial_reward": 0.0,
+    "expert_control_feasible": true,
+    "noop_control_feasible": false,
+    "generated_candidates": 2,
+    "feasible_candidates": 2,
+    "model_replays": 0,
+    "training_admitted": true,
+    "elapsed_sec": 481.6648864746094,
+    "selected_index": 1,
+    "sft_sha256": "0f395b8b5177c9242a334d7471081c21a34b9832620c469fae8c65b32e7d20da",
+    "supervised_tokens": 382,
+    "total_tokens": 33846
+  },
+  "alignment_and_copy_review": {
+    "score_input_ids_equal_sft_input_prefix": true,
+    "candidate_start_equals_first_supervised_token": true,
+    "only_selected_student_block_supervised": true,
+    "expert_prefix_messages_masked": 49,
+    "supervised_tokens": 382,
+    "total_tokens": 33846,
+    "reference_prompt_absent": true,
+    "reference_attribution_mentions": [],
+    "candidate_scores": [
+      {
+        "schema": "native-candidate-score.v1",
+        "history_sha256": "bb8e0ac0f7c295f27da8816dda551e2302ac8d575849e0e9ac2c8db1be4defb4",
+        "action_sha256": "6975a5f2e2e34636502b71b41c21c4e06cdfc0dd1b5355e91feb6985da50ecf0",
+        "rendered_text_sha256": "0e354b693a2982e74291848cee99370431f4d759c6104cd6f91241ee456a0714",
+        "tokenizer_identity": "6212f739cd88998dfef7e3639160a679aa50cbd95bd9e252619271f1649702d8",
+        "template_sha256": "c3cf9e34abf4f9e36c2d72165aa9c132d3e2a725b6c2586aaa3a8af9d7a81041",
+        "candidate_start": 33463,
+        "token_count": 418,
+        "sum_logprob": -110.92787818306219,
+        "mean_logprob": -0.2653776990025411,
+        "request_id": "8be4456dd08944c4a54146013a96d006",
+        "input_token_alignment_verified": true,
+        "generation_template_alignment_verified": false,
+        "training_admitted": false,
+        "model_id": "Qwen-Qwen3.8-27B-base-15160e906848-3",
+        "response_sha256": "c13002597720a9b1e4b6d858019ae09a11de052bc4999681d557ce5f4be4845d"
+      },
+      {
+        "schema": "native-candidate-score.v1",
+        "history_sha256": "bb8e0ac0f7c295f27da8816dda551e2302ac8d575849e0e9ac2c8db1be4defb4",
+        "action_sha256": "b4dc419f433466648a15c5b37f7b14e08ba7db61f9fb4ae34ca3c2d23587133e",
+        "rendered_text_sha256": "b841d1e50886a59ccce9a76f6f7b1b3ec705ba1e38bb52d1c57579dd3234f6a9",
+        "tokenizer_identity": "6212f739cd88998dfef7e3639160a679aa50cbd95bd9e252619271f1649702d8",
+        "template_sha256": "c3cf9e34abf4f9e36c2d72165aa9c132d3e2a725b6c2586aaa3a8af9d7a81041",
+        "candidate_start": 33463,
+        "token_count": 381,
+        "sum_logprob": -94.6302754766371,
+        "mean_logprob": -0.2483734264478664,
+        "request_id": "dc2529c612944f8dbcdf13a229435a0a",
+        "input_token_alignment_verified": true,
+        "generation_template_alignment_verified": false,
+        "training_admitted": false,
+        "model_id": "Qwen-Qwen3.8-27B-base-15160e906848-3",
+        "response_sha256": "3d464acbfd65982c33ff7130b57a0f65cd275e4e5e79ce22cf8b233743aa8dee"
+      }
+    ],
+    "expert_incumbent_score": {
+      "schema": "native-candidate-score.v1",
+      "history_sha256": "bb8e0ac0f7c295f27da8816dda551e2302ac8d575849e0e9ac2c8db1be4defb4",
+      "action_sha256": "31b6a7cff8410573e6504847438d7b571173421cc37c300852222587922a981d",
+      "rendered_text_sha256": "703efb51e3131462c520bcb0cc2fd096a2d50e2f351708e39d4b2dec8546c0e8",
+      "tokenizer_identity": "6212f739cd88998dfef7e3639160a679aa50cbd95bd9e252619271f1649702d8",
+      "template_sha256": "c3cf9e34abf4f9e36c2d72165aa9c132d3e2a725b6c2586aaa3a8af9d7a81041",
+      "candidate_start": 33463,
+      "token_count": 413,
+      "sum_logprob": -112.4261289606353,
+      "mean_logprob": -0.27221822992889905,
+      "request_id": "175abb20ded24450be2dca6381e9ad99",
+      "input_token_alignment_verified": true,
+      "generation_template_alignment_verified": false,
+      "training_admitted": false,
+      "model_id": "Qwen-Qwen3.8-27B-base-15160e906848-3",
+      "response_sha256": "3bf2c87b4fe97365134df98e5b34e3152985ed69be5ab833e61c166daa5d85e9"
+    },
+    "artifact_exact_match_to_teacher": true,
+    "artifact_text_similarity": 1.0,
+    "sft_sha256": "0f395b8b5177c9242a334d7471081c21a34b9832620c469fae8c65b32e7d20da",
+    "technical_mvp_passed": true,
+    "learning_effectiveness_established": false
+  },
+  "local_archive": "/Users/fancy/project/finetuning-with-sampling-data/owned-coq-block-mvp-20261102/owned-coq-block-mvp-delivery-v1.tar.gz",
+  "local_dataset_validation": {
+    "rows": 1,
+    "total_tokens": 33846,
+    "supervised_tokens": 382
+  },
+  "research_learning_gain_established": false
+}
