@@ -83,6 +83,7 @@ async def run(args):
             task, args.sandbox_credentials, "terminus-rewrite-" + output.name
         )
         dump(output / "sandbox.json", {"sandbox_id": sb.sandbox_id})
+        sb.set_timeout(int(args.timeout + 300))
         sandbox.prepare(sb, state)
         env = SDKEnvironment(sb, manifest["cwd"])
         # SDKEnvironment contains no Fleet credential; only the controller calls LLM.
@@ -117,6 +118,7 @@ async def run(args):
                 "elapsed_sec": time.time() - start,
                 "metrics": context.model_dump(mode="json"),
                 "training_admitted": False,
+                "provider_cost_available": False,
             },
         )
     except Exception as exc:

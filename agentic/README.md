@@ -117,7 +117,7 @@ is a legacy Anthropic-shaped fixture. New native text blocks use `terminus.proto
 
 ## Historical protocol: native Claude Code (closed studies)
 
-New paired studies use the same pinned Claude Code 2.1.207 binary and Harbor
+The historical paired studies used the same pinned Claude Code 2.1.207 binary and Harbor
 ClaudeCode implementation for DeepSeek and Qwen. `claude_agent.UnifiedClaudeCode`
 reuses the frozen tb4-foundry `OfflineClaudeCode` adapter. The former OpenAI
 `execute` loop in `run.py` is retained only as a historical harness.

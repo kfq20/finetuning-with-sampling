@@ -14,6 +14,55 @@ import uuid
     "requires pinned Harbor and Linux tmux",
 )
 class NativeTerminus(unittest.TestCase):
+    def test_backend_usage_and_no_native_paid_retry(self):
+        from types import SimpleNamespace
+        from harbor.llms.chat import Chat
+        from append_rewrite.terminus.backend import FleetLLM
+        from append_rewrite.terminus.runtime import make_agent
+
+        async def exercise(root):
+            calls = []
+
+            def response(*args, **kwargs):
+                calls.append(kwargs)
+                return {
+                    "choices": [
+                        {"finish_reason": "stop", "message": {"content": "fixture"}}
+                    ],
+                    "usage": {
+                        "prompt_tokens": 12,
+                        "completion_tokens": 3,
+                        "prompt_tokens_details": {"cached_tokens": 4},
+                    },
+                }
+
+            b = FleetLLM.__new__(FleetLLM)
+            b.fleet = SimpleNamespace(chat=response)
+            b.requests, b.deadline, b.max_output_tokens = 0, 9999999999, 128000
+            b.root, b.model_name = root, "fixture"
+            got = await b.call("task")
+            self.assertEqual(got.usage.cache_tokens, 4)
+            self.assertEqual(got.usage.prompt_tokens, 12)
+            self.assertEqual(len(calls), 1)
+
+            class Broken:
+                calls = 0
+
+                async def call(self, **kwargs):
+                    self.calls += 1
+                    raise RuntimeError("Ambiguous provider failure")
+
+            broken = Broken()
+            agent = make_agent(root / "agent", "fixture", backend=broken)
+            with self.assertRaises(RuntimeError):
+                await agent._query_llm(Chat(agent._llm), "task")
+            self.assertEqual(broken.calls, 1)
+
+        with tempfile.TemporaryDirectory(
+            dir=os.environ.get("REWRITE_TEST_ROOT")
+        ) as directory:
+            asyncio.run(exercise(Path(directory)))
+
     def test_native_batch_feedback_and_confirmed_completion(self):
         from harbor.llms.base import LLMResponse
         from harbor.models.agent.context import AgentContext

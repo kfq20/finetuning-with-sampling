@@ -1,5 +1,8 @@
 # Tool-boundary rewrite: review version 1
 
+Historical Anthropic-shaped fixture design. New selected harness and native
+text blocks: [Terminus-2 rewrite](terminus-rewrite.md).
+
 This implements the model-free core discussed on2026-11-02. It does not launch
 models, run training, modify old experiments, or claim to reproduce paper MCMC.
 The upstream math/chemistry code and current native Claude Code harness are
