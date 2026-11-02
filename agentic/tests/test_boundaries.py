@@ -103,6 +103,41 @@ class Boundaries(unittest.TestCase):
                 ],
             )
 
+    def test_durable_job_reconnect_does_not_repeat_submission(self):
+        from append_rewrite.fleet import Fleet
+        from http.client import IncompleteRead
+        from unittest.mock import patch
+        import time
+
+        client = object.__new__(Fleet)
+        client.config = {"model_id": "owned-model"}
+        routes = []
+
+        def request(route, body=None):
+            routes.append(route)
+            if body is not None:
+                return {"job_id": "one"}
+            if len(routes) == 2:
+                raise IncompleteRead(b"")
+            return {
+                "status": "completed",
+                "results": [{"status": "completed", "response": {"choices": []}}],
+            }
+
+        client.request = request
+        with (
+            tempfile.TemporaryDirectory() as root,
+            patch("append_rewrite.fleet.time.sleep"),
+        ):
+            journal = Path(root) / "request"
+            result = client.chat([], journal=journal, deadline=time.time() + 60)
+            self.assertEqual(result, {"choices": []})
+            self.assertEqual(routes.count("/control/jobs"), 1)
+            self.assertTrue((journal / "accepted.json").is_file())
+            with self.assertRaises(FileExistsError):
+                client.chat([], journal=journal, deadline=time.time() + 60)
+            self.assertEqual(routes.count("/control/jobs"), 1)
+
     def test_state_pack_rejects_symlinks(self):
         with tempfile.TemporaryDirectory() as root:
             p = Path(root)

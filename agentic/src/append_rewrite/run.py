@@ -153,7 +153,12 @@ def run(inventory, sample_id, fleet_config, sandbox_credentials, output, mode):
                     output / "progress.json",
                     result | {"rounds": rounds, "tools": tools},
                 )
-                response = client.chat(messages, TOOLS)
+                response = client.chat(
+                    messages,
+                    TOOLS,
+                    journal=output / "jobs" / f"{rounds + 1:05d}",
+                    deadline=deadline,
+                )
                 rounds += 1
                 dump(output / "model-responses" / f"{rounds:05d}.json", response)
                 usage.append(response.get("usage", {}))

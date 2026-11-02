@@ -104,6 +104,7 @@ def inspect_receipt(path, workspace):
     seed = agent.get("load_trajectory")
     if not seed:
         return None  # No continuation identity: not an append sample.
+    seed = str((workspace / seed).resolve()) if not Path(seed).is_absolute() else seed
     tag = str(r.get("tag", path.stem))
     if any(
         word in tag.lower()
@@ -114,6 +115,8 @@ def inspect_receipt(path, workspace):
     if len(tasks) != 1:
         return None
     task = Path(tasks[0]["path"])
+    if not task.is_absolute():
+        task = (workspace / task).resolve()
     item = {
         "sample_id": hashlib.sha256(str(path).encode()).hexdigest()[:20],
         "workspace": str(workspace),
@@ -167,6 +170,8 @@ def inspect_receipt(path, workspace):
             item["holds"].append("observable_prefix_mismatch")
         item["prefix_messages"] = len(prefix)
         item["expert_messages"] = len(full) - len(prefix)
+        if "requires_public_asset_binding" in json.dumps(prefix + full[len(prefix) :]):
+            item["holds"].append("image_asset_binding_missing")
         item["_context"] = prefix
         item["_expert"] = full[len(prefix) :]
     item["admission"] = "source_indexed" if not item["holds"] else "hold"
@@ -196,6 +201,10 @@ def main():
     recent = base / "tb4-evolution-batches/foundry-evolve10-20261102-b7d3a1/data"
     if recent.is_dir():
         workspaces.extend(q for q in recent.iterdir() if q.is_dir())
+    workspaces.append(
+        base
+        / "relayforge/terminal-pipeline/experiments/append-goals5-extra-20261101-7a8f24"
+    )
     rows = []
     seen = set()
     for ws in workspaces:
