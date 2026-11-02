@@ -174,6 +174,10 @@ def run(inventory, sample_id, fleet_config, sandbox_credentials, output, mode):
                     assistant["tool_calls"] = calls
                 messages.append(assistant)
                 trace.append(assistant)
+                dump(
+                    output / "trajectory.json",
+                    {"messages": trace, "observations_are_real": True},
+                )
                 if not calls:
                     break
                 for call in calls:

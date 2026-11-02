@@ -59,3 +59,15 @@ persistent storage. Existing experiments/images/graders are read-only sources.
 The upstream math/chemistry code and training behavior remain unchanged.
 
 Model-free checks: `PYTHONPATH=agentic/src python -m unittest discover -s agentic/tests`.
+
+Fleet inference uses durable Jobs: each generation records an exclusive intent,
+then the accepted job ID, then terminal output. Interrupted result reads reconnect
+to that ID; they never submit a replacement generation. Lost POST acknowledgement
+is a hold. Completed jobs with incomplete generations remain a hold.
+
+State extraction follows the original `runtime-binding.json` restore manifests.
+A folder called `environment/public` does not establish its destination: some
+lanes restore to `/app/project`, others to `/app`, and some restore multiple
+roots. Every restored file must match an expected hash/mode, obtained only from
+the published pre-append package or captured parent trial. Missing bindings,
+multimodal assets and service-state adapters remain holds before student dispatch.

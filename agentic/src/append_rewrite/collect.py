@@ -240,13 +240,24 @@ def main():
                     row["context"] = ref(dest / "context.json")
                     row["expert_observable"] = ref(dest / "expert.json")
                     if row["admission"] == "source_indexed":
-                        public = Path(row["initial_public_state_path"])
+                        from .state import plan
+
                         state = dest / "start_state"
-                        if any(p.is_symlink() for p in public.rglob("*")):
-                            row["holds"].append("state_symlink_requires_adapter")
+                        try:
+                            mapping = plan(
+                                Path(row["task_path"]), Path(row["parent_native_path"])
+                            )
+                            for name, source in mapping.items():
+                                target = state / name
+                                target.parent.mkdir(parents=True, exist_ok=True)
+                                shutil.copy2(source, target)
+                        except (ValueError, KeyError, FileNotFoundError) as exc:
+                            row["holds"].append(
+                                str(exc)
+                                if isinstance(exc, ValueError)
+                                else "state_binding_missing"
+                            )
                             row["admission"] = "hold"
-                        elif not state.exists():
-                            shutil.copytree(public, state, copy_function=shutil.copy2)
                         if row["admission"] == "source_indexed":
                             manifest = {
                                 str(p.relative_to(state)): {
@@ -261,7 +272,7 @@ def main():
                                 {
                                     "files": manifest,
                                     "restore_root": "/app",
-                                    "source": str(public),
+                                    "source": row["initial_public_state_path"],
                                 },
                             )
                             row["state_manifest"] = ref(dest / "state-manifest.json")

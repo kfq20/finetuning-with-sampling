@@ -138,6 +138,35 @@ class Boundaries(unittest.TestCase):
                 client.chat([], journal=journal, deadline=time.time() + 60)
             self.assertEqual(routes.count("/control/jobs"), 1)
 
+    def test_restore_uses_published_destination_not_public_folder_guess(self):
+        from append_rewrite.state import plan
+        from append_rewrite.collect import sha
+        import json
+
+        with tempfile.TemporaryDirectory() as root:
+            task = Path(root) / "task"
+            public = task / "environment/public"
+            public.mkdir(parents=True)
+            f = public / "input.db"
+            f.write_bytes(b"checkpoint")
+            f.chmod(0o640)
+            (task / "runtime-binding.json").write_text(
+                json.dumps(
+                    {
+                        "restore_manifests": {
+                            "/app/project": {
+                                "input.db": {"sha256": sha(f), "mode": 0o640}
+                            }
+                        }
+                    }
+                )
+            )
+            mapped = plan(task, Path(root) / "missing-native.jsonl")
+            self.assertEqual(mapped, {"project/input.db": f})
+            f.write_bytes(b"future-state")
+            with self.assertRaisesRegex(ValueError, "checkpoint_source_missing"):
+                plan(task, Path(root) / "missing-native.jsonl")
+
     def test_state_pack_rejects_symlinks(self):
         with tempfile.TemporaryDirectory() as root:
             p = Path(root)
