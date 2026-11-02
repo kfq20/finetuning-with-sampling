@@ -183,10 +183,18 @@ def native_metrics(seed, native):
                 calls.append({"id": b["id"], "name": b["name"]})
             elif b.get("type") == "tool_result":
                 results.append(
-                    {"id": b.get("tool_use_id"), "is_error": b.get("is_error", False)}
+                    {
+                        "id": b.get("tool_use_id"),
+                        "is_error": b.get("is_error", False),
+                        "validation_rejected": "InputValidationError"
+                        in str(b.get("content", "")),
+                    }
                 )
     return {
         "tool_calls": len(calls),
+        "distinct_tool_ids": len({x["id"] for x in calls}),
+        "validation_rejections": sum(x["validation_rejected"] for x in results),
+        "accepted_tool_calls": sum(not x["validation_rejected"] for x in results),
         "tools": calls,
         "tool_results": results,
         "tool_pairs_complete": {x["id"] for x in calls} == {x["id"] for x in results},

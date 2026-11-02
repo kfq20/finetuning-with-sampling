@@ -108,6 +108,14 @@ def review(root, prepared):
                 original = expert_artifacts / name
                 if original.is_file():
                     item["overlap"][name] = source_overlap(data, original.read_bytes())
+        offline = arm / "offline-snapshot-score.json"
+        if offline.exists():
+            snapshot_score = json.loads(offline.read_text())
+            item["interrupted_snapshot_score"] = {
+                "reward": snapshot_score.get("score", {}).get("reward"),
+                "classification": snapshot_score["classification"],
+                "report_sha256": sha(offline),
+            }
         item["comparison_ready"] = (
             item["normal_cli"] and item["fresh_reward"] is not None
         )
