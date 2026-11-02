@@ -202,8 +202,13 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--output", type=Path, required=True)
     p.add_argument("--state-adapters", type=Path)
+    p.add_argument("--receipt-inventory", type=Path)
     a = p.parse_args()
     adapters = json.loads(a.state_adapters.read_text()) if a.state_adapters else {}
+    frozen = (
+        json.loads(a.receipt_inventory.read_text()) if a.receipt_inventory else None
+    )
+    selected = {r["receipt"]["path"]: r for r in frozen["rows"]} if frozen else None
     base = Path("/vePFS-Mindverse/user/intern/fanqi")
     root = base / "tb4-evolution-goals"
     workspaces = []
@@ -246,6 +251,11 @@ def main():
             ]
         for folder in folders:
             for path in sorted(folder.glob("*.json")):
+                if selected is not None:
+                    if str(path) not in selected:
+                        continue
+                    if sha(path) != selected[str(path)]["receipt"]["sha256"]:
+                        raise ValueError("FrozenReceiptChanged")
                 asset_dir = (
                     a.output
                     / "samples"
@@ -346,6 +356,10 @@ def main():
         {
             "schema_version": 1,
             "observed_at": time.time(),
+            "source_cutoff": frozen["observed_at"] if frozen else None,
+            "receipt_inventory": ref(a.receipt_inventory)
+            if a.receipt_inventory
+            else None,
             "new_solver_requests": 0,
             "unit": "one previously executed native append, not cumulative prefix copies",
             "source_indexed_is_not_sandbox_admission": True,
