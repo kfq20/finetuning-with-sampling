@@ -160,6 +160,41 @@ def run(a):
             summary | {"status": "deployment_hold", "deployment_request": status},
         )
         return
+    if a.extensions_only:
+        prefix = "Question: What is 2 + 2?\nAnswer:\n"
+        common = {
+            "model": cfg["model_id"],
+            "prompt": prefix + "9",
+            "max_tokens": 1,
+            "temperature": 0,
+            "echo": True,
+            "logprobs": 1,
+        }
+        for name, fields in [
+            ("prompt_logprobs", {"prompt_logprobs": 1}),
+            ("native_logprob_fields", {"return_logprob": True, "logprob_start_len": 0}),
+        ]:
+            response, meta = request(name, "/completions", common | fields)
+            if response is not None:
+                if response.get("model") != cfg["model_id"]:
+                    raise ValueError("Response model mismatch")
+                meta.update(analyze_echo(response, prefix, "9"))
+                meta["metadata_keys"] = list((response.get("metadata") or {}).keys())
+                meta["prompt_logprobs_type"] = type(
+                    response.get("prompt_logprobs")
+                ).__name__
+            summary["probes"][name] = meta
+            dump(a.output / "progress.json", summary)
+            if meta.get("http_status") in (401, 403):
+                dump(a.output / "summary.json", summary | {"status": "auth_hold"})
+                return
+        summary.update(
+            status="extension_probe_completed",
+            elapsed_seconds=time.time() - summary["started_at"],
+        )
+        dump(a.output / "summary.json", summary)
+        print(json.dumps(summary))
+        return
     chat = {
         "model": cfg["model_id"],
         "messages": [{"role": "user", "content": "Reply with exactly OK."}],
@@ -248,6 +283,7 @@ def main():
     p.add_argument("--fleet-config", type=Path, required=True)
     p.add_argument("--protocol", type=Path, required=True)
     p.add_argument("--output", type=Path, required=True)
+    p.add_argument("--extensions-only", action="store_true")
     run(p.parse_args())
 
 
