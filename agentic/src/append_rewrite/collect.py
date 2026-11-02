@@ -247,10 +247,11 @@ def main():
                             mapping = plan(
                                 Path(row["task_path"]), Path(row["parent_native_path"])
                             )
-                            for name, source in mapping.items():
+                            for name, (source, mode) in mapping.items():
                                 target = state / name
                                 target.parent.mkdir(parents=True, exist_ok=True)
                                 shutil.copy2(source, target)
+                                target.chmod(mode)
                         except (ValueError, KeyError, FileNotFoundError) as exc:
                             row["holds"].append(
                                 str(exc)

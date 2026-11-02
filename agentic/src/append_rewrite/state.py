@@ -34,7 +34,7 @@ def plan(task: Path, parent_native: Path):
         ]
     index = {}
     for p in sources:
-        index.setdefault((sha(p), p.stat().st_mode & 511), p)
+        index.setdefault(sha(p), p)
     mapped = {}
     for root, files in manifests.items():
         target_root = Path(root)
@@ -44,8 +44,8 @@ def plan(task: Path, parent_native: Path):
             if Path(name).is_absolute() or ".." in Path(name).parts:
                 raise ValueError("unsafe_restore_name")
             target = str((target_root / name).relative_to("/app"))
-            source = index.get((meta["sha256"], meta["mode"]))
+            source = index.get(meta["sha256"])
             if source is None:
                 raise ValueError("checkpoint_source_missing:" + target)
-            mapped[target] = source
+            mapped[target] = (source, meta["mode"])
     return mapped

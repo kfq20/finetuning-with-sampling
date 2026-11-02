@@ -162,7 +162,7 @@ class Boundaries(unittest.TestCase):
                 )
             )
             mapped = plan(task, Path(root) / "missing-native.jsonl")
-            self.assertEqual(mapped, {"project/input.db": f})
+            self.assertEqual(mapped, {"project/input.db": (f, 0o640)})
             f.write_bytes(b"future-state")
             with self.assertRaisesRegex(ValueError, "checkpoint_source_missing"):
                 plan(task, Path(root) / "missing-native.jsonl")
