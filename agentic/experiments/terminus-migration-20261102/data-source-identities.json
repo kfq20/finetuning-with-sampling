@@ -1,0 +1,22 @@
+[
+  {
+    "id": "nvidia/Nemotron-Terminal-Corpus",
+    "error_type": "URLError"
+  },
+  {
+    "id": "nvidia/Nemotron-Terminal-Synthetic-Tasks",
+    "error_type": "URLError"
+  },
+  {
+    "id": "open-thoughts/OpenThoughts-Agent-SFT-100K",
+    "error_type": "URLError"
+  },
+  {
+    "id": "SWE-bench/SWE-smith",
+    "error_type": "URLError"
+  },
+  {
+    "id": "SWE-bench/SWE-smith-trajectories",
+    "error_type": "URLError"
+  }
+]
