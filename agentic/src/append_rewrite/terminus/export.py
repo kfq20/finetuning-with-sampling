@@ -3,7 +3,7 @@
 from .protocol import public_messages, action
 
 
-def export_row(history, tokenizer, *, provenance):
+def export_row(history, tokenizer, *, provenance, target_start_message=0):
     history = public_messages(history)
     if not history or len(history) % 2:
         raise ValueError("Complete native history required")
@@ -14,7 +14,7 @@ def export_row(history, tokenizer, *, provenance):
     loss = [False] * len(encoded.ids)
     spans = []
     for i, message in enumerate(history):
-        if message["role"] != "assistant":
+        if message["role"] != "assistant" or i < target_start_message:
             continue
         action(message["content"])
         prefix = tokenizer.apply_chat_template(
