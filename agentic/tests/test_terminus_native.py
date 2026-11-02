@@ -15,7 +15,6 @@ import uuid
 )
 class NativeTerminus(unittest.TestCase):
     def test_native_batch_feedback_and_confirmed_completion(self):
-        from harbor.agents.terminus_2.tmux_session import TmuxSession
         from harbor.llms.base import LLMResponse
         from harbor.models.agent.context import AgentContext
         from harbor.environments.base import ExecResult
@@ -29,7 +28,9 @@ class NativeTerminus(unittest.TestCase):
                 default_user = None
 
                 async def exec(self, command, **kwargs):
-                    cmd = command.replace("tmux ", f"tmux -L {socket} ")
+                    cmd = command.replace("tmux ", f"tmux -L {socket} ").replace(
+                        "/logs/agent", str(root / "terminal-logs")
+                    )
                     proc = await asyncio.create_subprocess_shell(
                         cmd,
                         stdout=asyncio.subprocess.PIPE,
@@ -82,7 +83,7 @@ class NativeTerminus(unittest.TestCase):
             boundaries = []
 
             async def before(agent, history, prompt):
-                if history:
+                if len(history) == 2:
                     self.assertIn("NATIVE_OK", prompt)
                 boundaries.append(
                     agent.capture_boundary(
@@ -100,15 +101,8 @@ class NativeTerminus(unittest.TestCase):
                 reference="fixture reference",
                 before_model=before,
             )
-            agent._session = TmuxSession(
-                session_name="test",
-                environment=env,
-                logging_path=root / "pane.log",
-                local_asciinema_recording_path=None,
-                remote_asciinema_recording_path=None,
-            )
             try:
-                await agent._session.start()
+                await agent.setup(env)
                 ctx = AgentContext()
                 await asyncio.wait_for(
                     agent.run("Write result.txt and verify it", env, ctx), 30

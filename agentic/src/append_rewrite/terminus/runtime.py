@@ -74,7 +74,39 @@ def make_agent(
     verify_pin()
     from harbor.agents.terminus_2.terminus_2 import Terminus2
 
+    from harbor.agents.terminus_2.tmux_session import TmuxSession
+    from harbor.models.environment.paths import EnvironmentPaths
+
+    class OfflineTmux(TmuxSession):
+        async def _attempt_tmux_installation(self):
+            probe = await self.environment.exec(
+                command="command -v tmux", user=self._user
+            )
+            if probe.return_code:
+                raise RuntimeError(
+                    "OfflineTmuxMissing; rebuild environment, no online install"
+                )
+
     class RewriteTerminus2(Terminus2):
+        async def setup(self, environment):
+            probe = await environment.exec(
+                command="mkdir -p /logs/agent", user=environment.default_user
+            )
+            if probe.return_code:
+                raise RuntimeError("TerminusLogDirectoryUnavailable")
+            self._session = OfflineTmux(
+                session_name=self.name(),
+                environment=environment,
+                logging_path=EnvironmentPaths.agent_dir / "terminus_2.pane",
+                local_asciinema_recording_path=None,
+                remote_asciinema_recording_path=None,
+                pane_width=self.options.tmux_pane_width,
+                pane_height=self.options.tmux_pane_height,
+                extra_env=self._extra_env,
+                user=environment.default_user,
+            )
+            await self._session.start()
+
         def _init_llm(self, *args, **options):
             selected = (
                 backend if backend is not None else super()._init_llm(*args, **options)
@@ -116,6 +148,7 @@ def make_agent(
     }
     if set(kwargs) & set(fixed):
         raise ValueError("Selected research protocol overrides are forbidden")
+    Path(logs_dir).mkdir(parents=True, exist_ok=True)
     return RewriteTerminus2(
         logs_dir=Path(logs_dir), model_name=model_name, **fixed, **kwargs
     )

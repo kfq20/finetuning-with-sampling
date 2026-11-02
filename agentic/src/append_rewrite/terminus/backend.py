@@ -52,5 +52,9 @@ class FleetLLM:
             usage=UsageInfo(
                 prompt_tokens=u.get("prompt_tokens", 0),
                 completion_tokens=u.get("completion_tokens", 0),
+                cache_tokens=(u.get("prompt_tokens_details") or {}).get(
+                    "cached_tokens", 0
+                ),
+                cost_usd=0.0,
             ),
         )

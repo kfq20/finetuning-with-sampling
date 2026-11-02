@@ -21,8 +21,11 @@ study and contamination-safe evaluation.
 ## Public agent resources
 
 Counts below describe publisher claims and currently displayed row counts, not
-our admitted success count. Revision IDs and card licenses are in
+our admitted success count. Direct metadata API requests failed from this workstation; the attempted queries
+and error types are retained in
 `../experiments/terminus-migration-20261102/data-source-identities.json`.
+Numbers and licenses below come from the linked publisher cards. Revision pinning
+and row-level admission are required at ingestion, and have not been completed.
 
 | Source | Scale / assets | Fit for this work | Card license |
 |---|---|---|---|
