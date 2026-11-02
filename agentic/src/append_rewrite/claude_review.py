@@ -65,8 +65,13 @@ def review(root, prepared):
     source_receipt = json.loads(Path(row["receipt"]["path"]).read_text())
     expert_artifacts = Path(source_receipt["raw_result_path"]).parent / "artifacts"
     summary = {"sample_id": row["sample_id"], "arms": {}, "training_admitted": False}
+    selection_path = root / "selected-attempts.json"
+    selection = (
+        json.loads(selection_path.read_text()) if selection_path.exists() else {}
+    )
+    summary["selection"] = selection
     for mode in ("expert", "none"):
-        arm = root / mode
+        arm = root / selection.get(mode, mode)
         if not (arm / "receipt.json").exists():
             summary["arms"][mode] = {
                 "status": "running_or_pending",
