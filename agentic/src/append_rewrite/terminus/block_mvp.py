@@ -10,6 +10,7 @@ import asyncio
 import json
 from pathlib import Path
 import time
+import shutil
 
 from .. import sandbox
 from ..collect import dump, sha
@@ -96,44 +97,65 @@ async def run(args):
     )
     # Actual replay materializes the intermediate state; no final solved state
     # is substituted for the prefix checkpoint.
-    sb = restore(
-        task,
-        state,
-        args.sandbox_credentials,
-        "block-mvp-prefix-replay",
-        args.runtime_assets,
-    )
-    try:
-        agent = await terminal(sb, out / "prefix-agent")
-        observations = []
-        for i in range(target - 1):
-            raw = history[2 * i + 1]["content"]
-            observations.append(await execute(agent, raw))
-        active = await SDKEnvironment(sb, "/app/project").exec(
-            command="tmux display-message -p -t terminus-2 '#{pane_current_command}'"
-        )
-        if active.stdout.strip() not in ["bash", "sh"]:
-            raise ValueError("Prefix terminal not quiescent")
-        snap = sandbox.capture(
-            sb, ["/app/project", "/app/output"], out / "checkpoint.tgz"
-        )
+    if args.prepared_prefix:
+        previous = args.prepared_prefix
+        info = json.loads((previous / "checkpoint.json").read_text())
+        if info["teacher_prefix_sha256"] != digest(prefix) or info["capture"][
+            "archive_sha256"
+        ] != sha(previous / "checkpoint.tgz"):
+            raise ValueError("Prepared prefix identity drift")
+        for name in ["checkpoint.tgz", "checkpoint.json", "initial-control.json"]:
+            shutil.copyfile(previous / name, out / name)
+        initial = json.loads((out / "initial-control.json").read_text())
+        if initial["reward"] != 0:
+            raise ValueError("Prepared prefix task already complete")
         dump(
-            out / "checkpoint.json",
+            out / "prepared-prefix-binding.json",
             {
-                "teacher_prefix_sha256": digest(prefix),
-                "capture": snap,
-                "expert_next_decision": target,
-                "scope": ["files", "fresh shell cwd"],
-                "replayed_teacher_model_requests": 0,
+                "source": str(previous),
+                "checkpoint_sha256": sha(previous / "checkpoint.tgz"),
+                "model_generations_replayed": 0,
             },
         )
-        dump(out / "prefix-replay-observations.json", observations)
-        initial = sandbox.grade(sb, task)
-        dump(out / "initial-control.json", initial)
-        if initial["reward"] != 0:
-            raise ValueError("Selected prefix task already complete")
-    finally:
-        sb.kill()
+    else:
+        sb = restore(
+            task,
+            state,
+            args.sandbox_credentials,
+            "block-mvp-prefix-replay",
+            args.runtime_assets,
+        )
+        try:
+            agent = await terminal(sb, out / "prefix-agent")
+            observations = []
+            for i in range(target - 1):
+                raw = history[2 * i + 1]["content"]
+                observations.append(await execute(agent, raw))
+            active = await SDKEnvironment(sb, "/app/project").exec(
+                command="tmux display-message -p -t terminus-2 '#{pane_current_command}'"
+            )
+            if active.stdout.strip() not in ["bash", "sh"]:
+                raise ValueError("Prefix terminal not quiescent")
+            snap = sandbox.capture(
+                sb, ["/app/project", "/app/output"], out / "checkpoint.tgz"
+            )
+            dump(
+                out / "checkpoint.json",
+                {
+                    "teacher_prefix_sha256": digest(prefix),
+                    "capture": snap,
+                    "expert_next_decision": target,
+                    "scope": ["files", "fresh shell cwd"],
+                    "replayed_teacher_model_requests": 0,
+                },
+            )
+            dump(out / "prefix-replay-observations.json", observations)
+            initial = sandbox.grade(sb, task)
+            dump(out / "initial-control.json", initial)
+            if initial["reward"] != 0:
+                raise ValueError("Selected prefix task already complete")
+        finally:
+            sb.kill()
     suffix = [
         m["content"]
         for m in history[2 * target :]
@@ -192,10 +214,26 @@ async def run(args):
         finally:
             sb.kill()
 
-    oracle = await evaluate(target_raw, "expert-control")
+    if args.prepared_prefix:
+        oracle_path = args.prepared_prefix / "expert-control/verdict.json"
+        oracle = json.loads(oracle_path.read_text())
+        dump(
+            out / "expert-control-reused.json",
+            {
+                "source": str(oracle_path),
+                "sha256": sha(oracle_path),
+                "original_reward": oracle["original"]["reward"],
+                "fresh_reward": oracle["fresh"]["reward"],
+            },
+        )
+    else:
+        oracle = await evaluate(target_raw, "expert-control")
     if not oracle["feasible"]:
         raise ValueError("Expert block/suffix control failed")
-    noop = await evaluate('{"commands":[],"task_complete":false}', "noop-control")
+    noop = await evaluate(
+        '{"analysis":"No-op control","plan":"Leave checkpoint unchanged","commands":[],"task_complete":false}',
+        "noop-control",
+    )
     if noop["feasible"]:
         raise ValueError("Target block is unnecessary: no-op plus suffix passes")
     t = PinnedTokenizer(args.tokenizer)
@@ -285,6 +323,7 @@ def main():
     ]:
         p.add_argument("--" + name, type=Path, required=True)
     p.add_argument("--expert-decision", type=int, required=True)
+    p.add_argument("--prepared-prefix", type=Path)
     args = p.parse_args()
     try:
         asyncio.run(run(args))
