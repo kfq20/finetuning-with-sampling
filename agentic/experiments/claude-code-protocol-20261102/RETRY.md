@@ -39,3 +39,19 @@ retired; no lossless same-state resume is claimed. Future error closure also
 captures /app/project and /tmp Coq .v sources. Compiled caches can be rebuilt;
 this is file recovery, not a process/memory snapshot. Original failed attempts,
 submission hashes and snapshot scores remain unchanged.
+
+## First live buffered pair
+
+The first buffered expert arm encountered the same provider SSE error three
+consecutive times in one request (total117.98seconds). No response content was
+delivered for these failed attempts. Retry cannot guarantee recovery from a
+persistent provider failure. Native Claude Code then attempted its own nonstream
+fallback. The frozen stream-only gateway rejected that permanently but returned
+HTTP502, leading to11 local, unbilled-by-provider rejection requests and delay.
+The expert arm closed as infrastructure hold; no new task attempt was started.
+
+The next maintained gateway returns Anthropic-shaped HTTP400 for a local invalid
+request, avoiding retryable502. A real localhost HTTP test confirms the rejected
+nonstream request never reaches upstream. A second regression confirms buffered
+responses return at message_stop instead of requiring a proxy to close HTTP EOF.
+Suite29pass. These changes were not patched into the running frozen pair.

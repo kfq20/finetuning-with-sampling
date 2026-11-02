@@ -152,3 +152,89 @@ class BufferedRetryTests(unittest.TestCase):
                 open_response, "selected", 2, lambda *x: None, sleep=lambda _: None
             )
         self.assertEqual(len(attempts), 2)
+
+
+class TerminalResponseTests(unittest.TestCase):
+    def test_message_stop_does_not_wait_for_http_eof(self):
+        class KeptOpen(Response):
+            def read1(self, length):
+                if not self.raw:
+                    raise TimeoutError("proxy did not close its HTTP stream")
+                return super().read1(length)
+
+        payload = valid_tool_stream()
+        actual, _ = validated_stream(KeptOpen(payload), "selected")
+        self.assertEqual(actual, payload)
+
+    def test_permanent_native_request_rejection_is_http400_not_retryable502(self):
+        import hashlib
+        import http.client
+        import os
+        from pathlib import Path
+        import socket
+        import subprocess
+        import sys
+        import tempfile
+        import time
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            config = root / "config.json"
+            config.write_text(
+                json.dumps(
+                    {
+                        "base_url": "https://example.invalid",
+                        "model_id": "selected",
+                        "api_key": "fixture-only",
+                        "task_id": "fixture",
+                        "client_sha256": hashlib.sha256(b"fixture-token").hexdigest(),
+                    }
+                )
+            )
+            config.chmod(0o600)
+            with socket.socket() as sock:
+                sock.bind(("127.0.0.1", 0))
+                port = sock.getsockname()[1]
+            process = subprocess.Popen(
+                [
+                    sys.executable,
+                    "-m",
+                    "append_rewrite.claude_gateway",
+                    "--config",
+                    str(config),
+                    "--root",
+                    str(root / "state"),
+                    "--port",
+                    str(port),
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                env=os.environ,
+            )
+            try:
+                for _ in range(200):
+                    if (root / "state/ready.json").exists():
+                        break
+                    time.sleep(0.01)
+                else:
+                    self.fail("gateway not ready")
+                conn = http.client.HTTPConnection("127.0.0.1", port, timeout=3)
+                conn.request(
+                    "POST",
+                    "/v1/messages",
+                    json.dumps({"model": "selected", "stream": False}),
+                    {"Content-Type": "application/json", "x-api-key": "fixture-token"},
+                )
+                response = conn.getresponse()
+                self.assertEqual(response.status, 400)
+                self.assertEqual(
+                    json.loads(response.read())["error"]["type"],
+                    "invalid_request_error",
+                )
+                conn.close()
+                events = (root / "state/requests.jsonl").read_text()
+                self.assertNotIn('"phase": "started"', events)
+                self.assertNotIn('"phase": "upstream_attempt_started"', events)
+            finally:
+                process.terminate()
+                process.wait(timeout=3)

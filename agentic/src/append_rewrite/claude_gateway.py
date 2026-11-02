@@ -144,6 +144,10 @@ def validated_stream(response, model):
             if not line.strip():
                 output.extend(frame)
                 frame = b""
+                if stopped:
+                    # message_stop closes this response; do not wait for a
+                    # proxy to close a keep-alive HTTP transport afterwards.
+                    return bytes(output), {"usage": usage, "stop_reason": stop_reason}
     if not stopped or pending.strip() or frame.strip():
         raise StreamFailure("IncompleteAnthropicStream")
     return bytes(output), {"usage": usage, "stop_reason": stop_reason}
@@ -505,6 +509,24 @@ def serve(config_file, root, port):
                                 }
                             )
                         )
+                    elif isinstance(exc, ValueError):
+                        # Permanent local request rejection is not a server outage.
+                        # Native nonstream fallback must not retry a local 502 loop.
+                        raw = json.dumps(
+                            {
+                                "type": "error",
+                                "error": {
+                                    "type": "invalid_request_error",
+                                    "message": "Scoped gateway rejected request: "
+                                    + code,
+                                },
+                            }
+                        ).encode()
+                        self.send_response(400)
+                        self.send_header("Content-Type", "application/json")
+                        self.send_header("Content-Length", str(len(raw)))
+                        self.end_headers()
+                        write(raw)
                     else:
                         self.send_error(502, "Scoped gateway error")
                 except OSError:
