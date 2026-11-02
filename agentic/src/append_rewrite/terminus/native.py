@@ -107,6 +107,8 @@ class NativeRewriteLLM:
         base = self.root / f"turn-{self.turn:04d}"
         base.mkdir(mode=0o700)
         candidates = []
+        all_usage = []
+        scoring_input_tokens = 0
         for index in range(self.proposals):
             start = time.monotonic()
             result = await asyncio.to_thread(
@@ -115,6 +117,19 @@ class NativeRewriteLLM:
                 self.tokenizer,
                 journal=base / f"proposal-{index}",
             )
+            usage = {
+                k: v
+                for k, v in result["meta_info"].items()
+                if k
+                in [
+                    "prompt_tokens",
+                    "completion_tokens",
+                    "cached_tokens",
+                    "id",
+                    "finish_reason",
+                ]
+            }
+            all_usage.append(usage)
             raw = result["text"]
             try:
                 action(raw)
@@ -130,13 +145,14 @@ class NativeRewriteLLM:
                 self.client.score, rendered, journal=base / f"score-{index}"
             )
             score["generation_template_alignment_verified"] = True
+            scoring_input_tokens += len(rendered.input_ids)
             candidates.append(
                 {
                     "index": index,
                     "status": "scored",
                     "raw": raw,
                     "score": score,
-                    "generation_usage": result["meta_info"],
+                    "generation_usage": usage,
                     "elapsed_sec": time.monotonic() - start,
                 }
             )
@@ -150,15 +166,17 @@ class NativeRewriteLLM:
             "selected_index": best["index"],
             "candidates": candidates,
             "training_admitted": False,
+            "scoring_prefill_tokens": scoring_input_tokens,
+            "generation_usage": all_usage,
         }
         (base / "decision.json").write_text(json.dumps(record, indent=2))
         self.decisions.append(record)
-        all_usage = [c["generation_usage"] for c in usable]
         return LLMResponse(
             content=best["raw"],
             model_name=self.model_name,
             usage=UsageInfo(
-                prompt_tokens=sum(x.get("prompt_tokens", 0) for x in all_usage),
+                prompt_tokens=sum(x.get("prompt_tokens", 0) for x in all_usage)
+                + scoring_input_tokens,
                 completion_tokens=sum(x.get("completion_tokens", 0) for x in all_usage),
                 cache_tokens=0,
                 cost_usd=0.0,
