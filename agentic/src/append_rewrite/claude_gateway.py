@@ -73,6 +73,10 @@ def validated_stream(response, model):
                         "ProviderSSEError",
                         retryable=error_type in ("api_error", "overloaded_error"),
                         raw_error=data,
+                        status={
+                            "authentication_error": 401,
+                            "permission_error": 403,
+                        }.get(error_type),
                     )
                 if stopped:
                     raise StreamFailure("EventsAfterMessageStop")

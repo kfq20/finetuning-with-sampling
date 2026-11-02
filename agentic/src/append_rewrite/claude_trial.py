@@ -156,6 +156,24 @@ def collect_gateway(g, output):
     return {
         "started_requests": sum(e["phase"] == "started" for e in events),
         "complete_requests": len(completed),
+        "upstream_attempts": sum(
+            e["phase"] == "upstream_attempt_started" for e in events
+        ),
+        "upstream_attempt_errors": [
+            {
+                k: e.get(k)
+                for k in (
+                    "id",
+                    "attempt",
+                    "status",
+                    "code",
+                    "retryable",
+                    "usage_unknown",
+                )
+            }
+            for e in events
+            if e["phase"] == "upstream_attempt_error"
+        ],
         "errors": [
             {k: e.get(k) for k in ("id", "phase", "status", "code", "error_type")}
             for e in events
@@ -436,7 +454,10 @@ async def run(a):
         if gateway:
             try:
                 result["gateway"] = collect_gateway(gateway, a.output)
-                if result["gateway"]["errors"] and result["status"] == "completed":
+                if (
+                    result["gateway"]["errors"]
+                    or result["gateway"]["upstream_attempt_errors"]
+                ) and result["status"] == "completed":
                     result["status"] = "completed_with_transport_events"
             except Exception as exc:
                 result["gateway_evidence_error"] = type(exc).__name__
