@@ -66,7 +66,46 @@ def validate_call(call):
     return args
 
 
-def run(inventory, sample_id, fleet_config, sandbox_credentials, output, mode):
+def build_messages(context, requirement, expert, reference_mode="expert"):
+    system = (
+        "You are a terminal coding agent. Complete the current append task in the REAL sandbox. "
+        "Use execute for actual commands, reads, edits and tests. The historical interaction and expert example "
+        "are observable reference material, not the current sandbox observations. Obtain your own tool feedback. "
+        "You may choose a different implementation. Do not access /tests or /solution or alter graders. "
+        "When finished, give a short final response. Tools run from /app and have no network."
+    )
+    user = (
+        "PUBLIC HISTORICAL CONTEXT:\n"
+        + json.dumps(context, ensure_ascii=False)
+        + "\nCURRENT APPEND REQUIREMENT:\n"
+        + requirement
+        + (
+            (
+                "\nPRIVILEGED SUCCESSFUL EXPERT CONTINUATION (reference only):\n"
+                + json.dumps(expert, ensure_ascii=False)
+            )
+            if reference_mode == "expert"
+            else ""
+        )
+        + "\nNow complete ONLY this append task from the supplied start state, executing your own actions."
+    )
+    messages = [
+        {"role": "system", "content": system},
+        {"role": "user", "content": user},
+    ]
+    return messages
+
+
+def run(
+    inventory,
+    sample_id,
+    fleet_config,
+    sandbox_credentials,
+    output,
+    mode,
+    reference_mode="expert",
+    paired_reference=None,
+):
     output.mkdir(parents=True, exist_ok=False, mode=0o700)
     began = time.time()
     result = {
@@ -77,7 +116,10 @@ def run(inventory, sample_id, fleet_config, sandbox_credentials, output, mode):
         "new_model_requests": 0,
         "automatic_retry": False,
         "framework": "controller OpenAI tools + real Sandbox, not native Claude CLI",
-        "privileged_reference": "observable expert continuation, no private reasoning",
+        "privileged_reference": "observable expert continuation, no private reasoning"
+        if reference_mode == "expert"
+        else "none: current append expert continuation omitted",
+        "reference_mode": reference_mode,
         "semantic_review": "author_only",
     }
     sb = None
@@ -139,26 +181,38 @@ def run(inventory, sample_id, fleet_config, sandbox_credentials, output, mode):
         else:
             context = json.loads(check(row["context"]).read_text())
             expert = json.loads(check(row["expert_observable"]).read_text())
-            system = (
-                "You are a terminal coding agent. Complete the current append task in the REAL sandbox. "
-                "Use execute for actual commands, reads, edits and tests. The historical interaction and expert example "
-                "are observable reference material, not the current sandbox observations. Obtain your own tool feedback. "
-                "You may choose a different implementation. Do not access /tests or /solution or alter graders. "
-                "When finished, give a short final response. Tools run from /app and have no network."
+            messages = build_messages(
+                context,
+                check(row["requirement_copy"]).read_text(),
+                expert,
+                reference_mode,
             )
-            user = (
-                "PUBLIC HISTORICAL CONTEXT:\n"
-                + json.dumps(context, ensure_ascii=False)
-                + "\nCURRENT APPEND REQUIREMENT:\n"
-                + check(row["requirement_copy"]).read_text()
-                + "\nPRIVILEGED SUCCESSFUL EXPERT CONTINUATION (reference only):\n"
-                + json.dumps(expert, ensure_ascii=False)
-                + "\nNow complete ONLY this append task from the supplied start state, executing your own actions."
-            )
-            messages = [
-                {"role": "system", "content": system},
-                {"role": "user", "content": user},
-            ]
+            if paired_reference is not None:
+                original_input = json.loads(
+                    (paired_reference / "generation-input.json").read_text()
+                )
+                if original_input["messages"] != build_messages(
+                    context,
+                    check(row["requirement_copy"]).read_text(),
+                    expert,
+                    "expert",
+                ):
+                    raise ValueError("PairedReferencePromptMismatch")
+                original_receipt = json.loads(
+                    (paired_reference / "receipt.json").read_text()
+                )
+                for key in (
+                    "requirement_sha256",
+                    "state_manifest_sha256",
+                    "task_tests",
+                ):
+                    if result[key] != original_receipt[key]:
+                        raise ValueError("PairedReferenceStateOrTaskMismatch")
+                result["paired_reference"] = {
+                    "receipt_path": str(paired_reference / "receipt.json"),
+                    "receipt_sha256": sha(paired_reference / "receipt.json"),
+                    "expert_prompt_rebuilt_byte_identically": True,
+                }
             # These are generation inputs, NOT an SFT item: privileged material must be removed in future training export.
             dump(
                 output / "generation-input.json",
@@ -332,6 +386,8 @@ def main():
         choices=["student", "expert-control", "initial-control"],
         default="student",
     )
+    p.add_argument("--reference-mode", choices=["expert", "none"], default="expert")
+    p.add_argument("--paired-reference", type=Path)
     a = p.parse_args()
     raise SystemExit(
         run(
@@ -341,6 +397,8 @@ def main():
             a.sandbox_credentials,
             a.output,
             a.mode,
+            a.reference_mode,
+            a.paired_reference,
         )
     )
 

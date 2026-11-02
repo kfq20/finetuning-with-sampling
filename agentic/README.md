@@ -81,3 +81,11 @@ as if they were visual observations. `audio_state` reproduces the original audio
 environment startup without solver calls and materializes a reusable state index.
 `collect --receipt-inventory ... --state-adapters ...` fixes source membership
 while incorporating those states. `catalog` groups equivalent append units.
+
+
+A paired no-reference control uses `--reference-mode none --paired-reference
+PATH_TO_COMPLETED_EXPERT_CONDITIONED_ATTEMPT`. It checks that the original
+expert-conditioned input is reconstructed byte-for-byte and the requirement,
+state manifest and verifier hashes match. It removes only the current append's
+expert continuation section. Historical parent context and starting files remain
+unchanged. This is a distinct experimental condition, not an automatic retry.

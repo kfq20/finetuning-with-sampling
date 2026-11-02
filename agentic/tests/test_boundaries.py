@@ -269,6 +269,26 @@ class Boundaries(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "UnsafeCaptureMember"):
                 archive_manifest(p)
 
+    def test_no_reference_changes_only_the_expert_section(self):
+        from append_rewrite.run import build_messages
+        import json
+
+        context = [{"role": "user", "content": "old task"}]
+        expert = [{"role": "assistant", "content": "EXPERT_ONLY_SENTINEL"}]
+        with_ref = build_messages(context, "current requirement", expert, "expert")
+        without = build_messages(context, "current requirement", expert, "none")
+        section = (
+            "\nPRIVILEGED SUCCESSFUL EXPERT CONTINUATION (reference only):\n"
+            + json.dumps(expert, ensure_ascii=False)
+        )
+        self.assertEqual(with_ref[0], without[0])
+        self.assertEqual(
+            with_ref[1]["content"].replace(section, "", 1), without[1]["content"]
+        )
+        self.assertNotIn("EXPERT_ONLY_SENTINEL", str(without))
+        self.assertIn("old task", without[1]["content"])
+        self.assertIn("current requirement", without[1]["content"])
+
     def test_state_pack_rejects_symlinks(self):
         with tempfile.TemporaryDirectory() as root:
             p = Path(root)
