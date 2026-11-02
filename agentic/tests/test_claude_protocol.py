@@ -162,3 +162,44 @@ class LiveGatewayContract(unittest.TestCase):
         self.assertEqual(
             len(terminal('{"type":"result","is_error":false,"subtype":"success"}\n')), 1
         )
+
+
+class NativeTrialMetricsTests(unittest.TestCase):
+    def test_counts_only_new_native_tools(self):
+        from append_rewrite.claude_trial import native_metrics
+
+        with tempfile.TemporaryDirectory() as directory:
+            seed = Path(directory) / "seed.jsonl"
+            original = {
+                "uuid": "old",
+                "message": {
+                    "content": [{"type": "tool_use", "id": "a", "name": "Bash"}]
+                },
+            }
+            seed.write_text(json.dumps(original) + "\n")
+            new = [
+                {
+                    "uuid": "new",
+                    "message": {
+                        "content": [{"type": "tool_use", "id": "b", "name": "Read"}]
+                    },
+                },
+                {
+                    "uuid": "feedback",
+                    "message": {
+                        "content": [
+                            {
+                                "type": "tool_result",
+                                "tool_use_id": "b",
+                                "is_error": False,
+                            }
+                        ]
+                    },
+                },
+            ]
+            actual = native_metrics(
+                seed, "\n".join(json.dumps(x) for x in [original] + new)
+            )
+            self.assertEqual(actual["tool_calls"], 1)
+            self.assertTrue(actual["tool_pairs_complete"])
+            self.assertEqual(actual["tools"][0]["name"], "Read")
