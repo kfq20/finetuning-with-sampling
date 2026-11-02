@@ -28,7 +28,7 @@ async def run(args):
         raise ValueError(
             "New native task required; old CC histories are reference-only"
         )
-    for key in ("instruction", "state_manifest", "runtime_binding"):
+    for key in ("instruction", "state_manifest", "runtime_binding", "task_manifest"):
         item = manifest[key]
         if sha(Path(item["path"])) != item["sha256"]:
             raise ValueError("Input identity drift: " + key)
@@ -38,6 +38,16 @@ async def run(args):
         != (task / "runtime-binding.json").resolve()
     ):
         raise ValueError("Runtime binding path mismatch")
+    package_files = json.loads(Path(manifest["task_manifest"]["path"]).read_text())[
+        "files"
+    ]
+    current_files = {
+        str(p.relative_to(task)): {"sha256": sha(p), "mode": p.stat().st_mode & 511}
+        for p in task.rglob("*")
+        if p.is_file()
+    }
+    if current_files != package_files or any(p.is_symlink() for p in task.rglob("*")):
+        raise ValueError("Frozen task/verifier release drift")
     expected = json.loads(Path(manifest["state_manifest"]["path"]).read_text())["files"]
     actual = {
         str(p.relative_to(state)): {"sha256": sha(p), "mode": p.stat().st_mode & 511}
@@ -110,6 +120,19 @@ async def run(args):
             },
         )
     except Exception as exc:
+        # Preserve available artifacts before destroying the owned sandbox, even
+        # for incomplete inference. A diagnostic snapshot is not model success.
+        if sb is not None and not (output / "submission.tgz").exists():
+            try:
+                diagnostic = sandbox.capture(
+                    sb, manifest["artifact_paths"], output / "partial-submission.tgz"
+                )
+                dump(output / "partial-capture.json", diagnostic)
+            except Exception as capture_error:
+                dump(
+                    output / "partial-capture-error.json",
+                    {"error_type": type(capture_error).__name__},
+                )
         dump(
             output / "error.json",
             {

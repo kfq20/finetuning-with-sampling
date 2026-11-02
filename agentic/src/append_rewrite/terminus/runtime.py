@@ -72,10 +72,9 @@ def make_agent(
     receives live agent + copied public history/pending prompt, not model secrets.
     """
     verify_pin()
-    from harbor.agents.terminus_2.terminus_2 import Terminus2
+    from harbor.agents.terminus_2.terminus_2 import Terminus2, EnvironmentPaths
 
     from harbor.agents.terminus_2.tmux_session import TmuxSession
-    from harbor.models.environment.paths import EnvironmentPaths
 
     class OfflineTmux(TmuxSession):
         async def _attempt_tmux_installation(self):

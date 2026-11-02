@@ -32,6 +32,8 @@ Context overflow is an explicit error, not a silent prefix replacement. This is
 a study setting, not a claim of identical official benchmark settings. Output and
 wall-clock limits are supplied explicitly at launch; no new global budgets.
 
+Offline tmux must already exist in the frozen image; setup never installs packages.
+
 The adapter overrides Harbor's blanket three-attempt `_query_llm` retry: ambiguous
 provider failures stop the current trial; there is no new paid completion,
 endpoint fallback or repeated tool execution. Confirmed SSE completion and exact
@@ -75,7 +77,8 @@ PYTHONPATH=agentic/src python -m append_rewrite.terminus.trial \
 
 The input manifest declares `protocol=harbor-terminus-2-json.v1`,
 `history_import=fresh_task`, task/state/cwd/artifact_paths, and path/sha256 bindings
-for instruction, state_manifest and runtime_binding. State manifest enumerates
+for instruction, state_manifest, runtime_binding and task_manifest.
+The external task manifest binds every frozen task/grader file by SHA256 and mode. State manifest enumerates
 all restored files with bytes SHA256 and POSIX mode. Output directories are
 exclusive. Original grading/capture/error journals are retained, no retries.
 Run controls and bind the frozen task/grader release before any new paid study;
