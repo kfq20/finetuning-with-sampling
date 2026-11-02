@@ -1,7 +1,7 @@
 """Scoped Anthropic transport relay. Run only in a trusted, non-solver sandbox.
 
-Preserves native CLI payloads; no upstream retry or model fallback. Early SSE
-headers/heartbeats protect long prefill. Provider credentials never leave here.
+Preserves native CLI payloads with optional explicitly configured buffered retry.
+Early SSE headers/heartbeats protect prefill. No fallback; credentials stay here.
 """
 
 from __future__ import annotations
@@ -32,6 +32,164 @@ def validate_request(path, payload, model):
         raise ValueError("NativeStreamingRequired")
 
 
+class StreamFailure(RuntimeError):
+    def __init__(self, code, retryable=True, raw_error=None, status=None):
+        super().__init__(code)
+        self.retryable, self.raw_error, self.status = retryable, raw_error, status
+
+
+def validated_stream(response, model):
+    """Buffer one complete Anthropic message, with no downstream delivery.
+
+    Reject malformed tool frames rather than guessing or repairing their meaning.
+    Private thinking is opaque and is never included in diagnostics.
+    """
+    pending = b""
+    frame = b""
+    output = bytearray()
+    blocks = {}
+    tool_ids = set()
+    begun = stopped = False
+    usage = {}
+    stop_reason = None
+    while True:
+        chunk = response.read1(8192)
+        if not chunk:
+            break
+        pending += chunk
+        while b"\n" in pending:
+            line, pending = pending.split(b"\n", 1)
+            line = line.rstrip(b"\r")
+            frame += line + b"\n"
+            if line.startswith(b"data:"):
+                try:
+                    data = json.loads(line[5:].strip())
+                except ValueError as exc:
+                    raise StreamFailure("MalformedSSEJSON") from exc
+                kind = data.get("type")
+                if kind == "error":
+                    error_type = data.get("error", {}).get("type")
+                    raise StreamFailure(
+                        "ProviderSSEError",
+                        retryable=error_type in ("api_error", "overloaded_error"),
+                        raw_error=data,
+                    )
+                if stopped:
+                    raise StreamFailure("EventsAfterMessageStop")
+                if kind == "message_start":
+                    if begun:
+                        raise StreamFailure("DuplicateMessageStart")
+                    msg = data.get("message", {})
+                    if msg.get("model") != model:
+                        raise StreamFailure("ResponseModelMismatch", retryable=False)
+                    begun = True
+                    usage.update(msg.get("usage", {}))
+                elif kind == "content_block_start":
+                    index = data["index"]
+                    block = data["content_block"]
+                    if not begun or index in blocks:
+                        raise StreamFailure("DuplicateOrUnboundContentBlock")
+                    if block["type"] == "tool_use":
+                        if not block.get("id") or block["id"] in tool_ids:
+                            raise StreamFailure("DuplicateToolUseID")
+                        tool_ids.add(block["id"])
+                    blocks[index] = {
+                        "kind": block["type"],
+                        "input": block.get("input", {}),
+                        "partial": "",
+                        "closed": False,
+                    }
+                elif kind == "content_block_delta":
+                    block = blocks.get(data["index"])
+                    if block is None or block["closed"]:
+                        raise StreamFailure("UnboundContentDelta")
+                    delta = data.get("delta", {})
+                    if delta.get("type") == "input_json_delta":
+                        if block["kind"] != "tool_use":
+                            raise StreamFailure("ToolDeltaOnNonToolBlock")
+                        block["partial"] += delta.get("partial_json", "")
+                elif kind == "content_block_stop":
+                    block = blocks.get(data["index"])
+                    if block is None or block["closed"]:
+                        raise StreamFailure("UnboundOrDuplicateBlockStop")
+                    if block["kind"] == "tool_use":
+                        try:
+                            value = (
+                                json.loads(block["partial"])
+                                if block["partial"]
+                                else block["input"]
+                            )
+                        except ValueError as exc:
+                            raise StreamFailure("IncompleteToolInputJSON") from exc
+                        if not isinstance(value, dict):
+                            raise StreamFailure("NonObjectToolInput")
+                    block["closed"] = True
+                elif kind == "message_delta":
+                    stop_reason = (
+                        data.get("delta", {}).get("stop_reason") or stop_reason
+                    )
+                    usage.update(data.get("usage", {}))
+                elif kind == "message_stop":
+                    if (
+                        not begun
+                        or not stop_reason
+                        or any(not b["closed"] for b in blocks.values())
+                    ):
+                        raise StreamFailure("IncompleteAnthropicMessage")
+                    stopped = True
+            if not line.strip():
+                output.extend(frame)
+                frame = b""
+    if not stopped or pending.strip() or frame.strip():
+        raise StreamFailure("IncompleteAnthropicStream")
+    return bytes(output), {"usage": usage, "stop_reason": stop_reason}
+
+
+def buffered_retry(open_response, model, max_attempts, on_event, sleep=time.sleep):
+    """Retry only undelivered responses. The caller writes output exactly once."""
+    if type(max_attempts) is not int or not 1 <= max_attempts <= 3:
+        raise ValueError("Explicit upstream attempts must be 1..3")
+    for attempt in range(1, max_attempts + 1):
+        connection = None
+        on_event("started", attempt, {})
+        try:
+            connection, response = open_response()
+            if response.status != 200:
+                raw = response.read(8192)
+                raise StreamFailure(
+                    "UpstreamHTTP_" + str(response.status),
+                    retryable=response.status in (408, 502, 503, 504),
+                    raw_error={"body": raw.decode(errors="replace")},
+                    status=response.status,
+                )
+            payload, metadata = validated_stream(response, model)
+            on_event("completed", attempt, metadata)
+            return payload, metadata
+        except (StreamFailure, OSError, http.client.HTTPException) as exc:
+            retryable = not isinstance(exc, StreamFailure) or exc.retryable
+            on_event(
+                "error",
+                attempt,
+                {
+                    "code": str(exc)
+                    if isinstance(exc, StreamFailure)
+                    else type(exc).__name__,
+                    "status": getattr(exc, "status", None),
+                    "retryable": retryable,
+                    "raw_error": getattr(exc, "raw_error", None),
+                    "usage_unknown": True,
+                    "delivered_upstream_content_bytes": 0,
+                },
+            )
+            if not retryable or attempt == max_attempts:
+                raise
+        finally:
+            if connection is not None:
+                connection.close()
+        sleep(2**attempt)
+    raise AssertionError("Unreachable")
+
+
 def serve(config_file, root, port):
     if config_file.stat().st_mode & 0o077:
         raise PermissionError("Private gateway config required")
@@ -40,6 +198,15 @@ def serve(config_file, root, port):
     if up.scheme != "https" or up.path not in ("", "/") or up.query or up.fragment:
         raise ValueError("Unapproved upstream URL")
     model = config["model_id"]
+    if config.get("stream_mode", "passthrough") not in (
+        "passthrough",
+        "validated_buffer",
+    ):
+        raise ValueError("UnsupportedTransportPolicy")
+    if config.get("stream_mode") == "validated_buffer" and config.get(
+        "max_upstream_attempts", 1
+    ) not in (1, 2, 3):
+        raise ValueError("UnsupportedAttemptPolicy")
     root.mkdir(parents=True, exist_ok=True)
     lock = threading.Lock()
 
@@ -115,6 +282,87 @@ def serve(config_file, root, port):
                     self.end_headers()
                     write(b": gateway-ready\n\n")
                     threading.Thread(target=heartbeat, daemon=True).start()
+                if early and config.get("stream_mode") == "validated_buffer":
+
+                    def open_response():
+                        upstream = http.client.HTTPSConnection(
+                            up.hostname, up.port or 443, timeout=28800
+                        )
+                        headers = {
+                            "Content-Type": "application/json",
+                            "Accept-Encoding": "identity",
+                            "x-api-key": config["api_key"],
+                            "anthropic-version": self.headers.get(
+                                "anthropic-version", "2023-06-01"
+                            ),
+                        }
+                        if self.headers.get("anthropic-beta"):
+                            headers["anthropic-beta"] = self.headers["anthropic-beta"]
+                        try:
+                            upstream.request(
+                                "POST",
+                                "/d/" + config["task_id"] + self.path,
+                                body,
+                                headers,
+                            )
+                            return upstream, upstream.getresponse()
+                        except BaseException:
+                            upstream.close()
+                            raise
+
+                    def attempt_event(phase, attempt, detail):
+                        detail = dict(detail)
+                        raw_error = detail.pop("raw_error", None)
+                        if raw_error is not None:
+                            error_file = root / (
+                                rid + "-attempt" + str(attempt) + "-error.json"
+                            )
+                            error_file.write_text(json.dumps(raw_error))
+                            detail["error_sha256"] = hashlib.sha256(
+                                error_file.read_bytes()
+                            ).hexdigest()
+                        if detail.get("status") in (401, 403):
+                            (root / "STOP.json").write_text(
+                                json.dumps(
+                                    {
+                                        "reason": "upstream_auth",
+                                        "status": detail["status"],
+                                    }
+                                )
+                            )
+                        event(
+                            {
+                                "id": rid,
+                                "phase": "upstream_attempt_" + phase,
+                                "attempt": attempt,
+                                "elapsed": time.time() - started,
+                                **detail,
+                            }
+                        )
+
+                    payload, metadata = buffered_retry(
+                        open_response,
+                        model,
+                        config.get("max_upstream_attempts", 1),
+                        attempt_event,
+                    )
+                    usage = metadata["usage"]
+                    stop_reason = metadata["stop_reason"]
+                    write(payload)
+                    complete = True
+                    event(
+                        {
+                            "id": rid,
+                            "phase": "completed",
+                            "status": 200,
+                            "stream_complete": True,
+                            "stop_reason": stop_reason,
+                            "usage": usage,
+                            "elapsed": time.time() - started,
+                            "transport": "validated_buffer",
+                        }
+                    )
+                    return
                 conn = http.client.HTTPSConnection(
                     up.hostname, up.port or 443, timeout=28800
                 )
@@ -270,7 +518,10 @@ def serve(config_file, root, port):
                 "port": port,
                 "model": model,
                 "entry_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-                "upstream_retry": False,
+                "upstream_retry": config.get("stream_mode") == "validated_buffer"
+                and config.get("max_upstream_attempts", 1) > 1,
+                "stream_mode": config.get("stream_mode", "passthrough"),
+                "max_upstream_attempts": config.get("max_upstream_attempts", 1),
             }
         )
     )

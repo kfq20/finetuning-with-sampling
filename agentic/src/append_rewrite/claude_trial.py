@@ -228,6 +228,16 @@ async def run(a):
             raise PermissionError("ProviderConfigNotPrivate")
         if cfg["model_id"] != p["models"]["student"]:
             raise ValueError("ModelNotSelected")
+        if a.buffered_upstream_attempts is not None:
+            cfg = dict(
+                cfg,
+                stream_mode="validated_buffer",
+                max_upstream_attempts=a.buffered_upstream_attempts,
+            )
+        result["transport_policy"] = {
+            "stream_mode": cfg.get("stream_mode", "passthrough"),
+            "max_upstream_attempts": cfg.get("max_upstream_attempts", 1),
+        }
         v = dotenv_values(a.sandbox_credentials, interpolate=False)
         opts = dict(
             api_key=v["E2B_API_KEY"],
@@ -375,6 +385,40 @@ async def run(a):
                     (a.output / name).write_text(sb.files.read(path, user="root"))
                 except Exception:
                     pass
+            if result["status"] != "completed":
+                try:
+                    result["partial_workspace_capture"] = sandbox.capture(
+                        sb, ["/app/project"], a.output / "partial-workspace.tgz"
+                    )
+                except Exception as exc:
+                    result["partial_workspace_error"] = type(exc).__name__
+                # Coq uses temporary scratch source files while searching proofs.
+                # Preserve source inputs; compiled caches can be rebuilt offline.
+                try:
+                    listing = sandbox.command(
+                        sb,
+                        "find /tmp -maxdepth 5 -type f -name '*.v'",
+                        user="root",
+                        timeout=30,
+                    )
+                    scratch = {}
+                    for path in listing.stdout.splitlines():
+                        relative = Path(path).relative_to("/tmp")
+                        if ".." in relative.parts:
+                            raise ValueError("UnsafeScratchPath")
+                        target = a.output / "coq-scratch" / relative
+                        target.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+                        target.write_bytes(
+                            sb.files.read(path, format="bytes", user="root")
+                        )
+                        scratch[path] = {
+                            "sha256": sha(target),
+                            "bytes": target.stat().st_size,
+                        }
+                    dump(a.output / "coq-scratch-manifest.json", scratch)
+                    result["scratch_sources_captured"] = len(scratch)
+                except Exception as exc:
+                    result["scratch_capture_error"] = type(exc).__name__
             if result["status"] != "completed" and artifacts:
                 try:
                     result["partial_capture"] = sandbox.capture(
@@ -428,6 +472,13 @@ def main():
     parser.add_argument("--sandbox-credentials", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--reference-mode", choices=("none", "expert"), required=True)
+    parser.add_argument(
+        "--buffered-upstream-attempts",
+        type=int,
+        choices=(1, 2, 3),
+        default=None,
+        help="Explicit opt-in: buffer/validate each upstream response, at most N attempts; no task replay",
+    )
     asyncio.run(run(parser.parse_args()))
 
 
