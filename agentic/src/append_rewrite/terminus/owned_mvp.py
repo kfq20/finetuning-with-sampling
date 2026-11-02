@@ -18,6 +18,7 @@ from .environment import SDKEnvironment
 from .runtime import make_agent, verify_pin
 from .teacher import DeepSeekTeacher
 from .protocol import public_messages
+from .assets import install as install_runtime
 
 
 def freeze(source_protocol, output):
@@ -62,11 +63,13 @@ def freeze(source_protocol, output):
     return owned, source["cwd"]
 
 
-def restore(task, state, credentials, owner):
+def restore(task, state, credentials, owner, runtime_assets=None):
     sb = sandbox.create(task, credentials, owner)
     try:
         sb.set_timeout(30000)
         sandbox.prepare(sb, state)
+        if runtime_assets:
+            install_runtime(sb, runtime_assets)
         q = sandbox.command(
             sb, "rm -rf /app/output && mkdir -p /app/output", user="root", timeout=30
         )
@@ -78,8 +81,8 @@ def restore(task, state, credentials, owner):
         raise
 
 
-def fresh(task, state, credentials, archive, owner):
-    sb = restore(task, state, credentials, owner)
+def fresh(task, state, credentials, archive, owner, runtime_assets=None):
+    sb = restore(task, state, credentials, owner, runtime_assets)
     try:
         sandbox.restore_archive(sb, archive, ["/app/output/Submission.v"])
         return sandbox.grade(sb, task)
@@ -94,10 +97,20 @@ async def run(args):
     out.mkdir(parents=True, mode=0o700, exist_ok=False)
     owned, cwd = freeze(args.source_protocol, out)
     task, state = owned / "task", owned / "state"
-    dump(out / "runtime-pin.json", verify_pin())
+    dump(
+        out / "runtime-pin.json",
+        {
+            "harbor": verify_pin(),
+            "asset_manifest_sha256": sha(args.runtime_assets / "manifest.json"),
+        },
+    )
     start = time.time()
     control = restore(
-        task, state, args.sandbox_credentials, "terminus-owned-mvp-control"
+        task,
+        state,
+        args.sandbox_credentials,
+        "terminus-owned-mvp-control",
+        args.runtime_assets,
     )
     try:
         empty = sandbox.grade(control, task)
@@ -122,7 +135,11 @@ async def run(args):
     sb = None
     try:
         sb = restore(
-            task, state, args.sandbox_credentials, "terminus-owned-mvp-teacher"
+            task,
+            state,
+            args.sandbox_credentials,
+            "terminus-owned-mvp-teacher",
+            args.runtime_assets,
         )
         dump(out / "teacher-sandbox.json", {"sandbox_id": sb.sandbox_id})
         backend = DeepSeekTeacher(args.teacher_config, out / "teacher-requests")
@@ -160,6 +177,7 @@ async def run(args):
             args.sandbox_credentials,
             out / "teacher-submission.tgz",
             "terminus-owned-mvp-fresh-grade",
+            args.runtime_assets,
         )
         record = {
             "terminal_reason": "completed",
@@ -208,7 +226,13 @@ async def run(args):
 
 def main():
     p = argparse.ArgumentParser(__doc__)
-    for name in ["source-protocol", "teacher-config", "sandbox-credentials", "output"]:
+    for name in [
+        "source-protocol",
+        "teacher-config",
+        "sandbox-credentials",
+        "output",
+        "runtime-assets",
+    ]:
         p.add_argument("--" + name, type=Path, required=True)
     asyncio.run(run(p.parse_args()))
 
