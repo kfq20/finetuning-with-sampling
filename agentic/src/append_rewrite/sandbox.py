@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import shlex
 import tarfile
+import uuid
 from types import SimpleNamespace
 
 
@@ -38,19 +39,37 @@ def pack(root):
 
 
 def upload(sb, root, destination):
-    sb.files.write("/tmp/append-rewrite-upload.tgz", pack(root), user="root")
-    r = command(
-        sb,
-        "mkdir -p "
-        + shlex.quote(destination)
-        + " && tar xzf /tmp/append-rewrite-upload.tgz -C "
-        + shlex.quote(destination)
-        + " && rm /tmp/append-rewrite-upload.tgz",
-        user="root",
-        timeout=120,
-    )
-    if r.exit_code:
-        raise RuntimeError("StateUploadFailed")
+    payload = pack(root)
+    prefix = "/tmp/append-rewrite-" + uuid.uuid4().hex
+    parts = []
+    try:
+        for offset in range(0, len(payload), 1048576):
+            name = prefix + f".{len(parts):05d}.part"
+            sb.files.write(name, payload[offset : offset + 1048576], user="root")
+            parts.append(name)
+        archive = prefix + ".tgz"
+        expected = hashlib.sha256(payload).hexdigest()
+        script = (
+            "cat "
+            + " ".join(shlex.quote(x) for x in parts)
+            + " > "
+            + archive
+            + " && test $(sha256sum "
+            + archive
+            + " | cut -d ' ' -f 1) = "
+            + expected
+            + " && mkdir -p "
+            + shlex.quote(destination)
+            + " && tar xzf "
+            + archive
+            + " -C "
+            + shlex.quote(destination)
+        )
+        r = command(sb, script, user="root", timeout=120)
+        if r.exit_code:
+            raise RuntimeError("StateUploadFailed")
+    finally:
+        command(sb, "rm -f " + shlex.quote(prefix) + ".*", user="root", timeout=30)
 
 
 def create(task, credential_file, owner):
