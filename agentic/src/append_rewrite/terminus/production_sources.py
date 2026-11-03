@@ -5,6 +5,7 @@ captures are private legal controls, never starting state or model reference.
 """
 
 import argparse
+import hashlib
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
@@ -18,6 +19,14 @@ from append_rewrite.collect import sha
 from append_rewrite.state import plan as legacy_state
 from .production import tree, safe_artifacts, dump
 from .protocol import digest
+
+
+def foundry_id(value):
+    return hashlib.sha256(
+        json.dumps(
+            value, sort_keys=True, separators=(",", ":"), allow_nan=False
+        ).encode()
+    ).hexdigest()
 
 
 def ref_path(ref):
@@ -213,13 +222,17 @@ def foundry(order_path, unit, reuse):
     raw = ref_path(receipt["raw_result"])
     task_manifest = ref_path(order["task"])
     manifest = json.loads(task_manifest.read_text())
-    task_source = Path(manifest["harbor_task_directory"])
+    task_source = Path(config["tasks"][0]["path"])
+    for name, expected in manifest["operator_file_sha256"].items():
+        source_file = task_source / name
+        if source_file.is_symlink() or sha(source_file) != expected:
+            raise ValueError("Foundry task operator bytes drift")
     task = unit / "task"
     shutil.copytree(task_source, task)
     env = config["environment"]["kwargs"]
     snapshot = Path(env["snapshot_path"])
     snap = json.loads((snapshot / "manifest.json").read_text())
-    if digest(snap) != snapshot.name:
+    if foundry_id(snap) != snapshot.name:
         raise ValueError("Snapshot manifest identity")
     state = unit / "state"
     state.mkdir()
@@ -239,7 +252,7 @@ def foundry(order_path, unit, reuse):
     ):
         cap = ref_path(receipt["capture"])
         m = json.loads(cap.read_text())
-        if digest(m) != cap.parent.name:
+        if foundry_id(m) != cap.parent.name:
             raise ValueError("Success capture snapshot identity")
         oracle = {
             name: (cap.parent / "files" / name, meta)
