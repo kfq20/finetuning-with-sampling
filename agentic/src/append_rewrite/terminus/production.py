@@ -418,21 +418,24 @@ async def batch(args):
     lock = (args.output / "coordinator.lock").open("a+")
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     lanes = {}
-    for item in plan["units"]:
-        lanes.setdefault(item["lane"], []).append(item)
+    workers = []
+    scheduled = set()
     dump(
         args.output / "coordinator.json",
         {
             "pid": os.getpid(),
             "plan_sha256": sha(args.plan),
-            "lanes": list(lanes),
             "global_budget": None,
             "global_concurrency_cap": None,
+            "incremental_discovery": bool(args.discovery_summary),
         },
     )
 
-    async def lane(items):
-        for item in items:
+    async def lane(queue):
+        while True:
+            item = await queue.get()
+            if item is None:
+                return
             if (args.output / "STOP_PROVIDER").exists():
                 return
             dest = args.output / "units" / item["unit_id"]
@@ -482,7 +485,36 @@ async def batch(args):
                 },
             )
 
-    await asyncio.gather(*(lane(items) for items in lanes.values()))
+    while True:
+        plan = json.loads(args.plan.read_text())
+        for item in plan["units"]:
+            key = item["unit_id"]
+            if key in scheduled:
+                continue
+            # Preserve the exact per-unit adapter contract used at dispatch.
+            specs = args.output / "specs"
+            specs.mkdir(exist_ok=True)
+            frozen = specs / (key + ".json")
+            content = Path(item["spec_path"]).read_bytes()
+            with frozen.open("xb") as f:
+                f.write(content)
+            item = dict(item, spec_path=str(frozen))
+            scheduled.add(key)
+            name = item["lane"]
+            if name not in lanes:
+                lanes[name] = asyncio.Queue()
+                workers.append(asyncio.create_task(lane(lanes[name])))
+            await lanes[name].put(item)
+        finished = not args.discovery_summary
+        if args.discovery_summary and args.discovery_summary.exists():
+            final = json.loads(args.discovery_summary.read_text())
+            finished = final["plan_sha256"] == sha(args.plan)
+        if finished or (args.output / "STOP_PROVIDER").exists():
+            break
+        await asyncio.sleep(5)
+    for queue in lanes.values():
+        await queue.put(None)
+    await asyncio.gather(*workers)
     dump(args.output / "coordinator-finished.json", {"finished_at": time.time()})
 
 
@@ -491,6 +523,7 @@ def main():
     p.add_argument("mode", choices=("unit", "batch"))
     p.add_argument("--spec", type=Path)
     p.add_argument("--plan", type=Path)
+    p.add_argument("--discovery-summary", type=Path)
     for name in (
         "teacher-config",
         "fleet-config",
