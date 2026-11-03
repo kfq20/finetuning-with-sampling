@@ -6,6 +6,7 @@ captures are private legal controls, never starting state or model reference.
 
 import argparse
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 from pathlib import Path
 import shutil
@@ -13,9 +14,9 @@ import tarfile
 import tomllib
 from urllib.parse import unquote, urlparse
 
-from append_rewrite.collect import dump, sha
+from append_rewrite.collect import sha
 from append_rewrite.state import plan as legacy_state
-from .production import tree, safe_artifacts
+from .production import tree, safe_artifacts, dump
 from .protocol import digest
 
 
@@ -276,6 +277,7 @@ def main():
     p = argparse.ArgumentParser(__doc__)
     for name in ("legacy-inventory", "foundry-root", "research-root", "output"):
         p.add_argument("--" + name, type=Path, required=True)
+    p.add_argument("--previous-plan", type=Path)
     a = p.parse_args()
     a.output.mkdir(parents=True, mode=0o700, exist_ok=False)
     reuse = [
@@ -284,12 +286,21 @@ def main():
         if json.loads(p.read_text()).get("expert_admitted_for_mvp")
     ]
     old_student = a.research_root / "data/latest-block-eight-coq-01"
-    entries = []
+    entries = (
+        json.loads(a.previous_plan.read_text())["units"] if a.previous_plan else []
+    )
     holds = []
     aliases = []
-    seen = {}
+    seen = {x["unit_id"]: x for x in entries}
+    completed_sources = {
+        (
+            x["source"]["kind"],
+            x["source"].get("sample_id") or x["source"].get("node_id"),
+        )
+        for x in entries
+    }
 
-    def add(kind, identity, source):
+    def prepare(kind, identity, source):
         folder = a.output / "inputs" / (kind + "-" + identity)
         folder.mkdir(parents=True, mode=0o700)
         try:
@@ -298,6 +309,19 @@ def main():
                 if kind == "legacy"
                 else foundry(source, folder, reuse)
             )
+            return item
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            return {
+                "preparation_error": {
+                    "kind": kind,
+                    "source": str(source) if kind != "legacy" else source["sample_id"],
+                    "error_type": type(exc).__name__,
+                    "reason": str(exc)[:300],
+                }
+            }
+
+    def add(kind, source, item):
+        if "preparation_error" not in item:
             key = item["unit_id"]
             if key in seen:
                 aliases.append(
@@ -311,15 +335,8 @@ def main():
             else:
                 seen[key] = item
                 entries.append(item)
-        except (OSError, ValueError, KeyError, TypeError) as exc:
-            holds.append(
-                {
-                    "kind": kind,
-                    "source": str(source) if kind != "legacy" else source["sample_id"],
-                    "error_type": type(exc).__name__,
-                    "reason": str(exc)[:300],
-                }
-            )
+        else:
+            holds.append(item["preparation_error"])
         dump(
             a.output / "plan.json",
             {
@@ -332,23 +349,32 @@ def main():
             },
         )
 
+    work = []
     for row in json.loads(a.legacy_inventory.read_text())["rows"]:
-        add("legacy", row["sample_id"], row)
+        if ("legacy", row["sample_id"]) not in completed_sources:
+            work.append(("legacy", row["sample_id"], row))
     if a.foundry_root.exists():
-        orders = sorted(a.foundry_root.glob("**/order.json"))
+        orders = sorted(
+            a.foundry_root.glob("**/order.json"),
+            key=lambda x: not (x.parent / "harbor-execution/receipt.json").exists(),
+        )
         nodes = set()
         for order_path in orders:
             try:
                 order = json.loads(order_path.read_text())
             except (OSError, json.JSONDecodeError):
                 continue
-            if order.get("mode") != "append":
-                continue
-            # Attempts/aliases of the same immutable node are one data unit.
-            if order.get("node_id") in nodes:
+            if order.get("mode") != "append" or order.get("node_id") in nodes:
                 continue
             nodes.add(order["node_id"])
-            add("foundry", order["node_id"][:24], order_path)
+            if ("foundry", order["node_id"]) not in completed_sources:
+                work.append(("foundry", order["node_id"][:24], order_path))
+    # File-copy preparation only; this is unrelated to model concurrency.
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        futures = {pool.submit(prepare, *item): item for item in work}
+        for future in as_completed(futures):
+            kind, _, source = futures[future]
+            add(kind, source, future.result())
     summary = {
         "ready_units": len(entries),
         "source_holds": len(holds),

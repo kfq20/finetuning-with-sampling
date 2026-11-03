@@ -15,7 +15,11 @@ def main():
     parser.add_argument("--source-commit", required=True)
     parser.add_argument(
         "--module",
-        choices=("append_rewrite.terminus.episode", "append_rewrite.terminus.unit"),
+        choices=(
+            "append_rewrite.terminus.episode",
+            "append_rewrite.terminus.unit",
+            "append_rewrite.terminus.production",
+        ),
         default="append_rewrite.terminus.episode",
     )
     parser.add_argument("episode_args", nargs=argparse.REMAINDER)
