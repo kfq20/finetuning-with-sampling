@@ -6,7 +6,7 @@ from unittest.mock import patch
 from urllib.error import HTTPError
 from http.client import IncompleteRead
 
-from append_rewrite.terminus.production import safe_artifacts, tree, dump
+from append_rewrite.terminus.production import safe_artifacts, tree, dump, fresh_grade
 from append_rewrite.terminus.suffix_score import (
     NativeFullStreamClient,
     ResilientFullStreamClient,
@@ -40,6 +40,27 @@ class ProductionSafety(unittest.TestCase):
                 json.loads((root / "receipt.json").read_text()), {"complete": True}
             )
             self.assertFalse(list(root.glob("*.tmp")))
+
+    def test_grader_uses_private_template(self):
+        spec = {
+            "verifier_template_id": "grader-only",
+            "artifacts": ["/app/output/"],
+            "task_path": "/private/task",
+        }
+        args = object()
+        with (
+            patch("append_rewrite.terminus.production.restore") as restore,
+            patch("append_rewrite.terminus.production.apply_capture"),
+            patch(
+                "append_rewrite.terminus.production.grade", return_value={"reward": 1}
+            ),
+        ):
+            result = fresh_grade(spec, args, Path("/capture.tgz"), "independent-grade")
+            self.assertEqual(result["reward"], 1)
+            restore.assert_called_once_with(
+                spec, args, "independent-grade", template_id="grader-only"
+            )
+            restore.return_value.kill.assert_called_once()
 
     def test_only_failed_scores_retry(self):
         client = object.__new__(ResilientFullStreamClient)
