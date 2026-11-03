@@ -14,7 +14,7 @@ from .native import NativeClient
 from .protocol import digest
 
 
-def consume(response, journal, input_count):
+def consume(response, journal, input_count, *, scoring=False):
     text, metadata, request_id = "", {}, None
     started = time.monotonic()
     first = None
@@ -63,11 +63,15 @@ def consume(response, journal, input_count):
             text, metadata = current, meta
             finish = meta.get("finish_reason")
             if finish is not None:
-                if (
-                    not isinstance(finish, dict)
-                    or finish.get("type") != "stop"
-                    or not text
-                ):
+                if not isinstance(finish, dict):
+                    raise ValueError("Invalid native termination metadata")
+                if scoring:
+                    valid_finish = finish.get("type") == "stop" or (
+                        finish.get("type") == "length" and finish.get("length") == 0
+                    )
+                    if not valid_finish or meta.get("completion_tokens") != 0 or text:
+                        raise ValueError("Unexpected generation or incomplete scoring")
+                elif finish.get("type") != "stop" or not text:
                     raise ValueError("Incomplete native generation")
                 # Stop at explicit model termination, never wait for HTTP EOF.
                 (journal / "transport.json").write_text(

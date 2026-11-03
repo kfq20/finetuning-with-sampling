@@ -156,6 +156,9 @@ async def run(args):
             "algorithm": algorithm,
             "proposals_per_block": 8 if blockwise else 1,
             "online_likelihood_selection": blockwise,
+            "scoring_protocol": "native-suffix-logprob-sse.v1"
+            if blockwise
+            else "native-full-input-nonstream.v1",
             "generation_transport": "native-sse-explicit-input-ids"
             if (blockwise or stream)
             else "native-buffered-text",

@@ -10,7 +10,7 @@ import time
 
 from ..collect import dump
 from .episode import generation_history
-from .native_stream import NativeStreamClient
+from .suffix_score import NativeSuffixStreamClient
 from .protocol import action, digest, public_messages
 from .scoring import render_candidate
 
@@ -26,7 +26,7 @@ class BlockwiseLLM:
     def __init__(self, config, tokenizer, root, reference, *, proposals=8):
         if type(proposals) is not int or proposals < 1:
             raise ValueError("Positive candidate count required")
-        self.client = NativeStreamClient(config)
+        self.client = NativeSuffixStreamClient(config)
         self.tokenizer, self.reference, self.proposals = tokenizer, reference, proposals
         self.root = Path(root)
         self.root.mkdir(parents=True, mode=0o700, exist_ok=False)

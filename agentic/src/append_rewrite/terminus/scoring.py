@@ -80,8 +80,13 @@ def render_candidate(history, raw_action, tokenizer, *, tokenizer_identity):
     return result
 
 
-def analyze_native(response, rendered):
+def analyze_native(response, rendered, *, logprob_start=0):
     rendered.validate()
+    if (
+        type(logprob_start) is not int
+        or not 0 <= logprob_start < rendered.candidate_start
+    ):
+        raise ValueError("Scoring offset must retain a prefix boundary token")
     meta = response.get("meta_info")
     if not isinstance(meta, dict):
         raise ValueError("Missing native metadata")
@@ -91,9 +96,12 @@ def analyze_native(response, rendered):
     ):
         raise ValueError("Input coverage drift or unexpected generation")
     rows = meta.get("input_token_logprobs")
-    if not isinstance(rows, list) or len(rows) != len(rendered.input_ids):
+    if (
+        not isinstance(rows, list)
+        or len(rows) != len(rendered.input_ids) - logprob_start
+    ):
         raise ValueError("Missing full input logprobs")
-    for i, (row, expected) in enumerate(zip(rows, rendered.input_ids)):
+    for i, (row, expected) in enumerate(zip(rows, rendered.input_ids[logprob_start:])):
         if (
             not isinstance(row, list)
             or len(row) < 2
@@ -102,7 +110,7 @@ def analyze_native(response, rendered):
         ):
             raise ValueError("Returned input token ID mismatch")
         value = row[0]
-        if value is None and i == 0:
+        if value is None and i == 0 and logprob_start < rendered.candidate_start:
             continue
         if (
             isinstance(value, bool)
@@ -111,10 +119,13 @@ def analyze_native(response, rendered):
             or value > 0
         ):
             raise ValueError("Invalid or missing input token probability")
-    selected = rows[rendered.candidate_start :]
+    selected = rows[rendered.candidate_start - logprob_start :]
     values = [r[0] for r in selected]
     return {
-        "schema": "native-candidate-score.v1",
+        "schema": "native-candidate-score.v2"
+        if logprob_start
+        else "native-candidate-score.v1",
+        "returned_logprob_start": logprob_start,
         "history_sha256": rendered.history_sha256,
         "action_sha256": rendered.action_sha256,
         "rendered_text_sha256": hashlib.sha256(rendered.text.encode()).hexdigest(),

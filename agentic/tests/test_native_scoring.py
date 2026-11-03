@@ -61,3 +61,31 @@ class NativeInputScores(unittest.TestCase):
             r["meta_info"]["input_token_logprobs"][3][0] = value
             with self.assertRaises(ValueError):
                 analyze_native(r, self.rendered())
+
+
+class SuffixInputScores(unittest.TestCase):
+    rendered = NativeInputScores.rendered
+    response = NativeInputScores.response
+
+    def test_suffix_boundary_and_full_scores_equal(self):
+        r = self.response()
+        full = analyze_native(r, self.rendered())
+        r["meta_info"]["input_token_logprobs"] = [
+            [None, 2, "refix"],
+            [-0.2, 3, " an"],
+            [-0.3, 4, "swer"],
+        ]
+        suffix = analyze_native(r, self.rendered(), logprob_start=1)
+        self.assertEqual(full["token_count"], suffix["token_count"])
+        self.assertEqual(full["mean_logprob"], suffix["mean_logprob"])
+        self.assertEqual(full["sum_logprob"], suffix["sum_logprob"])
+
+    def test_suffix_wrong_ids_or_null_target_rejected(self):
+        for rows in (
+            [[None, 2], [-0.2, 99], [-0.3, 4]],
+            [[None, 2], [None, 3], [-0.3, 4]],
+        ):
+            r = self.response()
+            r["meta_info"]["input_token_logprobs"] = rows
+            with self.assertRaises(ValueError):
+                analyze_native(r, self.rendered(), logprob_start=1)

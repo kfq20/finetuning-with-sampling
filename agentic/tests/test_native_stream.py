@@ -52,3 +52,20 @@ class NativeSSE(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             with self.assertRaises(ValueError):
                 consume(stream([event("a")]), d, 4)
+
+
+class ZeroGenerationSSE(unittest.TestCase):
+    def test_expected_zero_length_stop_is_complete_score(self):
+        v = event("", {"type": "length", "length": 0})
+        v["meta_info"]["completion_tokens"] = 0
+        with tempfile.TemporaryDirectory() as d:
+            result = consume(stream([v, None]), d, 3, scoring=True)
+            self.assertEqual(result["meta_info"]["completion_tokens"], 0)
+
+    def test_score_cannot_deliver_generated_text_or_tokens(self):
+        for text, tokens in (("unexpected", 0), ("", 1)):
+            v = event(text, {"type": "length", "length": 0})
+            v["meta_info"]["completion_tokens"] = tokens
+            with tempfile.TemporaryDirectory() as d:
+                with self.assertRaises(ValueError):
+                    consume(stream([v]), d, 3, scoring=True)
