@@ -281,9 +281,13 @@ def main():
     a = p.parse_args()
     a.output.mkdir(parents=True, mode=0o700, exist_ok=False)
     reuse = [
-        p.parent
-        for p in (a.research_root / "data").glob("**/teacher-receipt.json")
-        if json.loads(p.read_text()).get("expert_admitted_for_mvp")
+        a.research_root / "data" / rel
+        for rel in (
+            "owned-terminus-coq-mvp-v2",
+            "fixed-start-small-batch-v1/coq-append4/teacher",
+            "fixed-start-small-batch-v1/coq-append5/teacher",
+        )
+        if (a.research_root / "data" / rel / "teacher-receipt.json").exists()
     ]
     old_student = a.research_root / "data/latest-block-eight-coq-01"
     entries = (

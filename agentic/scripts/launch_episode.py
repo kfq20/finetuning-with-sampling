@@ -19,6 +19,7 @@ def main():
             "append_rewrite.terminus.episode",
             "append_rewrite.terminus.unit",
             "append_rewrite.terminus.production",
+            "append_rewrite.terminus.production_sources",
         ),
         default="append_rewrite.terminus.episode",
     )
