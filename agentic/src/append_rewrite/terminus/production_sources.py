@@ -258,7 +258,7 @@ def foundry(order_path, unit, reuse):
             name: (cap.parent / "files" / name, meta)
             for name, meta in m["files"].items()
         }
-    template = env.get("template_name")
+    template = env.get("template_alias") or env.get("template_name")
     if not template:
         # Harbor derives this alias from immutable environment content. This
         # computes the existing alias only; it never builds a template.
