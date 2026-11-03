@@ -258,6 +258,24 @@ def foundry(order_path, unit, reuse):
             name: (cap.parent / "files" / name, meta)
             for name, meta in m["files"].items()
         }
+    template = env.get("template_name")
+    if not template:
+        # Harbor derives this alias from immutable environment content. This
+        # computes the existing alias only; it never builds a template.
+        from harbor.models.task.task import Task
+        from harbor.environments.base import environment_content_hash
+        from harbor.environments.e2b import SNAPSHOT_HASH_LEN
+
+        parsed_task = Task(task_source)
+        env_hash = environment_content_hash(
+            task_source / "environment",
+            docker_image=parsed_task.config.environment.docker_image,
+        )
+        template = (
+            (parsed_task.short_name + "__" + env_hash[:SNAPSHOT_HASH_LEN])
+            .replace("/", "__")
+            .replace(".", "-")
+        )
     scene = next(p.name for p in order_path.parents if p.parent.name == "data")
     return finalize(
         task,
@@ -275,7 +293,7 @@ def foundry(order_path, unit, reuse):
             "original_outcome": receipt.get("score"),
         },
         {
-            "template_id": env.get("template_name"),
+            "template_id": template,
             "lane": "foundry-" + scene,
             "artifacts": [
                 "/" + p for p in manifest.get("public_capture_allowlist", [])
