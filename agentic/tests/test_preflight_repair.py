@@ -138,6 +138,7 @@ class PublishedFixtureBinding(unittest.TestCase):
                 updated["verifier_revision"]["instruction_sha256_unchanged"]
             )
             self.assertFalse(updated["verifier_revision"]["scoring_rules_changed"])
+            self.assertEqual(event_binding(updated, root / "already-correct"), updated)
             published.write_text('{"quota":"drifted"}')
             with self.assertRaises(ValueError):
                 event_binding(spec, root / "other")

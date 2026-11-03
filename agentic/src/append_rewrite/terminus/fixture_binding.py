@@ -25,6 +25,13 @@ def event_binding(spec, output):
     if sha(old / "tests/fixtures/netting-routes.json") == expected:
         return spec
     wrapper = (old / "tests/grade.py").read_text()
+    already = old / "tests/published-netting-routes.json"
+    if (
+        already.is_file()
+        and sha(already) == expected
+        and "'/tests/published-netting-routes.json'" in wrapper
+    ):
+        return spec
     target = "'/tests/fixtures/netting-routes.json'"
     if wrapper.count(target) != 1:
         raise ValueError("Unrecognized evaluator batch binding")

@@ -78,7 +78,8 @@ def alive(record):
     p = Path("/proc") / str(record["pid"])
     try:
         stat = (p / "stat").read_text()
-        return stat[stat.rfind(")") + 2 :].split()[19] == record["start_ticks"]
+        fields = stat[stat.rfind(")") + 2 :].split()
+        return fields[0] not in ("Z", "X") and fields[19] == record["start_ticks"]
     except OSError:
         return False
 
