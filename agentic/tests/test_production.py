@@ -19,6 +19,12 @@ class ProductionSafety(unittest.TestCase):
             with self.assertRaises(ValueError):
                 safe_artifacts(paths)
         self.assertEqual(safe_artifacts(["/app/output/"]), ["/app/output/"])
+        self.assertEqual(
+            safe_artifacts(
+                [{"source": "/app/submission", "destination": "submission"}]
+            ),
+            ["/app/submission"],
+        )
 
     def test_mode_identity_and_atomic_metadata(self):
         with tempfile.TemporaryDirectory() as d:

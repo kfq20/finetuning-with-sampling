@@ -293,6 +293,22 @@ def main():
     entries = (
         json.loads(a.previous_plan.read_text())["units"] if a.previous_plan else []
     )
+    if a.previous_plan:
+        # Completed copy/validation workers may have sealed specs before an
+        # unrelated source failed. Reuse those bytes without recopying/replay.
+        known = {x["unit_id"] for x in entries}
+        for path in sorted((a.previous_plan.parent / "inputs").glob("*/spec.json")):
+            spec = json.loads(path.read_text())
+            if spec["unit_id"] not in known:
+                entries.append(
+                    {k: spec[k] for k in ("unit_id", "lane", "source")}
+                    | {
+                        "spec_path": str(path),
+                        "reuse_teacher": spec.get("reuse_teacher"),
+                        "reuse_student": spec.get("reuse_student"),
+                    }
+                )
+                known.add(spec["unit_id"])
     holds = []
     aliases = []
     seen = {x["unit_id"]: x for x in entries}
@@ -314,7 +330,7 @@ def main():
                 else foundry(source, folder, reuse)
             )
             return item
-        except (OSError, ValueError, KeyError, TypeError) as exc:
+        except Exception as exc:
             return {
                 "preparation_error": {
                     "kind": kind,

@@ -46,8 +46,10 @@ def tree(root):
 
 
 def safe_artifacts(paths):
+    paths = [p.get("source") if isinstance(p, dict) else p for p in (paths or [])]
     if not paths or any(
-        not p.startswith("/app/") or ".." in Path(p).parts for p in paths
+        not isinstance(p, str) or not p.startswith("/app/") or ".." in Path(p).parts
+        for p in paths
     ):
         raise ValueError("Explicit /app artifact allowlist required")
     return paths
@@ -534,6 +536,11 @@ def main():
     ):
         p.add_argument("--" + name, type=Path, required=True)
     a = p.parse_args()
+    if (
+        not a.runtime_assets.is_dir()
+        or not (a.runtime_assets / "manifest.json").is_file()
+    ):
+        p.error("--runtime-assets requires the offline runtime DIRECTORY")
     asyncio.run(unit(a) if a.mode == "unit" else batch(a))
 
 
