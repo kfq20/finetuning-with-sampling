@@ -16,17 +16,19 @@ from .scoring import analyze_native
 
 
 class NativeSuffixStreamClient(NativeStreamClient):
-    def score(self, rendered, *, journal, timeout=120):
+    def score(self, rendered, *, journal, timeout=120, full_input=False):
         rendered.validate()
         journal = Path(journal)
         journal.mkdir(parents=True, mode=0o700, exist_ok=False)
-        offset = rendered.candidate_start - 1
+        offset = 0 if full_input else rendered.candidate_start - 1
         body = {
-            "input_ids": list(rendered.input_ids),
+            ("text" if full_input else "input_ids"): rendered.text
+            if full_input
+            else list(rendered.input_ids),
             "sampling_params": {"max_new_tokens": 0, "temperature": 0},
             "return_logprob": True,
             "logprob_start_len": offset,
-            "return_text_in_logprobs": False,
+            "return_text_in_logprobs": full_input,
             "stream": True,
         }
         (journal / "request.json").write_text(json.dumps(body))
@@ -109,3 +111,12 @@ class NativeSuffixStreamClient(NativeStreamClient):
                 )
             )
             raise
+
+
+class NativeFullStreamClient(NativeSuffixStreamClient):
+    """Same full-input score request/analysis as legacy, only streamed transport."""
+
+    def score(self, rendered, *, journal, timeout=120):
+        return super().score(
+            rendered, journal=journal, timeout=timeout, full_input=True
+        )
