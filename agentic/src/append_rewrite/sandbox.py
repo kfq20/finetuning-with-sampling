@@ -72,14 +72,18 @@ def upload(sb, root, destination):
         command(sb, "rm -f " + shlex.quote(prefix) + ".*", user="root", timeout=30)
 
 
-def create(task, credential_file, owner):
+def create(task, credential_file, owner, *, template_id=None):
     from dotenv import dotenv_values
     from e2b import Sandbox
 
     v = dotenv_values(credential_file, interpolate=False)
-    binding = json.loads((task / "runtime-binding.json").read_text())
+    binding = (
+        json.loads((task / "runtime-binding.json").read_text())
+        if template_id is None
+        else {}
+    )
     sb = Sandbox.create(
-        template=binding["template_id"],
+        template=template_id or binding["template_id"],
         timeout=3600,
         metadata={"envforge.owner": owner, "envforge.role": "qwen-append-rewrite"},
         network={"allow_out": [], "deny_out": ["0.0.0.0/0"]},

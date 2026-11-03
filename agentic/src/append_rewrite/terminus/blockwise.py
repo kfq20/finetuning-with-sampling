@@ -10,7 +10,7 @@ import time
 
 from ..collect import dump
 from .episode import generation_history
-from .suffix_score import NativeFullStreamClient
+from .suffix_score import ResilientFullStreamClient
 from .protocol import action, digest, public_messages
 from .scoring import render_candidate
 
@@ -26,7 +26,7 @@ class BlockwiseLLM:
     def __init__(self, config, tokenizer, root, reference, *, proposals=8):
         if type(proposals) is not int or proposals < 1:
             raise ValueError("Positive candidate count required")
-        self.client = NativeFullStreamClient(config)
+        self.client = ResilientFullStreamClient(config)
         self.tokenizer, self.reference, self.proposals = tokenizer, reference, proposals
         self.root = Path(root)
         self.root.mkdir(parents=True, mode=0o700, exist_ok=False)
@@ -54,6 +54,7 @@ class BlockwiseLLM:
         self.turn += 1
         base = self.root / f"turn-{self.turn:04d}"
         base.mkdir(mode=0o700)
+        dump(base / "public-prefix.json", public)
 
         async def propose(index):
             started = time.monotonic()

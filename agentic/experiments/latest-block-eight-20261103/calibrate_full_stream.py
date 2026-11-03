@@ -8,7 +8,7 @@ from pathlib import Path
 
 from append_rewrite.terminus.protocol import public_messages
 from append_rewrite.terminus.scoring import RenderedCandidate, render_candidate
-from append_rewrite.terminus.suffix_score import NativeFullStreamClient
+from append_rewrite.terminus.suffix_score import ResilientFullStreamClient
 from append_rewrite.terminus.tokenizer import PinnedTokenizer
 
 
@@ -22,7 +22,7 @@ def main():
         json.loads((args.previous / "public-messages.json").read_text())
     )
     tokenizer = PinnedTokenizer(args.tokenizer)
-    client = NativeFullStreamClient(args.config)
+    client = ResilientFullStreamClient(args.config)
 
     def check(turn, index, label):
         old = args.previous / "generation" / f"turn-{turn:04d}"

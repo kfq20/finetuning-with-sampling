@@ -35,7 +35,10 @@ def generation_history(public, reference):
             "The complete expert interaction is reference material, not your "
             "execution history. Solve the task using your own actual terminal "
             "feedback. Expert observations are historical and do not establish "
-            "your current state. You may use a different valid approach."
+            "your current state. You may use a different valid approach. "
+            "Your public response must be self-contained. Do not mention the "
+            "expert, reference trajectory, or access to a supplied solution. "
+            "Explain decisions using public task/project facts and your own feedback."
         )
     return result
 

@@ -88,7 +88,7 @@ class NativeSuffixStreamClient(NativeStreamClient):
             result.update(
                 model_id=self.config["model_id"],
                 response_sha256=hashlib.sha256(raw).hexdigest(),
-                full_input_ids_supplied=True,
+                full_input_ids_supplied=not full_input,
                 automatic_retry=False,
                 request_elapsed_sec=time.monotonic() - started,
             )
@@ -120,3 +120,76 @@ class NativeFullStreamClient(NativeSuffixStreamClient):
         return super().score(
             rendered, journal=journal, timeout=timeout, full_input=True
         )
+
+
+class ResilientFullStreamClient(NativeFullStreamClient):
+    """Retry only incomplete zero-generation scores, never action generation.
+
+    Every POST has its own retained journal. A validated result is reused once;
+    auth/policy, quota and validation errors never trigger transport retries.
+    """
+
+    def score(self, rendered, *, journal, timeout=120):
+        import shutil
+        from urllib.error import HTTPError, URLError
+        from http.client import IncompleteRead
+
+        journal = Path(journal)
+        journal.mkdir(parents=True, mode=0o700, exist_ok=False)
+        for attempt in range(1, 4):
+            dest = journal / f"attempt-{attempt}"
+            try:
+                result = super().score(rendered, journal=dest, timeout=timeout)
+            except (
+                HTTPError,
+                URLError,
+                IncompleteRead,
+                TimeoutError,
+                ConnectionError,
+            ) as exc:
+                retryable = not isinstance(exc, HTTPError) or exc.code in (
+                    499,
+                    500,
+                    502,
+                    503,
+                    504,
+                )
+                with (journal / "error-events.jsonl").open("a") as events:
+                    events.write(
+                        json.dumps(
+                            {
+                                "attempt": attempt,
+                                "error_type": type(exc).__name__,
+                                "http_status": getattr(exc, "code", None),
+                                "retryable_zero_generation_only": retryable,
+                            }
+                        )
+                        + "\n"
+                    )
+                if not retryable or attempt == 3:
+                    (journal / "error.json").write_text(
+                        json.dumps(
+                            {
+                                "error_type": type(exc).__name__,
+                                "http_status": getattr(exc, "code", None),
+                                "attempts": attempt,
+                                "generation_retried": False,
+                            }
+                        )
+                    )
+                    raise
+                time.sleep(2**attempt)
+            else:
+                for name in (
+                    "request.json",
+                    "intent.json",
+                    "response.json",
+                    "transport.json",
+                    "http.json",
+                ):
+                    if (dest / name).exists():
+                        shutil.copy2(dest / name, journal / name)
+                result["score_transport_attempts"] = attempt
+                result["generation_retried"] = False
+                (journal / "score.json").write_text(json.dumps(result, indent=2))
+                return result
