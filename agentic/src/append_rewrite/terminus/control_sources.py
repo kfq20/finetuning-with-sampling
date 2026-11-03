@@ -2,6 +2,7 @@
 
 import json
 import tomllib
+import re
 from pathlib import Path
 from .production_sources import ref_path, foundry_id, oracle_archive
 from append_rewrite.collect import sha
@@ -93,7 +94,15 @@ def recover(spec, output):
                 queue.append(p)
     for manifest_path in candidates:
         m = json.loads(manifest_path.read_text())
-        if m.get("schema_version") != 1 or foundry_id(m) != manifest_path.parent.name:
+        if not isinstance(m.get("files"), dict):
+            continue
+        # All candidates were reached through a verified FileRef or exact
+        # capture_sha256. Older controls use a fixed capture/ directory, while
+        # Snapshot additionally binds its canonical ID in the directory name.
+        if (
+            re.fullmatch(r"[0-9a-f]{64}", manifest_path.parent.name)
+            and foundry_id(m) != manifest_path.parent.name
+        ):
             raise ValueError("Original oracle snapshot identity mismatch")
         configured = tomllib.loads((Path(spec["task_path"]) / "task.toml").read_text())[
             "artifacts"
