@@ -83,3 +83,31 @@ actual errors/repairs, repetition, output length, reference-copy similarity,
 unreferenced action likelihood and wall time. Higher likelihood is a proxy for
 student compatibility, not proof of learning benefit; that needs downstream
 training and unreferenced held-out evaluation.
+
+### Matched direct arm completed
+
+Direct sourceeb5b3b7, data/direct-stream-coq-reference-01. Receipt SHA256
+8217b9db93bceb84e0101352209abe264467b2a623dc323dfc209fdc0eeef542.
+8 normal native responses/13 shell commands; original1/fresh1. Rollout191.833s;
+total319.458s includes64.816s grading+50.000s POST-episode scoring.8generation
+calls,8offline scoring calls; journal timestamps verify no online scoring.
+Generation input342061/output1896; score input35229; unreferenced mean action
+LP -0.320684 vs eight-arm -0.180634. Direct artifact exactly matches expert;
+both arm artifacts match after removing whitespace. Direct had no feedback
+blocks with Coq Error; eight-arm had two at3/4. Qualitatively direct is shorter
+and cleaner here; higher likelihood does not itself demonstrate learning benefit.
+
+New derived training-quality reviews hold BOTH exports: selected block2 refers
+to unseen expert material after reference stripping. Original raw exports, scores
+and prior technical-admission flags remain unchanged; TRAINING-QUALITY-REVIEW.json
+is authoritative for current release approval=false. No clean SFT release made.
+
+No-reference eight-arm completed23 selected blocks, generated all192candidates
+through24;190 forced scores completed. Candidate4/7 of24 hit IncompleteRead
+at31.249/31.260s on NONSTREAM zero-generation scoring. No action24 executed.
+All generation streams completed; failure is scoring transport, not model0.
+Full files-only partial state retained (SHA256
+0fbf5632aa4d72206a31ae5032e2ac656968111c820080a6431668a7f6b450f1).
+No automatic retry/regeneration/restart. All current owned workers exited.
+Comparison delivery: data/three-arm-coq-comparison-v1, includes both observable
+histories, receipts, quality holds and explicit no-reference transport status.
