@@ -70,3 +70,74 @@ class BoundControlReuse(unittest.TestCase):
             changed = dict(spec, template_id="other-template")
             with self.assertRaises(ValueError):
                 reuse_control_certificate(changed)
+
+
+class PublishedFixtureBinding(unittest.TestCase):
+    def test_only_batch_binding_changes(self):
+        import tempfile
+        import json
+        from pathlib import Path
+        from append_rewrite.collect import sha
+        from append_rewrite.terminus.fixture_binding import event_binding
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            task = root / "task"
+            (task / "tests/fixtures").mkdir(parents=True)
+            (task / "instruction.md").write_text(
+                "Preserve the published quota configuration."
+            )
+            (task / "tests/fixtures/netting-routes.json").write_text('{"quota":"old"}')
+            wrapper = "batch='/tests/fixtures/netting-routes.json'\n"
+            (task / "tests/grade.py").write_text(wrapper)
+            published = root / "published.json"
+            published.write_text('{"quota":"current"}')
+            profile = root / "profile.json"
+            profile.write_text(
+                json.dumps(
+                    {
+                        "harbor_worker": {
+                            "fresh_grader_argv": [
+                                "python",
+                                "grade.py",
+                                "--batch",
+                                str(published),
+                            ]
+                        }
+                    }
+                )
+            )
+            order = root / "order.json"
+            order.write_text(
+                json.dumps(
+                    {"profile": {"uri": profile.as_uri(), "sha256": sha(profile)}}
+                )
+            )
+            spec = {
+                "source": {"kind": "foundry", "order_path": str(order)},
+                "lane": "foundry-event",
+                "task_path": str(task),
+                "state_manifest": {
+                    "work/netting-routes.json": {"sha256": sha(published)}
+                },
+            }
+            output = root / "out"
+            output.mkdir()
+            updated = event_binding(spec, output)
+            derived = Path(updated["task_path"])
+            self.assertEqual((task / "tests/grade.py").read_text(), wrapper)
+            self.assertEqual(
+                (derived / "tests/fixtures/netting-routes.json").read_text(),
+                '{"quota":"old"}',
+            )
+            self.assertEqual(
+                (derived / "tests/published-netting-routes.json").read_bytes(),
+                published.read_bytes(),
+            )
+            self.assertTrue(
+                updated["verifier_revision"]["instruction_sha256_unchanged"]
+            )
+            self.assertFalse(updated["verifier_revision"]["scoring_rules_changed"])
+            published.write_text('{"quota":"drifted"}')
+            with self.assertRaises(ValueError):
+                event_binding(spec, root / "other")
