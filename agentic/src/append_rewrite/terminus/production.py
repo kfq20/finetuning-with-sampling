@@ -55,7 +55,7 @@ def safe_artifacts(paths):
     return paths
 
 
-def restore(spec, args, owner, *, template_id=None):
+def restore(spec, args, owner, *, template_id=None, install_runtime=True):
     state = Path(spec["state_path"])
     task = Path(spec["task_path"])
     if tree(state) != spec["state_manifest"] or tree(task) != spec["task_manifest"]:
@@ -68,9 +68,15 @@ def restore(spec, args, owner, *, template_id=None):
     )
     try:
         sb.set_timeout(30000)
+        resets = spec.get("restore_reset_paths")
+        if resets is None:
+            reset = "find /app -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +"
+        else:
+            safe_artifacts(resets)
+            reset = "rm -rf -- " + " ".join(shlex.quote(x) for x in resets)
         q = sandbox.command(
             sb,
-            "find /app -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +; rm -rf /tests /solution /logs/verifier",
+            reset + "; rm -rf /tests /solution /logs/verifier",
             user="root",
             timeout=120,
         )
@@ -90,7 +96,8 @@ def restore(spec, args, owner, *, template_id=None):
             q = sandbox.command(sb, spec["healthcheck"], user="root", timeout=600)
             if q.exit_code:
                 raise RuntimeError("PublishedHealthcheckFailed")
-        install(sb, args.runtime_assets)
+        if install_runtime:
+            install(sb, args.runtime_assets)
         return sb
     except BaseException:
         sb.kill()

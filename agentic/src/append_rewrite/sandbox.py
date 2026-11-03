@@ -45,7 +45,12 @@ def upload(sb, root, destination):
     try:
         for offset in range(0, len(payload), 1048576):
             name = prefix + f".{len(parts):05d}.part"
-            sb.files.write(name, payload[offset : offset + 1048576], user="root")
+            sb.files.write(
+                name,
+                payload[offset : offset + 1048576],
+                user="root",
+                request_timeout=240,
+            )
             parts.append(name)
         archive = prefix + ".tgz"
         expected = hashlib.sha256(payload).hexdigest()
@@ -126,12 +131,26 @@ def grade(sb, task):
     if r.exit_code:
         raise RuntimeError("GraderSetupFailed")
     upload(sb, task / "tests", "/tests")
-    r = command(sb, "cd /app && bash /tests/test.sh", user="root", timeout=900)
+    import tomllib
+    from .grading import parse_rewards
+
+    config = tomllib.loads((task / "task.toml").read_text())
+    r = command(
+        sb,
+        "cd /app && bash /tests/test.sh",
+        user="root",
+        timeout=config.get("verifier", {}).get("timeout_sec", 900),
+    )
     if r.exit_code:
         raise RuntimeError("GraderInfrastructureError")
-    value = float(sb.files.read("/logs/verifier/reward.txt", user="root").strip())
-    if value not in (0.0, 1.0):
-        raise RuntimeError("InvalidReward")
+    channels = {}
+    for name in ("reward.txt", "reward.json"):
+        exists = command(sb, "test -f /logs/verifier/" + name, user="root", timeout=30)
+        if exists.exit_code == 0:
+            channels[name] = sb.files.read("/logs/verifier/" + name, user="root")
+    value = parse_rewards(channels)
+    if value is None:
+        raise RuntimeError("RewardFileMissing")
     details = {}
     for name in (
         "checks.json",
@@ -143,9 +162,17 @@ def grade(sb, task):
     ):
         exists = command(sb, "test -f /logs/verifier/" + name, user="root", timeout=10)
         if exists.exit_code == 0:
-            details[name] = json.loads(
-                sb.files.read("/logs/verifier/" + name, user="root")
-            )
+            text = sb.files.read("/logs/verifier/" + name, user="root")
+            try:
+                details[name] = json.loads(text)
+            except ValueError:
+                # Reward remains authoritative; optional diagnostic stdout may
+                # be empty on a legitimate rejected submission.
+                details[name] = {
+                    "format": "unparsed_diagnostic",
+                    "sha256": hashlib.sha256(text.encode()).hexdigest(),
+                    "bytes": len(text.encode()),
+                }
     return {"reward": value, "details": details}
 
 
@@ -217,7 +244,32 @@ def restore_archive(sb, path, artifacts):
         q = command(sb, "rm -rf " + shlex.quote(artifact), user="root", timeout=30)
         if q.exit_code:
             raise RuntimeError("RestoreResetFailed")
-    sb.files.write("/tmp/append-submission.tgz", path.read_bytes(), user="root")
+    payload = path.read_bytes()
+    prefix = "/tmp/append-capture-" + uuid.uuid4().hex
+    parts = []
+    try:
+        for offset in range(0, len(payload), 1048576):
+            name = prefix + f".{len(parts):05d}.part"
+            sb.files.write(
+                name,
+                payload[offset : offset + 1048576],
+                user="root",
+                request_timeout=240,
+            )
+            parts.append(name)
+        q = command(
+            sb,
+            "cat "
+            + " ".join(shlex.quote(x) for x in parts)
+            + " > /tmp/append-submission.tgz && test $(sha256sum /tmp/append-submission.tgz | cut -d ' ' -f 1) = "
+            + hashlib.sha256(payload).hexdigest(),
+            user="root",
+            timeout=120,
+        )
+        if q.exit_code:
+            raise RuntimeError("CaptureUploadHashMismatch")
+    finally:
+        command(sb, "rm -f " + shlex.quote(prefix) + ".*", user="root", timeout=30)
     r = command(sb, "tar xzf /tmp/append-submission.tgz -C /", user="root", timeout=120)
     if r.exit_code:
         raise RuntimeError("RestoreFailed")
