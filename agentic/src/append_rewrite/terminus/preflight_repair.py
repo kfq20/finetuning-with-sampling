@@ -37,6 +37,16 @@ def run_one(item, args):
     spec_path = Path(item["spec_path"])
     original = json.loads(spec_path.read_text())
     spec = repaired_spec(original, item["lane"])
+    if not spec.get("oracle_archive") and spec["source"]["kind"] == "foundry":
+        from .control_sources import recover
+
+        try:
+            spec.update(recover(spec, out))
+        except Exception as e:
+            dump(
+                out / "original-control-discovery-error.json",
+                {"error_type": type(e).__name__, "message": str(e)[:400]},
+            )
     dump(out / "spec.json", spec)
     dump(out / "status.json", {"phase": "initial_control"})
     try:
@@ -47,6 +57,7 @@ def run_one(item, args):
             template_id=spec.get("verifier_template_id"),
             install_runtime=False,
         )
+        dump(out / "initial-sandbox.json", {"sandbox_id": sb.sandbox_id})
         try:
             initial = observe(sb, Path(spec["task_path"]), out / "initial")
         finally:
@@ -74,6 +85,7 @@ def run_one(item, args):
             template_id=spec.get("verifier_template_id"),
             install_runtime=False,
         )
+        dump(out / "legal-sandbox.json", {"sandbox_id": sb.sandbox_id})
         try:
             apply_capture(sb, Path(spec["oracle_archive"]), spec["artifacts"])
             legal = observe(sb, Path(spec["task_path"]), out / "legal")
@@ -125,11 +137,14 @@ def main():
     for key in ("census", "sandbox-credentials", "runtime-assets", "output"):
         p.add_argument("--" + key, type=Path, required=True)
     p.add_argument("--prior-success-only", action="store_true")
+    p.add_argument("--prior-zero-only", action="store_true")
     a = p.parse_args()
     a.output.mkdir(mode=0o700, parents=True, exist_ok=False)
     rows = json.loads(a.census.read_text())["rows"]
     if a.prior_success_only:
         rows = [x for x in rows if x["source"].get("original_outcome") == 1]
+    if a.prior_zero_only:
+        rows = [x for x in rows if x["source"].get("original_outcome") == 0]
     dump(
         a.output / "selection.json",
         {"rows": rows, "source_census_sha256": sha(a.census), "new_model_requests": 0},

@@ -128,6 +128,7 @@ def finalize(task, state, unit, source, adapter, oracle, reuse, legacy_student=N
         "source": source,
         "lane": adapter["lane"],
         "verifier_template_id": adapter.get("verifier_template_id"),
+        "restore_reset_paths": adapter.get("restore_reset_paths"),
     }
     archive = oracle_archive(oracle, unit / "oracle-control.tgz")
     if archive:
@@ -203,7 +204,15 @@ def legacy(row, unit, reuse, legacy_student):
             "receipt": row["receipt"],
             "original_outcome": row["score_original"],
         },
-        {"template_id": binding["template_id"], "lane": lane},
+        {
+            "template_id": binding["template_id"],
+            "lane": lane,
+            "restore_reset_paths": {
+                "legacy-cad": ["/app/output", "/app/stock", "/app/orders"],
+                "legacy-science": ["/app/project", "/app/submission"],
+                "legacy-audio": ["/app/output"],
+            }.get(lane),
+        },
         old_oracle(row, safe_artifacts(config["artifacts"])),
         reuse,
         legacy_student,
