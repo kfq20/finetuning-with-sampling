@@ -135,12 +135,18 @@ async def run(args):
     reference = (
         json.dumps(expert, ensure_ascii=False) if args.mode == "reference" else None
     )
+    blockwise = getattr(args, "algorithm", "full-episode") == "latest-block-8"
+    algorithm = (
+        "latest-block-logprob-8.v1"
+        if blockwise
+        else "fixed-start-full-episode-rewrite.v1"
+    )
     out = args.output
     out.mkdir(parents=True, mode=0o700, exist_ok=False)
     dump(
         out / "identity.json",
         {
-            "algorithm": "fixed-start-full-episode-rewrite.v1",
+            "algorithm": algorithm,
             "mode": args.mode,
             "teacher_receipt_sha256": sha(teacher / "teacher-receipt.json"),
             "teacher_history_sha256": sha(teacher / "teacher-public-messages.json"),
@@ -165,9 +171,16 @@ async def run(args):
             args.runtime_assets,
         )
         dump(out / "sandbox.json", {"sandbox_id": sb.sandbox_id})
-        backend = EpisodeLLM(
-            args.fleet_config, tokenizer, out / "generation", reference
-        )
+        if blockwise:
+            from .blockwise import BlockwiseLLM
+
+            backend = BlockwiseLLM(
+                args.fleet_config, tokenizer, out / "generation", reference, proposals=8
+            )
+        else:
+            backend = EpisodeLLM(
+                args.fleet_config, tokenizer, out / "generation", reference
+            )
         agent = make_agent(out / "agent", backend.model_name, backend=backend)
         env = SDKEnvironment(sb, "/app/project")
         await agent.setup(env)
@@ -195,22 +208,45 @@ async def run(args):
         if not complete:
             raise RuntimeError("StudentDidNotConfirmCompletion")
         before = time.monotonic()
+        submission_present = (
+            sandbox.command(
+                sb, "test -f /app/output/Submission.v", user="root", timeout=30
+            ).exit_code
+            == 0
+        )
         capture = sandbox.capture(
-            sb, ["/app/output/Submission.v"], out / "submission.tgz"
+            sb,
+            ["/app/output/Submission.v"] if submission_present else ["/app/output"],
+            out / "submission.tgz",
         )
         original = sandbox.grade(sb, source / "task")
-        restored = fresh(
-            source / "task",
-            source / "state",
-            args.sandbox_credentials,
-            out / "submission.tgz",
-            "fixed-start-qwen-fresh",
-            args.runtime_assets,
-        )
+        if submission_present:
+            restored = fresh(
+                source / "task",
+                source / "state",
+                args.sandbox_credentials,
+                out / "submission.tgz",
+                "fixed-start-qwen-fresh",
+                args.runtime_assets,
+            )
+        else:
+            empty = restore(
+                source / "task",
+                source / "state",
+                args.sandbox_credentials,
+                "fixed-start-empty-submission-grade",
+                args.runtime_assets,
+            )
+            try:
+                restored = sandbox.grade(empty, source / "task")
+            finally:
+                empty.kill()
         phases["capture_grading_sec"] = time.monotonic() - before
 
         def submitted(path):
             with tarfile.open(path, "r:gz") as archive:
+                if "app/output/Submission.v" not in archive.getnames():
+                    return ""
                 return archive.extractfile("app/output/Submission.v").read().decode()
 
         student, gold = (
@@ -220,10 +256,14 @@ async def run(args):
         passed = original["reward"] == restored["reward"] == 1
         record = {
             "terminal_reason": "completed",
+            "algorithm": algorithm,
+            "intermediate_verifier_calls": 0,
+            "environment_rollbacks": 0,
             "execution_closed_normally": True,
             "original": original,
             "fresh": restored,
             "capture": capture,
+            "submission_present": submission_present,
             "mode": args.mode,
             "training_admitted": False,
             "decisions": len(backend.decisions),
@@ -242,10 +282,19 @@ async def run(args):
         }
         # Preserve completed execution even if later offline likelihood work fails.
         dump(out / "execution-receipt.json", record)
+        if blockwise:
+            selected_scores = [
+                d["candidates"][d["selected_index"]]["score"] for d in backend.decisions
+            ]
+            record["likelihood"] = aggregate_scores(selected_scores)
+            record["proposals_per_block"] = 8
+            record["proposals_total"] = sum(
+                d["candidate_count"] for d in backend.decisions
+            )
         if passed:
             before = time.monotonic()
             scores = []
-            for i, m in enumerate(history):
+            for i, m in enumerate(history if not blockwise else []):
                 if m["role"] == "assistant":
                     rendered = render_candidate(
                         history[:i],
@@ -261,12 +310,13 @@ async def run(args):
                         )
                     )
             phases["unreferenced_scoring_sec"] = time.monotonic() - before
-            record["likelihood"] = aggregate_scores(scores)
+            if not blockwise:
+                record["likelihood"] = aggregate_scores(scores)
             row = export_row(
                 history,
                 tokenizer,
                 provenance={
-                    "algorithm": "fixed-start-full-episode-rewrite.v1",
+                    "algorithm": algorithm,
                     "mode": args.mode,
                     "teacher_receipt_sha256": sha(teacher / "teacher-receipt.json"),
                     "input_manifest_sha256": sha(teacher / "input-manifest.json"),
@@ -303,8 +353,27 @@ async def run(args):
                         sb, ["/app/output/Submission.v"], out / "partial-submission.tgz"
                     ),
                 )
-            except Exception:
-                pass
+            except Exception as capture_error:
+                dump(
+                    out / "partial-capture-error.json",
+                    {"error_type": type(capture_error).__name__},
+                )
+            try:
+                state_capture = sandbox.capture(
+                    sb, ["/app/project", "/app/output"], out / "partial-state.tgz"
+                )
+                dump(
+                    out / "partial-state.json",
+                    {
+                        "capture": state_capture,
+                        "scope": "files only; no process rollback claim",
+                    },
+                )
+            except Exception as state_error:
+                dump(
+                    out / "partial-state-error.json",
+                    {"error_type": type(state_error).__name__},
+                )
         raise
     finally:
         if sb is not None:
@@ -323,6 +392,11 @@ def main():
     ):
         p.add_argument("--" + name, type=Path, required=True)
     p.add_argument("--mode", choices=("reference", "no-reference"), required=True)
+    p.add_argument(
+        "--algorithm",
+        choices=("full-episode", "latest-block-8"),
+        default="full-episode",
+    )
     asyncio.run(run(p.parse_args()))
 
 
