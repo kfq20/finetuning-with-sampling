@@ -66,6 +66,23 @@ def recover(spec, output):
                 for key in ("capture", "snapshot"):
                     if isinstance(obj.get(key), dict) and "uri" in obj[key]:
                         candidates.append(ref_path(obj[key]))
+        # Some original batches bind named control cases instead of snapshot
+        # refs. Match their actual captured files to content-addressed snapshots.
+        if data.get("no_model") is True and data.get("passed") is True:
+            for case, expected in data.get("expected", {}).items():
+                if expected != 1:
+                    continue
+                for artifacts in (path.parent / case / "jobs").glob("*/*/artifacts"):
+                    for candidate in (path.parent / "actual-captures").glob(
+                        "*/manifest.json"
+                    ):
+                        m = json.loads(candidate.read_text())
+                        if m.get("files") and all(
+                            (artifacts / name).is_file()
+                            and sha(artifacts / name) == meta["sha256"]
+                            for name, meta in m["files"].items()
+                        ):
+                            candidates.append(candidate)
         for child in file_refs(data):
             try:
                 p = ref_path(child)

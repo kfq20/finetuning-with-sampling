@@ -7,6 +7,8 @@ from pathlib import Path
 import time
 from append_rewrite.collect import sha
 from .production import restore, apply_capture, dump
+from append_rewrite import sandbox
+import shlex
 from .grader import observe
 from .protocol import digest
 
@@ -47,6 +49,42 @@ def run_one(item, args):
                 out / "original-control-discovery-error.json",
                 {"error_type": type(e).__name__, "message": str(e)[:400]},
             )
+    recipe = None
+    task = Path(spec["task_path"])
+    if not spec.get("oracle_archive"):
+        if (task / "solution/solve.sh").is_file():
+            recipe = {
+                "kind": "script",
+                "path": str(task / "solution/solve.sh"),
+                "sha256": sha(task / "solution/solve.sh"),
+            }
+        elif (
+            item["lane"] == "legacy-science"
+            and (task / "solution/reference.py").is_file()
+        ):
+            recipe = {
+                "kind": "file",
+                "path": str(task / "solution/reference.py"),
+                "sha256": sha(task / "solution/reference.py"),
+                "destination": "/app/submission/solver.py",
+            }
+        elif item["lane"] == "foundry-eigenmodes" and spec.get("original_controls_ref"):
+            from .production_sources import ref_path
+
+            ctrl = json.loads(ref_path(spec["original_controls_ref"]).read_text())
+            if ctrl.get("control_evidence"):
+                witness = (
+                    ref_path(ctrl["control_evidence"]).parent / "third_order_witness.py"
+                )
+                if witness.is_file():
+                    recipe = {
+                        "kind": "file",
+                        "path": str(witness),
+                        "sha256": sha(witness),
+                        "destination": "/app/submission/solver.py",
+                    }
+    if recipe:
+        spec["private_legal_control_recipe"] = recipe
     dump(out / "spec.json", spec)
     dump(out / "status.json", {"phase": "initial_control"})
     try:
@@ -62,7 +100,7 @@ def run_one(item, args):
             initial = observe(sb, Path(spec["task_path"]), out / "initial")
         finally:
             sb.kill()
-        if not spec.get("oracle_archive"):
+        if not spec.get("oracle_archive") and not recipe:
             dump(
                 out / "receipt.json",
                 {
@@ -75,7 +113,10 @@ def run_one(item, args):
             )
             dump(out / "status.json", {"phase": "needs_original_control"})
             return
-        if sha(Path(spec["oracle_archive"])) != spec["oracle_sha256"]:
+        if (
+            spec.get("oracle_archive")
+            and sha(Path(spec["oracle_archive"])) != spec["oracle_sha256"]
+        ):
             raise ValueError("OriginalCaptureDrift")
         dump(out / "status.json", {"phase": "original_success_capture_control"})
         sb = restore(
@@ -87,7 +128,40 @@ def run_one(item, args):
         )
         dump(out / "legal-sandbox.json", {"sandbox_id": sb.sandbox_id})
         try:
-            apply_capture(sb, Path(spec["oracle_archive"]), spec["artifacts"])
+            if spec.get("oracle_archive"):
+                apply_capture(sb, Path(spec["oracle_archive"]), spec["artifacts"])
+            else:
+                source = Path(recipe["path"])
+                if sha(source) != recipe["sha256"]:
+                    raise ValueError("Original reference recipe drift")
+                if recipe["kind"] == "script":
+                    sandbox.upload(sb, task / "solution", "/solution")
+                    result = sandbox.command(
+                        sb,
+                        "cd "
+                        + shlex.quote(spec["cwd"])
+                        + " && bash /solution/solve.sh",
+                        user="root",
+                        timeout=1800,
+                    )
+                    (out / "recipe-stdout.txt").write_text(result.stdout or "")
+                    (out / "recipe-stderr.txt").write_text(result.stderr or "")
+                    if result.exit_code:
+                        raise RuntimeError("OriginalReferenceRecipeFailed")
+                else:
+                    dest = recipe["destination"]
+                    sandbox.command(
+                        sb,
+                        "mkdir -p " + shlex.quote(str(Path(dest).parent)),
+                        user="root",
+                        timeout=30,
+                    )
+                    sb.files.write(
+                        dest, source.read_bytes(), user="root", request_timeout=240
+                    )
+                    sandbox.command(
+                        sb, "chmod 644 " + shlex.quote(dest), user="root", timeout=30
+                    )
             legal = observe(sb, Path(spec["task_path"]), out / "legal")
         finally:
             sb.kill()
