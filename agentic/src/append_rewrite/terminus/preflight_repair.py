@@ -39,6 +39,9 @@ def run_one(item, args):
     spec_path = Path(item["spec_path"])
     original = json.loads(spec_path.read_text())
     spec = repaired_spec(original, item["lane"])
+    from .fixture_binding import event_binding
+
+    spec = event_binding(spec, out)
     if not spec.get("oracle_archive") and spec["source"]["kind"] == "foundry":
         from .control_sources import recover
 
@@ -184,7 +187,8 @@ def run_one(item, args):
             "source_original_outcome": spec["source"].get("original_outcome"),
             "elapsed_sec": time.time() - started,
             "new_model_requests": 0,
-            "original_grader_unchanged": True,
+            "original_grader_unchanged": not bool(spec.get("verifier_revision")),
+            "verifier_revision": spec.get("verifier_revision"),
         }
         dump(out / "receipt.json", record)
         dump(

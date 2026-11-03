@@ -42,7 +42,10 @@ def publish(selection, output):
                     "original_report_path": str(rp),
                     "original_report_sha256": sha(rp),
                     "new_model_requests": 0,
-                    "original_grader_unchanged": True,
+                    "original_grader_unchanged": receipt.get(
+                        "original_grader_unchanged", True
+                    ),
+                    "verifier_revision": receipt.get("verifier_revision"),
                 }
                 dest = output / "admissions" / key
                 dest.mkdir(parents=True, exist_ok=True)
