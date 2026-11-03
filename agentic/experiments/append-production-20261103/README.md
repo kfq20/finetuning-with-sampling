@@ -42,3 +42,11 @@ At 2026-11-03 13:30 Asia/Shanghai, the effective identity registry had 231 selec
 The first clean SFT example is Foundry Chinook unit `d2d0716acdcae4f87ffefbb8`: six executed native interactions, both independent scores one, 9,629 total tokens / 2,573 assistant-supervised tokens, no dangling expert-reference attribution, SFT hash and public-message equality checked. A one-row snapshot is at `datasets/append-method8-20261103/{train.jsonl,manifest.json}`. Each later admitted student writes its own receipt-bound `student/train.jsonl`; the snapshot is not a live counter.
 
 `PRODUCTION_STATUS.json` is a timestamped observation. `PRODUCTION_SELECTION.json` lists the effective unit routes, so read those routes instead of summing every historical directory's raw holds.
+
+## Student parallelism trial
+
+At the user's request, the 2026-11-03 evening trial supplements the running student with three previously unclaimed selected units, using the existing frozen `production unit` launcher and original exclusive output paths. No runtime code was added or changed. The old lane coordinator skips these claimed paths.
+
+The intended student parallelism is four. Units `1a799d7df1bb880c55fe742a` and `ad7378e20bcb89ec933ac662` reuse admitted native Coq experts after checking task/state manifests, instruction bytes and working directory; `c0f9d2cc583619dd3e4e0a33` first runs controls and its own expert. Actual inference concurrency varies with these dependencies and normal exits; this finite trial does not introduce a global semaphore or a separate continuous backfill scheduler. Eight candidates per action block are unchanged. Paid failures are not replayed.
+
+MindLab evidence: `data/student-concurrency4-20261103/{admission,launches,observation,four-active-verification}.json` under the research root, also referenced by `PRODUCTION_SELECTION.json.supplemental_dispatches`. Count live workers and request records; a phase label alone does not prove active inference.
