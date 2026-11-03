@@ -56,8 +56,13 @@ def aggregate_scores(scores):
 
 
 class EpisodeLLM:
-    def __init__(self, config, tokenizer, root, reference=None):
-        self.client = NativeClient(config)
+    def __init__(self, config, tokenizer, root, reference=None, *, stream=False):
+        if stream:
+            from .native_stream import NativeStreamClient
+
+            self.client = NativeStreamClient(config)
+        else:
+            self.client = NativeClient(config)
         self.tokenizer, self.reference = tokenizer, reference
         self.root = Path(root)
         self.root.mkdir(mode=0o700, exist_ok=False)
@@ -135,18 +140,25 @@ async def run(args):
     reference = (
         json.dumps(expert, ensure_ascii=False) if args.mode == "reference" else None
     )
-    blockwise = getattr(args, "algorithm", "full-episode") == "latest-block-8"
-    algorithm = (
-        "latest-block-logprob-8.v1"
-        if blockwise
-        else "fixed-start-full-episode-rewrite.v1"
-    )
+    variant = getattr(args, "algorithm", "full-episode")
+    blockwise = variant == "latest-block-8"
+    stream = variant == "full-episode-stream"
+    algorithm = {
+        "latest-block-8": "latest-block-logprob-8.v1",
+        "full-episode-stream": "fixed-start-direct-stream.v1",
+        "full-episode": "fixed-start-full-episode-rewrite.v1",
+    }[variant]
     out = args.output
     out.mkdir(parents=True, mode=0o700, exist_ok=False)
     dump(
         out / "identity.json",
         {
             "algorithm": algorithm,
+            "proposals_per_block": 8 if blockwise else 1,
+            "online_likelihood_selection": blockwise,
+            "generation_transport": "native-sse-explicit-input-ids"
+            if (blockwise or stream)
+            else "native-buffered-text",
             "mode": args.mode,
             "teacher_receipt_sha256": sha(teacher / "teacher-receipt.json"),
             "teacher_history_sha256": sha(teacher / "teacher-public-messages.json"),
@@ -179,7 +191,11 @@ async def run(args):
             )
         else:
             backend = EpisodeLLM(
-                args.fleet_config, tokenizer, out / "generation", reference
+                args.fleet_config,
+                tokenizer,
+                out / "generation",
+                reference,
+                stream=stream,
             )
         agent = make_agent(out / "agent", backend.model_name, backend=backend)
         env = SDKEnvironment(sb, "/app/project")
@@ -291,10 +307,10 @@ async def run(args):
             record["proposals_total"] = sum(
                 d["candidate_count"] for d in backend.decisions
             )
-        if passed:
+        if (passed or stream) and not blockwise:
             before = time.monotonic()
             scores = []
-            for i, m in enumerate(history if not blockwise else []):
+            for i, m in enumerate(history):
                 if m["role"] == "assistant":
                     rendered = render_candidate(
                         history[:i],
@@ -310,8 +326,8 @@ async def run(args):
                         )
                     )
             phases["unreferenced_scoring_sec"] = time.monotonic() - before
-            if not blockwise:
-                record["likelihood"] = aggregate_scores(scores)
+            record["likelihood"] = aggregate_scores(scores)
+        if passed:
             row = export_row(
                 history,
                 tokenizer,
@@ -394,7 +410,7 @@ def main():
     p.add_argument("--mode", choices=("reference", "no-reference"), required=True)
     p.add_argument(
         "--algorithm",
-        choices=("full-episode", "latest-block-8"),
+        choices=("full-episode", "full-episode-stream", "latest-block-8"),
         default="full-episode",
     )
     asyncio.run(run(p.parse_args()))

@@ -59,3 +59,27 @@ Transport metric note: first_byte_sec in this frozen stream implementation start
 after response headers. Use whole rollout or candidate elapsed_sec for complete
 network-inclusive time; do not interpret it as POST-to-first-byte latency.
 All owned workers exited; no follow-up model/automation was started.
+
+## Matched three-arm qualitative comparison
+
+User authorized one no-reference eight-candidate episode, then one complete
+full-reference DIRECT episode. Both use the same task/start files/native parser,
+tokenizer,temperature0.6,128000 output cap and native SSE transport as the original
+eight-candidate episode. The direct arm uses `--algorithm full-episode-stream`:
+one generation per interaction, no online score/selection. Forced action likelihood
+is calculated only after the full episode, including normal zero outcomes; final
+verifier is evaluation and successful SFT export remains separate.
+
+No-reference eight-candidate arm runs independently on frozen835892f; it is not
+restarted or altered by the new direct arm. Historical nonstream direct results
+are preserved, but do not substitute for this matched transport comparison.
+Actual starting terminal hostnames differ across owned sandboxes; task/state
+bytes, native harness and parameters are bound identically. Stochastic draws are
+independent. Single episodes support qualitative inspection, not success rates.
+
+Compare: reference benefit (reference8 vs no-reference8) and selection effect
+(reference8 vs reference-direct). Track final reward, action/command counts,
+actual errors/repairs, repetition, output length, reference-copy similarity,
+unreferenced action likelihood and wall time. Higher likelihood is a proxy for
+student compatibility, not proof of learning benefit; that needs downstream
+training and unreferenced held-out evaluation.

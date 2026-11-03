@@ -74,3 +74,40 @@ class BlockwiseProtocol(unittest.TestCase):
             self.assertEqual(len(b.decisions[0]["candidates"]), 8)
             self.assertEqual(b.decisions[0]["selected_index"], 7)
             self.assertEqual(b.decisions[0]["intermediate_verifier_calls"], 0)
+
+
+@unittest.skipUnless(importlib.util.find_spec("harbor"), "requires native SDK")
+class DirectReferenceBaseline(unittest.TestCase):
+    def test_one_generation_no_online_scoring_or_selection(self):
+        from append_rewrite.terminus.episode import EpisodeLLM
+
+        class Client:
+            calls = 0
+
+            def generate(self, wire, tokenizer, **kwargs):
+                assert "FULL_EXPERT_TRACE" in wire
+                self.calls += 1
+                return {
+                    "text": '{"commands":[],"task_complete":true}',
+                    "meta_info": {
+                        "prompt_tokens": 100,
+                        "completion_tokens": 10,
+                        "id": "fixture",
+                    },
+                }
+
+            def score(self, *args, **kwargs):
+                raise AssertionError("Direct rollout must not perform online scoring")
+
+        with tempfile.TemporaryDirectory() as d:
+            b = EpisodeLLM.__new__(EpisodeLLM)
+            b.client = Client()
+            b.tokenizer = Renderer()
+            b.reference = "FULL_EXPERT_TRACE"
+            b.root = Path(d)
+            b.model_name = "fixture"
+            b.decisions = []
+            result = asyncio.run(b.call("actual task"))
+            self.assertEqual(b.client.calls, 1)
+            self.assertEqual(len(b.decisions), 1)
+            self.assertEqual(result.content, '{"commands":[],"task_complete":true}')
