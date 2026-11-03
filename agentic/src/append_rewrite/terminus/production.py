@@ -24,7 +24,7 @@ from .assets import install
 from .blockwise import BlockwiseLLM
 from .environment import SDKEnvironment
 from .export import export_row
-from .protocol import action, public_messages
+from .protocol import action, public_messages, digest
 from .runtime import make_agent
 from .teacher import DeepSeekTeacher
 from .tokenizer import PinnedTokenizer
@@ -139,8 +139,53 @@ def fresh_grade(spec, args, archive, owner):
         sb.kill()
 
 
+def control_binding(spec):
+    return digest(
+        {
+            key: spec.get(key)
+            for key in (
+                "task_manifest",
+                "state_manifest",
+                "template_id",
+                "verifier_template_id",
+                "cwd",
+                "artifacts",
+                "healthcheck",
+                "restore_reset_paths",
+            )
+        }
+    )
+
+
+def reuse_control_certificate(spec):
+    ref = spec.get("preflight_certificate")
+    if not ref:
+        return None
+    path = Path(ref["path"])
+    if sha(path) != ref["sha256"]:
+        raise ValueError("Preflight certificate drift")
+    receipt = json.loads(path.read_text())
+    if not receipt.get("passed") or receipt.get("control_binding") != control_binding(
+        spec
+    ):
+        raise ValueError("Preflight certificate input mismatch")
+    if receipt["legal"]["reward"] != 1 or receipt["legal"]["exit_code"] != 0:
+        raise ValueError("Preflight legal control did not pass")
+    negative = receipt["initial"]
+    if not (
+        negative["reward"] == 0
+        or (negative["reward"] is None and negative["exit_code"] == 1)
+    ):
+        raise ValueError("Preflight negative control did not reject")
+    return {**receipt, "reused_certificate": ref, "new_model_requests": 0}
+
+
 def controls(spec, args, out):
     out.mkdir(mode=0o700, parents=True, exist_ok=False)
+    certified = reuse_control_certificate(spec)
+    if certified:
+        dump(out / "receipt.json", certified)
+        return
     sb = restore(
         spec,
         args,

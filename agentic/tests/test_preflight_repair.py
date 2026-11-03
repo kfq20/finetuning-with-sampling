@@ -34,3 +34,39 @@ class ExactPreflight(unittest.TestCase):
         self.assertNotIn(
             "restore_reset_paths", repaired_spec(original, "foundry-chinook")
         )
+
+
+class BoundControlReuse(unittest.TestCase):
+    def test_changed_inputs_do_not_inherit_green(self):
+        import tempfile
+        from pathlib import Path
+        import json
+        from append_rewrite.collect import sha
+        from append_rewrite.terminus.production import (
+            control_binding,
+            reuse_control_certificate,
+        )
+
+        spec = {
+            "task_manifest": {"tests/test.sh": {"sha256": "a", "mode": 420}},
+            "state_manifest": {},
+            "template_id": "solver",
+            "restore_reset_paths": ["/app/project"],
+        }
+        with tempfile.TemporaryDirectory() as root:
+            p = Path(root) / "admission.json"
+            p.write_text(
+                json.dumps(
+                    {
+                        "passed": True,
+                        "control_binding": control_binding(spec),
+                        "legal": {"reward": 1, "exit_code": 0},
+                        "initial": {"reward": 0, "exit_code": 0},
+                    }
+                )
+            )
+            spec["preflight_certificate"] = {"path": str(p), "sha256": sha(p)}
+            self.assertTrue(reuse_control_certificate(spec)["passed"])
+            changed = dict(spec, template_id="other-template")
+            with self.assertRaises(ValueError):
+                reuse_control_certificate(changed)
