@@ -25,7 +25,7 @@ async def restore_coq_file_boundary(agent, env, context, binding, instruction, o
     The coordinator must review the exact command trace and bind its hash.
     """
     from harbor.llms.chat import Chat
-    from harbor.agents.terminus_2.terminus_2 import Step
+    from harbor.agents.terminus_2.terminus_2 import Step, Command
     from datetime import datetime, timezone
     from .production import capture
 
@@ -57,7 +57,11 @@ async def restore_coq_file_boundary(agent, env, context, binding, instruction, o
         if message["role"] != "assistant":
             continue
         parsed = agent._parser.parse_response(message["content"])
-        timed_out, _ = await agent._execute_commands(parsed.commands, agent._session)
+        commands = [
+            Command(keystrokes=c.keystrokes, duration_sec=min(c.duration, 60))
+            for c in parsed.commands
+        ]
+        timed_out, _ = await agent._execute_commands(commands, agent._session)
         if timed_out:
             raise ValueError("Tool-only reconstruction timed out")
     await agent._session.send_keys("\n", min_timeout_sec=1)
