@@ -12,6 +12,7 @@ from urllib.request import Request, urlopen
 
 from .native import NativeClient
 from .protocol import digest
+from .http_evidence import failure, headers
 
 
 def consume(response, journal, input_count, *, scoring=False):
@@ -120,14 +121,25 @@ class NativeStreamClient(NativeClient):
                 "Content-Type": "application/json",
             },
         )
+        started = time.monotonic()
         try:
             with urlopen(request, timeout=timeout) as response:
+                (journal / "http.json").write_text(
+                    json.dumps(
+                        {
+                            "status": response.status,
+                            "headers": headers(response),
+                            "headers_elapsed_sec": time.monotonic() - started,
+                        }
+                    )
+                )
                 result = consume(response, journal, len(ids))
             (journal / "response.json").write_text(
                 json.dumps(result, ensure_ascii=False)
             )
             return result
         except BaseException as exc:
+            failure(exc, journal, started)
             (journal / "error.json").write_text(
                 json.dumps(
                     {

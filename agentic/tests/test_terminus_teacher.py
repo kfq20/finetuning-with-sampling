@@ -17,6 +17,9 @@ class TeacherTransport(unittest.TestCase):
 
     def stream(self, events):
         class Response:
+            status = 200
+            headers = {"x-request-id": "fixture-request"}
+
             def __enter__(self):
                 return self
 

@@ -5,6 +5,7 @@ A command batch is one block. All proposals share the identical public prefix.
 """
 
 import asyncio
+import json
 from pathlib import Path
 import time
 
@@ -13,6 +14,24 @@ from .episode import generation_history
 from .suffix_score import ResilientFullStreamClient
 from .protocol import action, digest, public_messages
 from .scoring import render_candidate
+from .scoring import analyze_native
+
+
+def cached_proposal(source, wire, tokenizer):
+    """Reuse only a complete response to this exact referenced token prefix."""
+    request = json.loads((source / "request.json").read_text())
+    result = json.loads((source / "response.json").read_text())
+    ids = tokenizer.encode(wire, add_special_tokens=False)
+    if request.get("input_ids") != ids:
+        raise ValueError("Cached candidate conditioning mismatch")
+    meta = result["meta_info"]
+    if (
+        meta.get("prompt_tokens") != len(ids)
+        or meta.get("finish_reason", {}).get("type") != "stop"
+        or not result.get("text")
+    ):
+        raise ValueError("Cached candidate incomplete")
+    return result
 
 
 def select(candidates):
@@ -23,7 +42,9 @@ def select(candidates):
 
 
 class BlockwiseLLM:
-    def __init__(self, config, tokenizer, root, reference, *, proposals=8):
+    def __init__(
+        self, config, tokenizer, root, reference, *, proposals=8, cached_turn=None
+    ):
         if type(proposals) is not int or proposals < 1:
             raise ValueError("Positive candidate count required")
         self.client = ResilientFullStreamClient(config)
@@ -32,7 +53,8 @@ class BlockwiseLLM:
         self.root.mkdir(parents=True, mode=0o700, exist_ok=False)
         self.model_name = self.client.config["model_id"]
         self.decisions = []
-        self.turn = 0
+        self.cached_turn = Path(cached_turn) if cached_turn else None
+        self.turn = int(self.cached_turn.name.split("-")[-1]) - 1 if cached_turn else 0
 
     def get_model_context_limit(self):
         return 1000000
@@ -46,6 +68,9 @@ class BlockwiseLLM:
         public = public_messages(
             list(message_history or []) + [{"role": "user", "content": prompt}]
         )
+        cached = getattr(self, "cached_turn", None)
+        if cached and json.loads((cached / "public-prefix.json").read_text()) != public:
+            raise ValueError("Cached public prefix mismatch")
         wire = self.tokenizer.apply_chat_template(
             generation_history(public, self.reference),
             tokenize=False,
@@ -58,12 +83,24 @@ class BlockwiseLLM:
 
         async def propose(index):
             started = time.monotonic()
-            result = await asyncio.to_thread(
-                self.client.generate,
-                wire,
-                self.tokenizer,
-                journal=base / f"proposal-{index}",
-            )
+            if cached:
+                source = cached / f"proposal-{index}"
+                result = cached_proposal(source, wire, self.tokenizer)
+                dump(
+                    base / f"reused-proposal-{index}.json",
+                    {
+                        "source": str(source),
+                        "response_sha256": digest(result),
+                        "new_generation_requests": 0,
+                    },
+                )
+            else:
+                result = await asyncio.to_thread(
+                    self.client.generate,
+                    wire,
+                    self.tokenizer,
+                    journal=base / f"proposal-{index}",
+                )
             raw = result["text"]
             item = {
                 "index": index,
@@ -86,9 +123,22 @@ class BlockwiseLLM:
             rendered = render_candidate(
                 public, raw, self.tokenizer, tokenizer_identity=self.tokenizer.identity
             )
-            score = await asyncio.to_thread(
-                self.client.score, rendered, journal=base / f"score-{index}"
-            )
+            old_score = cached / f"score-{index}" if cached else None
+            if old_score and (old_score / "response.json").exists():
+                req = json.loads((old_score / "request.json").read_text())
+                if (
+                    req.get("text") != rendered.text
+                    or req.get("logprob_start_len") != 0
+                ):
+                    raise ValueError("Cached score conditioning mismatch")
+                score = analyze_native(
+                    json.loads((old_score / "response.json").read_text()), rendered
+                )
+                dump(base / f"reused-score-{index}.json", {"source": str(old_score)})
+            else:
+                score = await asyncio.to_thread(
+                    self.client.score, rendered, journal=base / f"score-{index}"
+                )
             item.update(
                 status="scored",
                 score=score,
@@ -131,6 +181,7 @@ class BlockwiseLLM:
             "selected_commands_sha256": digest(action(best["raw"])["commands"]),
         }
         dump(base / "decision.json", record)
+        self.cached_turn = None
         self.decisions.append(record)
         usage = [c["generation_usage"] for c in candidates]
         return LLMResponse(
@@ -144,3 +195,40 @@ class BlockwiseLLM:
                 cost_usd=0.0,
             ),
         )
+
+
+def main():
+    """Repair a failed block's scores without executing tools or generating actions."""
+    import argparse
+    from .tokenizer import PinnedTokenizer
+
+    p = argparse.ArgumentParser(__doc__)
+    for key in ("config", "tokenizer", "source-turn", "teacher", "output"):
+        p.add_argument("--" + key, type=Path, required=True)
+    a = p.parse_args()
+    prefix = json.loads((a.source_turn / "public-prefix.json").read_text())
+    reference = json.dumps(
+        public_messages(json.loads(a.teacher.read_text())), ensure_ascii=False
+    )
+    backend = BlockwiseLLM(
+        a.config,
+        PinnedTokenizer(a.tokenizer),
+        a.output,
+        reference,
+        cached_turn=a.source_turn,
+    )
+    asyncio.run(backend.call(prefix[-1]["content"], message_history=prefix[:-1]))
+    dump(
+        a.output / "recovery-receipt.json",
+        {
+            "source_turn": str(a.source_turn),
+            "new_generation_requests": 0,
+            "tools_executed": 0,
+            "selected_index": backend.decisions[-1]["selected_index"],
+            "scoring_recovered_only": True,
+        },
+    )
+
+
+if __name__ == "__main__":
+    main()

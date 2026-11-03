@@ -9,10 +9,58 @@ import json
 from pathlib import Path
 import time
 from urllib.request import Request, urlopen
+from contextlib import contextmanager
+import fcntl
+import os
+import random
 
 from .native_stream import NativeStreamClient, consume
 from .protocol import digest
 from .scoring import analyze_native
+from .http_evidence import failure, headers
+
+
+@contextmanager
+def file_slot(root, capacity):
+    """Persistent process-owned slots; process exit releases the lock."""
+    if not root:
+        yield
+        return
+    root = Path(root)
+    root.mkdir(parents=True, mode=0o700, exist_ok=True)
+    while True:
+        reserved = 0
+        grandfathered = root / "grandfathered.json"
+        if grandfathered.exists():
+            for p in json.loads(grandfathered.read_text()):
+                try:
+                    stat = (
+                        Path(f"/proc/{p['pid']}/stat")
+                        .read_text()
+                        .split(") ")[1]
+                        .split()
+                    )
+                    reserved += stat[0] != "Z" and stat[19] == p["start_ticks"]
+                except FileNotFoundError:
+                    pass
+        for i in range(reserved, capacity):
+            f = (root / f"score-{i}.lock").open("a+")
+            try:
+                fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                f.close()
+                continue
+            try:
+                yield
+            finally:
+                f.close()
+            return
+        time.sleep(0.1)
+
+
+def score_slot():
+    """Two simultaneous scoring prefills, independent of four student episodes."""
+    return file_slot(os.environ.get("APPEND_REWRITE_SCORE_POOL"), 2)
 
 
 class NativeSuffixStreamClient(NativeStreamClient):
@@ -56,25 +104,11 @@ class NativeSuffixStreamClient(NativeStreamClient):
         started = time.monotonic()
         try:
             with urlopen(request, timeout=timeout) as reply:
-                allowed = {
-                    "content-type",
-                    "content-length",
-                    "transfer-encoding",
-                    "x-request-id",
-                    "x-correlation-id",
-                    "traceparent",
-                    "date",
-                }
-                headers = {
-                    k.lower(): v
-                    for k, v in reply.headers.items()
-                    if k.lower() in allowed
-                }
                 (journal / "http.json").write_text(
                     json.dumps(
                         {
                             "status": reply.status,
-                            "headers": headers,
+                            "headers": headers(reply),
                             "headers_elapsed_sec": time.monotonic() - started,
                         }
                     )
@@ -95,6 +129,7 @@ class NativeSuffixStreamClient(NativeStreamClient):
             (journal / "score.json").write_text(json.dumps(result, indent=2))
             return result
         except BaseException as exc:
+            failure(exc, journal, started)
             partial = getattr(exc, "partial", b"")
             if partial:
                 (journal / "partial-response.bin").write_bytes(partial[:65536])
@@ -136,10 +171,11 @@ class ResilientFullStreamClient(NativeFullStreamClient):
 
         journal = Path(journal)
         journal.mkdir(parents=True, mode=0o700, exist_ok=False)
-        for attempt in range(1, 4):
+        for attempt in range(1, 6):
             dest = journal / f"attempt-{attempt}"
             try:
-                result = super().score(rendered, journal=dest, timeout=timeout)
+                with score_slot():
+                    result = super().score(rendered, journal=dest, timeout=timeout)
             except (
                 HTTPError,
                 URLError,
@@ -166,7 +202,7 @@ class ResilientFullStreamClient(NativeFullStreamClient):
                         )
                         + "\n"
                     )
-                if not retryable or attempt == 3:
+                if not retryable or attempt == 5:
                     (journal / "error.json").write_text(
                         json.dumps(
                             {
@@ -178,7 +214,7 @@ class ResilientFullStreamClient(NativeFullStreamClient):
                         )
                     )
                     raise
-                time.sleep(2**attempt)
+                time.sleep(min(60, 3**attempt) + random.uniform(0, 1))
             else:
                 for name in (
                     "request.json",

@@ -1,0 +1,14 @@
+# Transport recovery — 2026-11-04
+
+Owned MindLab root: `/vePFS-Mindverse/user/intern/fanqi/tb4-research/projection-agent-20261102`.
+Evidence: `data/transport-diagnosis-20261104/`. Existing raw attempts remain immutable.
+
+Historical zero-generation scoring had 330 HTTP 499 attempts lasting 30.39–35.48 seconds, before the client's 120-second socket timeout. The same failed Coq candidate later returned HTTP 200 in 16.58 seconds. All eight cached candidates also succeeded concurrently (15.65–35.71 seconds). This excludes a universal 30-second timeout and malformed candidates; it does not prove the server-side cause of historical cancellations. Old clients discarded HTTP error bodies/headers, preventing request-level attribution. Five teacher 502s occurred before SSE, lasting 0.53–21.93 seconds. They are transport errors, not model zeros or 600-second stream truncations.
+
+Repair preserves the algorithm and model routes: four student episodes, eight candidates per block, full reference-free input-token scoring, and no intermediate verifier selection. A shared two-slot scoring-prefill gate limits request fanout independently of student concurrency. Zero-generation scores retain five bounded attempts with jittered backoff; generation/expert POSTs are never automatically replayed. Capture safe response headers (including Fleet record IDs), bounded private HTTP error bodies and timing for future attribution. This is client-side mitigation; no serving deployment restart or timeout change is claimed.
+
+`python -m append_rewrite.terminus.blockwise` repairs only an explicitly selected failed block. It checks the exact public prefix, referenced generation token IDs, normal generation finish, and returned score token IDs. Existing valid scores are reused; missing scores are recomputed without action generation. Tools never execute in this command.
+
+An explicit `coq-files-v1` continuation adapter may reconstruct a reviewed native command prefix, including its lost temporary compiler files/cwd, then compare the resulting `/app/project` and `/app/output` hashes/modes with the retained original capture. It resumes only at the bound pending block, reusing all eight original candidates. It is not arbitrary process/tmux snapshot restoration. Any state mismatch blocks model continuation. Other domains require their own state audit and remain held if state cannot be restored reliably.
+
+New unclaimed inputs may move to a frozen four-lane run, reserving their old paths so the old coordinator skips them. Active old workers continue unchanged and reserve student capacity until exit, preventing overlap beyond four. Previously paid failed attempts are not redispatched; the explicit Coq continuation is linked to its original failed attempt and is not a new cold replay. Never count repaired scores alone as completed trajectories or SFT data.

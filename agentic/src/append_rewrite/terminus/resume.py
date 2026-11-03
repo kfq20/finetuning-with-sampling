@@ -18,6 +18,92 @@ from .protocol import action, public_messages, digest
 from .scoring import render_candidate
 
 
+async def restore_coq_file_boundary(agent, env, context, binding, instruction, output):
+    """Explicit Coq adapter: reconstruct temporary builds using retained tool actions.
+
+    No model action is regenerated. This is not general process-state restoration.
+    The coordinator must review the exact command trace and bind its hash.
+    """
+    from harbor.llms.chat import Chat
+    from harbor.agents.terminus_2.terminus_2 import Step
+    from datetime import datetime, timezone
+    from .production import capture
+
+    previous = Path(binding["previous_student"])
+    history_file = previous / "public-messages.json"
+    if (
+        binding["adapter"] != "coq-files-v1"
+        or sha(history_file) != binding["history_sha256"]
+    ):
+        raise ValueError("Unreviewed file-boundary restoration")
+    history = public_messages(json.loads(history_file.read_text()))
+    prefix = public_messages(
+        json.loads((Path(binding["cached_turn"]) / "public-prefix.json").read_text())
+    )
+    if history != prefix[:-1]:
+        raise ValueError("Pending prefix/history mismatch")
+    expected_path = previous / "held-state.json"
+    if sha(expected_path) != binding["held_manifest_sha256"]:
+        raise ValueError("Held state manifest drift")
+    expected = json.loads(expected_path.read_text())["files"]
+    if not expected or any(
+        not p.startswith(("app/project/", "app/output/")) for p in expected
+    ):
+        raise ValueError("Unsupported Coq file scope")
+    # Recreate lost /tmp compiler intermediates and the shell cwd from the exact
+    # reviewed native tool trace, then verify the retained authoritative /app state.
+    agent._reset_per_run_state()
+    for message in history:
+        if message["role"] != "assistant":
+            continue
+        parsed = agent._parser.parse_response(message["content"])
+        timed_out, _ = await agent._execute_commands(parsed.commands, agent._session)
+        if timed_out:
+            raise ValueError("Tool-only reconstruction timed out")
+    await agent._session.send_keys("\n", min_timeout_sec=1)
+    actual = capture(
+        env.sb, ["/app/project/", "/app/output/"], output / "restored-state.tgz"
+    )
+    if actual["files"] != expected:
+        raise ValueError("Reconstructed files do not match retained state")
+    dump(
+        output / "recovery-binding.json",
+        {
+            **binding,
+            "restored_state_verified": True,
+            "model_generations_replayed": 0,
+            "tool_only_reconstruction": True,
+        },
+    )
+    agent._chat = Chat(agent._llm, interleaved_thinking=False)
+    agent._chat._messages = deepcopy(history)
+    agent._context = context
+    agent._trajectory_steps = [
+        Step(
+            step_id=1,
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            source="user",
+            message=prefix[-1]["content"],
+        )
+    ]
+    try:
+        await agent._run_agent_loop(
+            initial_prompt=prefix[-1]["content"],
+            chat=agent._chat,
+            original_instruction=instruction,
+        )
+    finally:
+        context.metadata = {
+            "all_messages": agent._chat.messages,
+            "reused_prior_interactions": len(history) // 2,
+        }
+        context.n_input_tokens = agent._chat.total_input_tokens
+        context.n_output_tokens = agent._chat.total_output_tokens
+        context.n_cache_tokens = agent._chat.total_cache_tokens
+        context.rollout_details = agent._chat.rollout_details
+        agent._dump_trajectory()
+
+
 class ResumeRewriteLLM(NativeRewriteLLM):
     def __init__(self, *args, previous, **kwargs):
         super().__init__(*args, **kwargs)

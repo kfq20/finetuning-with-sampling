@@ -28,6 +28,7 @@ from .protocol import action, public_messages, digest
 from .runtime import make_agent
 from .teacher import DeepSeekTeacher
 from .tokenizer import PinnedTokenizer
+from .suffix_score import file_slot
 
 
 def dump(path, value):
@@ -285,6 +286,7 @@ async def episode(spec, args, out, role, teacher=None):
                 out / "generation",
                 reference,
                 proposals=8,
+                cached_turn=spec.get("student_resume", {}).get("cached_turn"),
             )
         agent = make_agent(out / "agent", backend.model_name, backend=backend)
         env = SDKEnvironment(sb, spec["cwd"])
@@ -294,9 +296,18 @@ async def episode(spec, args, out, role, teacher=None):
         )
         rollout_start = time.monotonic()
         try:
-            await asyncio.wait_for(
-                agent.run(Path(spec["instruction_path"]).read_text(), env, ctx), 28800
-            )
+            instruction = Path(spec["instruction_path"]).read_text()
+            if role == "student" and spec.get("student_resume"):
+                from .resume import restore_coq_file_boundary
+
+                await asyncio.wait_for(
+                    restore_coq_file_boundary(
+                        agent, env, ctx, spec["student_resume"], instruction, out
+                    ),
+                    28800,
+                )
+            else:
+                await asyncio.wait_for(agent.run(instruction, env, ctx), 28800)
         finally:
             if agent._chat:
                 dump(
@@ -350,6 +361,7 @@ async def episode(spec, args, out, role, teacher=None):
             "input_identity": spec["identity"],
             "new_model_attempts": 1,
             "automatic_generation_retry": False,
+            "continuation": spec.get("student_resume") if role == "student" else None,
         }
         if role == "student" and success and not hits:
             row = export_row(
@@ -457,7 +469,8 @@ async def unit(args):
             )
             return
         dump(out / "status.json", {"phase": "student_8_candidates"})
-        r = await episode(spec, args, out / "student", "student", teacher)
+        with file_slot(os.environ.get("APPEND_REWRITE_STUDENT_POOL"), 4):
+            r = await episode(spec, args, out / "student", "student", teacher)
         dump(
             out / "status.json",
             {

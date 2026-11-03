@@ -7,7 +7,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-from append_rewrite.terminus.blockwise import BlockwiseLLM, select
+from append_rewrite.terminus.blockwise import BlockwiseLLM, select, cached_proposal
 
 
 class Renderer:
@@ -22,6 +22,29 @@ class Renderer:
 
 
 class Ranking(unittest.TestCase):
+    def test_cached_candidate_requires_identical_conditioning_and_normal_stop(self):
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d)
+            tok = Renderer()
+            wire = "referenced history"
+            ids = tok.encode(wire)
+            (p / "request.json").write_text(json.dumps({"input_ids": ids}))
+            result = {
+                "text": "action",
+                "meta_info": {
+                    "prompt_tokens": len(ids),
+                    "finish_reason": {"type": "stop"},
+                },
+            }
+            (p / "response.json").write_text(json.dumps(result))
+            self.assertEqual(cached_proposal(p, wire, tok), result)
+            with self.assertRaises(ValueError):
+                cached_proposal(p, wire + "changed", tok)
+            result["meta_info"]["finish_reason"] = {"type": "length"}
+            (p / "response.json").write_text(json.dumps(result))
+            with self.assertRaises(ValueError):
+                cached_proposal(p, wire, tok)
+
     def test_no_progress_or_verifier_score_added(self):
         reading = {"status": "scored", "raw": "cat", "score": {"mean_logprob": -0.1}}
         repair = {"status": "scored", "raw": "repair", "score": {"mean_logprob": -1}}

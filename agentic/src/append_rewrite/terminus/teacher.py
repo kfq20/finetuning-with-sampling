@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 import time
 from urllib.request import Request, urlopen
+from .http_evidence import failure, headers
 
 
 class DeepSeekTeacher:
@@ -78,11 +79,21 @@ class DeepSeekTeacher:
         stop = None
         model = None
         rid = None
+        started = time.monotonic()
         try:
             with (
                 urlopen(req, timeout=900) as response,
                 (journal / "wire.jsonl").open("w") as log,
             ):
+                (journal / "http.json").write_text(
+                    json.dumps(
+                        {
+                            "status": response.status,
+                            "headers": headers(response),
+                            "headers_elapsed_sec": time.monotonic() - started,
+                        }
+                    )
+                )
                 for line in response:
                     if not line.startswith(b"data:"):
                         continue
@@ -127,6 +138,7 @@ class DeepSeekTeacher:
             )
             return result
         except Exception as exc:
+            failure(exc, journal, started)
             (journal / "error.json").write_text(
                 json.dumps({"error_type": type(exc).__name__, "automatic_retry": False})
             )
