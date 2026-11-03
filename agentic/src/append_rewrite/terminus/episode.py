@@ -141,6 +141,9 @@ async def run(args):
         json.dumps(expert, ensure_ascii=False) if args.mode == "reference" else None
     )
     variant = getattr(args, "algorithm", "full-episode")
+    plain = getattr(args, "plain_baseline", False)
+    if plain and (variant != "full-episode-stream" or args.mode != "no-reference"):
+        raise ValueError("Plain baseline requires no-reference direct-stream mode")
     blockwise = variant == "latest-block-8"
     stream = variant == "full-episode-stream"
     algorithm = {
@@ -148,17 +151,25 @@ async def run(args):
         "full-episode-stream": "fixed-start-direct-stream.v1",
         "full-episode": "fixed-start-full-episode-rewrite.v1",
     }[variant]
+    if plain:
+        algorithm = "plain-no-reference-terminus.v1"
     out = args.output
     out.mkdir(parents=True, mode=0o700, exist_ok=False)
     dump(
         out / "identity.json",
         {
             "algorithm": algorithm,
+            "plain_baseline": plain,
+            "offline_likelihood_scoring": not plain and not blockwise,
             "proposals_per_block": 8 if blockwise else 1,
             "online_likelihood_selection": blockwise,
-            "scoring_protocol": "native-full-input-logprob-sse.v1"
-            if blockwise
-            else "native-full-input-nonstream.v1",
+            "scoring_protocol": None
+            if plain
+            else (
+                "native-full-input-logprob-sse.v1"
+                if blockwise
+                else "native-full-input-nonstream.v1"
+            ),
             "generation_transport": "native-sse-explicit-input-ids"
             if (blockwise or stream)
             else "native-buffered-text",
@@ -310,7 +321,7 @@ async def run(args):
             record["proposals_total"] = sum(
                 d["candidate_count"] for d in backend.decisions
             )
-        if (passed or stream) and not blockwise:
+        if (passed or stream) and not blockwise and not plain:
             before = time.monotonic()
             scores = []
             for i, m in enumerate(history):
@@ -330,7 +341,7 @@ async def run(args):
                     )
             phases["unreferenced_scoring_sec"] = time.monotonic() - before
             record["likelihood"] = aggregate_scores(scores)
-        if passed:
+        if passed and not plain:
             row = export_row(
                 history,
                 tokenizer,
@@ -415,6 +426,11 @@ def main():
         "--algorithm",
         choices=("full-episode", "full-episode-stream", "latest-block-8"),
         default="full-episode",
+    )
+    p.add_argument(
+        "--plain-baseline",
+        action="store_true",
+        help="One no-reference generation per turn; no logprob scoring or SFT export",
     )
     asyncio.run(run(p.parse_args()))
 

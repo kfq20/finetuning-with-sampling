@@ -111,3 +111,39 @@ class DirectReferenceBaseline(unittest.TestCase):
             self.assertEqual(b.client.calls, 1)
             self.assertEqual(len(b.decisions), 1)
             self.assertEqual(result.content, '{"commands":[],"task_complete":true}')
+
+
+@unittest.skipUnless(importlib.util.find_spec("harbor"), "requires native SDK")
+class PlainNoReferenceBaseline(unittest.TestCase):
+    def test_no_reference_no_candidates_no_score(self):
+        from append_rewrite.terminus.episode import EpisodeLLM
+
+        class Client:
+            calls = 0
+
+            def generate(self, wire, tokenizer, **kwargs):
+                assert "expert_reference" not in wire
+                self.calls += 1
+                return {
+                    "text": '{"commands":[],"task_complete":true}',
+                    "meta_info": {
+                        "prompt_tokens": 100,
+                        "completion_tokens": 10,
+                        "id": "fixture",
+                    },
+                }
+
+            def score(self, *args, **kwargs):
+                raise AssertionError("Plain baseline cannot use logprob scoring")
+
+        with tempfile.TemporaryDirectory() as d:
+            b = EpisodeLLM.__new__(EpisodeLLM)
+            b.client = Client()
+            b.tokenizer = Renderer()
+            b.reference = None
+            b.root = Path(d)
+            b.model_name = "fixture"
+            b.decisions = []
+            asyncio.run(b.call("actual task"))
+            self.assertEqual(b.client.calls, 1)
+            self.assertEqual(len(b.decisions), 1)

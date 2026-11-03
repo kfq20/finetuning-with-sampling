@@ -111,3 +111,19 @@ Full files-only partial state retained (SHA256
 No automatic retry/regeneration/restart. All current owned workers exited.
 Comparison delivery: data/three-arm-coq-comparison-v1, includes both observable
 histories, receipts, quality holds and explicit no-reference transport status.
+
+## User clarification: plain no-reference baseline (selected next)
+
+The intended no-reference comparator is ONE generation per interaction, no expert
+reference and NO candidate pool/logprob choice. The earlier no-reference8 arm was
+a coordinator misunderstanding; it remains separate historical evidence. Planned
+8-arm rerun was NOT launched. Suffix-score calibration is unselected research
+(9completed zero-generation requests, no solver generations); it does not gate
+or enter this plain baseline.
+
+New entry uses `--mode no-reference --algorithm full-episode-stream
+--plain-baseline`: same Qwen/native Terminus/task/state/temperature/output limits
+as the successful direct-reference arm; one real action followed by real tool
+feedback. No online OR offline probability scoring, no SFT export. Final original
+and independently restored verifier evaluate the result. A fresh source snapshot
+owns the new attempt; old attempts/errors/costs stay unchanged.
