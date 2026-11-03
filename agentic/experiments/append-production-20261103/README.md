@@ -14,13 +14,17 @@ A successful private-reference generation is not automatically training-ready. E
 
 MindLab research root: `/vePFS-Mindverse/user/intern/fanqi/tb4-research/projection-agent-20261102`
 
-- Frozen runtime: `source-production-v4`, commit `e10b714`.
-- Read-only source preparation receipt: `data/production-discovery-v3-launch.json`.
-- Source registry: `data/production-inputs-v3/plan.json`; final `summary.json` seals its hash.
-- Single production coordinator receipt: `data/append-production-v1-launch.json`.
-- Outputs: `data/append-production-v1/units/<identity>/{controls,teacher,student}`.
-- Per-unit progress: `status.json`. Student success exports: `student/train.jsonl` bound by `student/receipt.json`.
-- Coordinator uses exact copied specifications in `data/append-production-v1/specs/` while source discovery publishes additional independently sealed units. Final discovery summary binds the final manifest.
+- Active selection: `PRODUCTION_SELECTION.json` (exact run/plan/source bindings).
+- Legacy runtime: `source-production-v5`, commit `0608f9f`; run `data/append-production-v2`, original plan `data/production-inputs-v4/plan.json` (140 distinct units).
+- Foundry supplement: `source-production-v6`, commit `730d58a`; run `data/append-production-foundry-v1`, plan `data/production-foundry-supplement-v1/plan.json` (91 units disjoint from legacy).
+- Foundry adapter repair: `source-production-v7`, commit `c441cf9`; run `data/append-production-foundry-repair-v1`, plan `data/foundry-template-adapter-repair-v1/plan.json`. These 77 units had **zero model requests** and were held solely because the original adapter omitted Harbor's computed template alias. The repair records old-to-new runtime identities and never repeats a paid expert/student attempt.
+- Full source registry: `data/production-inputs-v5/plan.json`; `summary.json` seals its hash. 277 source records = 231 distinct input pairs + 42 holds + 4 aliases. Holds include 37 unclosed source executions, three capture-path mappings, and two unresolved predecessor files. Source eligibility is not execution success or SFT admission.
+- Outputs: each active run's `units/<identity>/{controls,teacher,student}`; per-unit `status.json`.
+- Student exports: `student/train.jsonl`, bound by `student/receipt.json`.
+- Each batch owns one exclusive coordinator. Batches have disjoint logical inputs, except explicitly linked **unpaid adapter repairs**; paid attempts are never replayed.
+- Matching native experts: three reusable existing trajectories; the completed Coq3 method8 attempt is preserved with its old reference-attribution hold rather than regenerated.
+
+Preparation and setup failures are retained separately. `append-production-v1` is stopped with zero model requests after an incorrect offline-runtime directory argument. Source preparation v1–v4 and old failed alias bindings remain historical evidence, not additional data or successes.
 
 Credentials and original model reasoning stay private. No source experiment, original receipt, grader, or failed-attempt evidence is edited.
 
