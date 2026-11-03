@@ -31,3 +31,31 @@ authorized for this pilot; old paid attempts and other append workers stay intac
 Entry:
 python -m append_rewrite.terminus.episode --algorithm latest-block-8 --mode reference
 plus the standard teacher/tokenizer/private credentials/assets/output paths.
+
+## Completed single-append result
+
+Frozen runtime835892f, offline audit7f1a6fe. External research root
+`projection-agent-20261102/data/latest-block-eight-coq-01`.
+Receipt SHA256 `039231d3dae3174c68c6c6f1ff0b795c1ea459732d8c9ed7ae02b5b8e37c5191`.
+
+12 blocks (including two native completion confirmations),96 generated AND scored
+candidates,24 executed shell commands. Every chosen action was verified against
+its eight-candidate maximum and actual student history. Both final rewards1.
+Rollout436.660s includes all candidate generation/forced scoring; total517.286s
+includes setup and65.045s final capture/grading. No intermediate verifier, rollback,
+API error or literal repeated nonempty command batch. Selected path encountered
+missing Submission logical-path errors at3/4, compiled the prerequisite at5,
+replaced Admitted at6, then compiled/checked/delivered and closed normally.
+
+Generation input4,291,408 tokens (cache/billing not inferred), generation output
+20,288; forced-score input606,960. Peak reference-conditioned input49,376 tokens.
+SFT row10,927 total/2,764 supervised tokens; selected action text2,752+12EOS.
+Final submission text similarity to expert99.8828%; no claim of independent
+proof invention or measured training benefit. Delivery contains score tables,
+all96 candidate command batches, selected actions with actual observations and
+one masked SFT row. No provider-private reasoning or credentials exported.
+
+Transport metric note: first_byte_sec in this frozen stream implementation starts
+after response headers. Use whole rollout or candidate elapsed_sec for complete
+network-inclusive time; do not interpret it as POST-to-first-byte latency.
+All owned workers exited; no follow-up model/automation was started.

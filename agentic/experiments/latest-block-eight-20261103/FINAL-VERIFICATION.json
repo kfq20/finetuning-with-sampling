@@ -1,0 +1,34 @@
+{
+  "passed_integrity_review": true,
+  "receipt_sha256": "039231d3dae3174c68c6c6f1ff0b795c1ea459732d8c9ed7ae02b5b8e37c5191",
+  "blocks": 12,
+  "generated_candidates": 96,
+  "scored_candidates": 96,
+  "shell_commands": 24,
+  "exact_repeated_nonempty_batches": 0,
+  "peak_input_tokens_with_reference": 49376,
+  "generation_input_tokens": 4291408,
+  "generation_output_tokens": 20288,
+  "original_reward": 1.0,
+  "fresh_reward": 1.0,
+  "phases": {
+    "setup_sec": 15.529064524918795,
+    "rollout_sec": 436.66024181991816,
+    "capture_grading_sec": 65.04546474292874,
+    "unreferenced_scoring_sec": 1.210719347000122e-06,
+    "total_sec": 517.285707294941
+  },
+  "copy_audit": {
+    "exact_submission_match": false,
+    "submission_similarity": 0.9988284162317606
+  },
+  "intermediate_verifier_calls": 0,
+  "environment_rollbacks": 0,
+  "api_errors": 0,
+  "actual_history_and_scoring_identity_verified": true,
+  "sft": {
+    "total_tokens": 10927,
+    "supervised_tokens": 2764,
+    "masked_tokens": 8163
+  }
+}
