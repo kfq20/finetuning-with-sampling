@@ -55,13 +55,16 @@ def safe_artifacts(paths):
     return paths
 
 
-def restore(spec, args, owner):
+def restore(spec, args, owner, *, template_id=None):
     state = Path(spec["state_path"])
     task = Path(spec["task_path"])
     if tree(state) != spec["state_manifest"] or tree(task) != spec["task_manifest"]:
         raise ValueError("Frozen input bytes/modes drift")
     sb = sandbox.create(
-        task, args.sandbox_credentials, owner, template_id=spec["template_id"]
+        task,
+        args.sandbox_credentials,
+        owner,
+        template_id=template_id or spec["template_id"],
     )
     try:
         sb.set_timeout(30000)
@@ -121,7 +124,7 @@ def grade(sb, task):
 
 
 def fresh_grade(spec, args, archive, owner):
-    sb = restore(spec, args, owner)
+    sb = restore(spec, args, owner, template_id=spec.get("verifier_template_id"))
     try:
         apply_capture(sb, archive, spec["artifacts"])
         return grade(sb, Path(spec["task_path"]))
@@ -131,7 +134,12 @@ def fresh_grade(spec, args, archive, owner):
 
 def controls(spec, args, out):
     out.mkdir(mode=0o700, parents=True, exist_ok=False)
-    sb = restore(spec, args, "production-initial-control")
+    sb = restore(
+        spec,
+        args,
+        "production-initial-control",
+        template_id=spec.get("verifier_template_id"),
+    )
     try:
         initial = grade(sb, Path(spec["task_path"]))
     finally:
@@ -146,7 +154,12 @@ def controls(spec, args, out):
             },
         )
         raise RuntimeError("InitialStateAlreadySatisfiesTask")
-    sb = restore(spec, args, "production-legal-control")
+    sb = restore(
+        spec,
+        args,
+        "production-legal-control",
+        template_id=spec.get("verifier_template_id"),
+    )
     try:
         if spec.get("oracle_archive"):
             if sha(Path(spec["oracle_archive"])) != spec["oracle_sha256"]:

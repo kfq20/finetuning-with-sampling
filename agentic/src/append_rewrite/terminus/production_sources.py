@@ -127,6 +127,7 @@ def finalize(task, state, unit, source, adapter, oracle, reuse, legacy_student=N
         .get("command"),
         "source": source,
         "lane": adapter["lane"],
+        "verifier_template_id": adapter.get("verifier_template_id"),
     }
     archive = oracle_archive(oracle, unit / "oracle-control.tgz")
     if archive:
@@ -246,6 +247,14 @@ def foundry(order_path, unit, reuse):
             raise ValueError("Public addition outside /app")
         source = ref_path(item["source"])
         copy_file(source, state / dest[5:])
+    for item in env.get("verifier_files", []):
+        destination = item["destination"]
+        if not destination.startswith("/tests/") or ".." in Path(destination).parts:
+            raise ValueError("Private verifier overlay outside /tests")
+        copy_file(ref_path(item["source"]), task / "tests" / destination[7:])
+    for path in env.get("require_absent_paths", []):
+        if path.startswith("/app/") and (state / path[5:]).exists():
+            raise ValueError("Published absent-state invariant violated")
     oracle = {}
     if receipt.get("score") == receipt.get("fresh_score") == 1 and receipt.get(
         "capture"
@@ -258,7 +267,20 @@ def foundry(order_path, unit, reuse):
             name: (cap.parent / "files" / name, meta)
             for name, meta in m["files"].items()
         }
-    template = env.get("template_alias") or env.get("template_name")
+    template = next(
+        (
+            env[k]
+            for k in (
+                "agent_template_id",
+                "pinned_template",
+                "existing_template",
+                "template_alias",
+                "template_name",
+            )
+            if env.get(k)
+        ),
+        None,
+    )
     if not template:
         # Harbor derives this alias from immutable environment content. This
         # computes the existing alias only; it never builds a template.
@@ -294,6 +316,7 @@ def foundry(order_path, unit, reuse):
         },
         {
             "template_id": template,
+            "verifier_template_id": env.get("verifier_template_id"),
             "lane": "foundry-" + scene,
             "artifacts": [
                 "/" + p for p in manifest.get("public_capture_allowlist", [])
