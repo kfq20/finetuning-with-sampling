@@ -15,6 +15,39 @@ from .protocol import digest
 
 def repaired_spec(spec, lane):
     spec = dict(spec)
+    source = spec.get("source", {})
+    if source.get("kind") == "foundry" and source.get("order_path"):
+        from .production_sources import ref_path
+
+        order_path = Path(source["order_path"])
+        execution = json.loads(
+            (order_path.parent / "harbor-execution/receipt.json").read_text()
+        )
+        config = json.loads(ref_path(execution["config"]).read_text())
+        env = config["environment"]["kwargs"]
+        pinned = next(
+            (
+                env[k]
+                for k in (
+                    "agent_template_id",
+                    "pinned_template",
+                    "existing_template",
+                    "template_alias",
+                    "template_name",
+                )
+                if env.get(k)
+            ),
+            None,
+        )
+        if pinned and pinned != spec.get("template_id"):
+            spec["template_binding_repair"] = {
+                "previous": spec.get("template_id"),
+                "original_published_pin": pinned,
+                "config": execution["config"],
+            }
+            spec["template_id"] = pinned
+        if env.get("verifier_template_id"):
+            spec["verifier_template_id"] = env["verifier_template_id"]
     # Exact selective-reset semantics of the original legacy adapters.
     if lane == "legacy-cad":
         spec["restore_reset_paths"] = ["/app/output", "/app/stock", "/app/orders"]
