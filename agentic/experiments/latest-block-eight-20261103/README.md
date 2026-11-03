@@ -127,3 +127,39 @@ as the successful direct-reference arm; one real action followed by real tool
 feedback. No online OR offline probability scoring, no SFT export. Final original
 and independently restored verifier evaluate the result. A fresh source snapshot
 owns the new attempt; old attempts/errors/costs stay unchanged.
+
+## User-approved pure-baseline early stop and final three-setting comparison
+
+User approved stopping the persistent proof loop and marking early termination.
+Exact703754/start1892694749 was verified and SIGINT delivered at1793678931.567660.
+Worker exited;71executed assistant turns/105shell entries saved. In-flight72
+returned normally but never executed; all72responses/costs remain retained.
+No new model calls for stop/review. Source aadbb06 unchanged, review fd162b2.
+
+Full current-state capture restored with identical file bytes/modes; verifier0.
+Separately restore only currentSubmission.v over frozen original input: verifier0.
+Both fail actualCoq compilation atSubmission.v:115, Cannot find witness.
+Operator receipt71af387f0008eb2d0fbe286a5f16f32adbf7cc1ec9c2e3b07388ce1f5ae5c668.
+Status operator_stopped_early/normal_completed=false, not a normal model-zero.
+Source captures b0aa4d2137ce08582d0d798b27340af624dc2abd666a6ecf05e980d5c7302dd9
+(state) and3e0d1694a2b61109e23d57797524240769daf9b00c55e8ce657b50d54db286a6
+(submission) preserved. Final selection THREE_SETTING_FINAL_SELECTION.json.
+
+| Metric | Reference+8selection | Directreference | Pure no-reference |
+|---|---:|---:|---:|
+| State | normal | normal | earlystop |
+| Verifier | 1/1 | 1/1 | currentcapture0/0 |
+| Executedturns | 12 | 8 | 71 |
+| Shellentries | 24 | 13 | 105 |
+| Agentminutes | 7.2777 | 3.1972 | 49.4665 |
+| Generationrequests | 96 | 8 | 72(1unexecuted) |
+| Score requests | 96online | 8postepisode | 0 |
+| Peak generation input | 49376 | 44736 | 89274 |
+| Allinputinclhistory/cache(gen+score) | 4898368 | 377290 | 3251870 |
+| Generationoutputtokens | 20288 | 1896 | 35476 |
+
+All use the same inputmanifest e6491cd1abb9eaef76a85063e48d71c0b359d03efd6e829facd4682805dc1e19.
+Input sums are not billing estimates. Context peak in reference arms includes
+privileged expert reference. Review/data sources in data/three-setting-final-v1
+and matching local external data. No prior failed no-reference8 results are
+substituted for pure baseline. No skills/training changed or model replay made.
