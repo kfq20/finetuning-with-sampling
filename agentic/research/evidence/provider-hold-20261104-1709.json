@@ -1,0 +1,40 @@
+{
+  "checked_cst": "2026-11-04T17:09:19+08:00",
+  "sampling_snapshot_cst": "2026-11-04T17:04:43+08:00",
+  "valid_sft": 118,
+  "supervised_tokens": 359547,
+  "train_sha256": "63a127efb4c0592bc4f862e38a4f69ad0f45f72222fc0dc46c66feac4f9209a2",
+  "bundle_hash_verified": true,
+  "pilot_sft": 3,
+  "completed_waves_sft": [
+    32,
+    39,
+    37
+  ],
+  "current_wave_sft": 7,
+  "current_wave_student_errors": 10,
+  "current_wave_closed_student_error_rate": "10/17=58.8%",
+  "cumulative_student_errors_including_pilot": 14,
+  "all_closed_student_error_rate": "14/(118+14)=10.6%",
+  "previous_wave_teacher_execution_errors": 3,
+  "failure_body": {
+    "detail": {
+      "error": "deployment_not_found"
+    }
+  },
+  "http_status": 404,
+  "example_request_ids": [
+    "1793782999699-dd8a19e13f2557b3a8b59f8cf64db8c4",
+    "1793783070370-f031feaba92bd585be05815ead169f0a"
+  ],
+  "operator_action": {
+    "new_dispatch_held": true,
+    "student_admission_slots_held": 8,
+    "existing_experts_allowed_to_finish": true,
+    "automatic_paid_replay": false,
+    "provider_changed": false,
+    "hold_keeper_model_requests": 0,
+    "entry_commit": "4f4ca95"
+  },
+  "data_disk_free_gib_at_snapshot": 144.64
+}
