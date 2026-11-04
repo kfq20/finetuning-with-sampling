@@ -57,10 +57,37 @@ Four student slots and two score-prefill slots are scoped to this new study.
 The existing unit pipeline may run fewer than four students while waiting for
 experts; do not call four task workers four active students.
 
-Compare with the old run's 17 closed experts (mean147 interactions/71.14min),
-and the two new admitted students (13 interactions/20.22min; resumed Coq19
-cumulative interactions/22.24min suffix elapsed). The latter resumed timing is
-not directly comparable to a fresh full episode. Report all six selected cases,
-preparation/controls separately, expert and student phases, peak context,
-generation/score requests and tokens, complete/held outcomes, and SFT files.
-Small-pilot throughput is descriptive; no stable success-rate claim is implied.
+Selected execution source: `frozen-source-v4`, commit `64ed416`, using
+`prepared-final/plan.json`; authority is `active_runtime_selection.json`.
+An unpaid row46 test-selector transport repair is separately selected by
+`selector-repair-selection.json`, source `frozen-source-v6`/`c180a62`.
+It bijectively maps eight malformed published IDs to the original collected
+tests, without changing instructions, fault recipes or assertions. Its original
+failed gate remains retained. Do not select a runtime by its version suffix.
+
+Initial observed results (2026-11-04, partial; not a final success-rate estimate):
+
+| Cohort | Closed n | Mean interactions | Mean shell commands | Mean total min | Mean peak prompt tokens |
+|---|---:|---:|---:|---:|---:|
+| TB4 expert, all selected closed | 107 | 62.90 | 107.43 | 36.15 | 72,773 |
+| CLI-Gym expert | 3 | 14.67 | 40.33 | 11.12 | 21,203 |
+| TB4 fresh student | 16 | 9.81 | 23.25 | 17.14 | 45,630 |
+| CLI-Gym fresh student | 2 | 8.00 | 23.50 | 11.77 | 29,740 |
+
+Scrapy row1 and MarkupSafe row46 each closed with original1/fresh1 and exported
+hash-verified SFT. Student totals were respectively 10 interactions/13.55min
+and 6 interactions/10.00min. ExceptionGroup row16 expert passed, but student
+block4 hit upstream HTTP502 (`upstream_unavailable`); candidates and held image
+are preserved, no automatic model retry. ExceptionGroup row87 expert remains
+in progress at this snapshot. Scrapy row15 was initially already passing;
+MarkupSafe row29 healthy control failed on malformed selectors. Those two
+pre-model exclusions consumed no model inference and are not model failures.
+
+`compare.py` reports all six source cases, preparation/controls separately,
+expert/student phases, commands, generation/score usage and SFT admission.
+Resumed Coq is excluded from fresh-episode means. The finite read-only comparison
+worker writes `comparison-current.json`/`.md` after existing workers finish;
+`comparison-progress.json`/`.md` is the interim snapshot. Its analysis revision
+is separate from active execution source. No new model dispatch is performed
+by the comparison worker. Small-pilot throughput is descriptive; no stable
+success-rate or training-gain claim is implied.
