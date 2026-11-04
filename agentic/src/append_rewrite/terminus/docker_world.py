@@ -107,9 +107,12 @@ class DockerWorld:
 
     def snapshot(self, dest):
         name = "append-rewrite/cligym-snapshot:" + uuid.uuid4().hex
-        image = (
-            checked("commit", "--pause=true", self.sandbox_id, name).decode().strip()
-        )
+        # Newer CLIs mix deprecation notices into commit stdout. Resolve the
+        # immutable ID from structured inspect instead of trusting display text.
+        checked("commit", self.sandbox_id, name)
+        image = json.loads(checked("image", "inspect", name))[0]["Id"]
+        if not re.fullmatch(r"sha256:[0-9a-f]{64}", image):
+            raise ValueError("Docker commit did not resolve an immutable image")
         record = {
             "storage_format": "docker-full-filesystem-image.v1",
             "image_id": image,
