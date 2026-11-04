@@ -1,0 +1,46 @@
+{
+  "checked_cst": "2026-11-04T13:35:33+08:00",
+  "valid_sft": 52,
+  "supervised_tokens": 156053,
+  "train_sha256": "201643989ba0df67ef3d1187d485480c27a6d1b5011052570314dba854b9050e",
+  "bundle_hash_verified": true,
+  "jsonl_rows": 52,
+  "pilot_valid_sft": 3,
+  "wave1": {
+    "sources": 94,
+    "built": 56,
+    "build_holds": 38,
+    "valid_sft": 32,
+    "student_execution_errors": 3,
+    "teacher_model_zero": 1,
+    "before_model_runtime_failure": 1,
+    "finished": true
+  },
+  "wave2": {
+    "sources": 100,
+    "built": 55,
+    "build_holds": 45,
+    "valid_sft": 17,
+    "student_execution_errors": 0,
+    "teacher_model_zero": 1,
+    "pending": 25,
+    "actual_worker_count": 3,
+    "actual_stage_counts": {
+      "teacher": 1,
+      "student": 2
+    },
+    "pending_by_lane": {
+      "lane-0": 11,
+      "lane-1": 6,
+      "lane-2": 8
+    },
+    "fourth_lane_empty": true
+  },
+  "pilot_student_error_from_original_receipt": 1,
+  "all_closed_student_error_ratio": "4/(52+4)=7.14%",
+  "provider_stop": false,
+  "campaign_alive": true,
+  "current_wave_coordinator_identity_verified": true,
+  "data_disk_free_gib": 149.58,
+  "changes_to_experiment": false
+}
