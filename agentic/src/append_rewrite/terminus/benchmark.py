@@ -42,3 +42,30 @@ class QwenBenchmarkAgent(Terminus2):
         response=await chat.chat(prompt,**self._llm_call_kwargs)
         self._api_request_times.append((time.monotonic()-start)*1000)
         return response
+
+
+# Alibaba's E2B-compatible image converter requires the registry credentials
+# already provisioned with this account. They stay in the controller process.
+import os
+from e2b import AsyncTemplate, Template
+from harbor.environments.e2b import E2BEnvironment
+
+
+class AlibabaBenchmarkEnvironment(E2BEnvironment):
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        self._template_name='tb21ali-v1-'+self.environment_id[:16]
+
+    async def _create_template(self):
+        if not self.task_env_config.docker_image:
+            raise ValueError('Official pinned image required for this adapter')
+        if not all(os.environ.get(k) for k in ['REGISTRY_USERNAME','REGISTRY_PASSWORD']):
+            raise ValueError('Controller registry credentials missing')
+        template=Template().from_image(
+            self.task_env_config.docker_image,username=os.environ['REGISTRY_USERNAME'],
+            password=os.environ['REGISTRY_PASSWORD'])
+        kwargs={}
+        if self._effective_cpus is not None:kwargs['cpu_count']=self._effective_cpus
+        if self._effective_memory_mb is not None:kwargs['memory_mb']=self._effective_memory_mb
+        # One build only: this provider rejects rebuilding a CREATE_FAILED ID.
+        await AsyncTemplate.build(template=template,alias=self._template_name,**kwargs)
