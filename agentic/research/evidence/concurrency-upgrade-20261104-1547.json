@@ -1,0 +1,32 @@
+{
+  "checked_cst": "2026-11-04T15:47:07+08:00",
+  "user_authorized_change": "raise concurrency",
+  "runtime_commit": "710c9c5",
+  "operation_entry_commit": "94d1396",
+  "task_workers": 8,
+  "actual_stage_counts": {
+    "teacher": 4,
+    "student": 4
+  },
+  "student_capacity": 8,
+  "score_prefill_capacity": 2,
+  "candidates_per_block": 8,
+  "queue_policy": "shared",
+  "adopted_original_workers": 4,
+  "new_workers_on_unattempted_inputs": 4,
+  "old_claims_retained": true,
+  "old_closed_hashes_unchanged": true,
+  "coordinator_and_campaign_identity_verified": true,
+  "provider_stop": false,
+  "valid_sft": 84,
+  "supervised_tokens": 272045,
+  "train_sha256": "58888c7485a63c644b9a38e615525ed8236b9ffe70c3aa3e1072f2e8f6ccbea3",
+  "runtime_tests": {
+    "total": 112,
+    "skipped": 2,
+    "failed": 0
+  },
+  "data_disk_free_gib": 143.7,
+  "model_attempts_replayed": 0,
+  "score_concurrency_increased": false
+}
