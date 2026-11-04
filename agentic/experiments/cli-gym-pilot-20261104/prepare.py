@@ -11,6 +11,7 @@ import subprocess
 import time
 import textwrap
 import threading
+import shutil
 
 from append_rewrite.terminus.production import tree
 from append_rewrite.terminus.protocol import digest
@@ -159,6 +160,7 @@ def main():
     p.add_argument("--output", type=Path, required=True)
     p.add_argument("--indices", type=int, nargs="+", default=[1, 15, 16, 87, 29, 46])
     p.add_argument("--canonicalize-selectors", action="store_true")
+    p.add_argument("--storage-root", type=Path)
     a = p.parse_args()
     a.output.mkdir(mode=0o700, parents=True, exist_ok=False)
     wanted = a.indices
@@ -182,6 +184,8 @@ def main():
     def group(indices):
         for i in indices:
             try:
+                if a.storage_root and shutil.disk_usage(a.storage_root).free < 20 * 1024**3:
+                    raise RuntimeError("StorageAdmissionHold: fewer than20GiB free; no deletion or model retry")
                 item = prepare(
                     rows[i], i, a.output,
                     canonicalize_selectors=a.canonicalize_selectors,
