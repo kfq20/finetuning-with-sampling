@@ -598,6 +598,7 @@ def external_worker_alive(worker):
 async def batch(args):
     plan = json.loads(args.plan.read_text())
     args.output.mkdir(mode=0o700, parents=True, exist_ok=True)
+    (args.output / "units").mkdir(mode=0o700, exist_ok=True)
     lock = (args.output / "coordinator.lock").open("a+")
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     lanes = {}
@@ -631,6 +632,8 @@ async def batch(args):
                 return
             dest = args.output / "units" / item["unit_id"]
             if item.get('_adopt'):
+                # A rolling queue may inherit a worker from an earlier run root.
+                dest = Path(item['_adopt'].get('output', dest))
                 while external_worker_alive(item['_adopt']):
                     await asyncio.sleep(2)
                 state = json.loads((dest / 'status.json').read_text())

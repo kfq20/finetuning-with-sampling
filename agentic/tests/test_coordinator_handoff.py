@@ -47,6 +47,19 @@ class CoordinatorHandoff(unittest.IsolatedAsyncioTestCase):
             finally:
                 worker.wait()
 
+    async def test_external_adoption_preserves_old_output_without_replay(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);old=root/'old-run/units/old';old.mkdir(parents=True)
+            receipt=old/'status.json';receipt.write_text('{"phase":"completed"}')
+            before=receipt.read_bytes();plan=root/'plan.json';plan.write_text('{"units":[]}')
+            adoption=root/'adopt.json';adoption.write_text(json.dumps({'workers':[{'unit_id':'old','output':str(old)}]}))
+            args=SimpleNamespace(plan=plan,output=root/'new-run',workers=8,adopt_workers=adoption,discovery_summary=None)
+            with patch('append_rewrite.terminus.production.external_worker_alive',return_value=False),patch('asyncio.create_subprocess_exec',side_effect=AssertionError('replay')):
+                await batch(args)
+            self.assertEqual(receipt.read_bytes(),before)
+            self.assertFalse((args.output/'units/old').exists())
+            self.assertTrue((args.output/'coordinator-finished.json').exists())
+
     async def test_shared_queue_dispatches_unclaimed_inputs_once(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d); output = root / 'run'; (output / 'specs').mkdir(parents=True)
