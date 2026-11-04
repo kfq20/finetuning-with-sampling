@@ -1,0 +1,92 @@
+{
+  "request_snapshot_at": "2026-11-04T19:07:19.219562+08:00",
+  "switch_at": "2026-11-04T18:49:15.590067+08:00",
+  "ssh": {
+    "generation": {
+      "n": 456,
+      "mean_sec": 31.10435159634513,
+      "median_sec": 28.410298333503306,
+      "p90_sec": 54.31367029901594,
+      "request_errors": 0
+    },
+    "score": {
+      "n": 424,
+      "mean_sec": 12.60562174707291,
+      "median_sec": 9.810589683707803,
+      "p90_sec": 26.34973190817982,
+      "request_errors": 0
+    },
+    "completed_block_slowest_candidate": {
+      "n": 49,
+      "mean_sec": 357.8265562891314,
+      "median_sec": 300.70069157797843,
+      "p90_sec": 692.0376584399492
+    },
+    "invalid_candidates": 0,
+    "candidates_in_complete_blocks": 392
+  },
+  "direct": {
+    "generation": {
+      "n": 222,
+      "mean_sec": 32.99528907920729,
+      "median_sec": 9.692832050845027,
+      "p90_sec": 75.57300319895148,
+      "request_errors": 0
+    },
+    "score": {
+      "n": 246,
+      "mean_sec": 6.830433608842938,
+      "median_sec": 3.738180798944086,
+      "p90_sec": 17.564179074950516,
+      "request_errors": 0
+    },
+    "completed_block_slowest_candidate": {
+      "n": 22,
+      "mean_sec": 136.6272062621164,
+      "median_sec": 124.64218819327652,
+      "p90_sec": 233.55616871081293
+    },
+    "invalid_candidates": 1,
+    "candidates_in_complete_blocks": 176
+  },
+  "sft_verified_at": "2026-11-04T19:09:56+08:00",
+  "valid_sft": 127,
+  "supervised_tokens": 377795,
+  "train_sha256": "cccd69af3897965eaa435f87e052e4567383a4a1fdc7692782f448b705d54b53",
+  "valid_sft_at_switch": 122,
+  "new_valid_sft_since_switch": 5,
+  "active_at_request_snapshot": [
+    {
+      "pid": 1396605,
+      "unit": "cligym-row-0379-native-recovery",
+      "phase": "student_8_candidates"
+    },
+    {
+      "pid": 1410059,
+      "unit": "cligym-row-0317-native-recovery",
+      "phase": "student_8_candidates"
+    },
+    {
+      "pid": 1415385,
+      "unit": "cligym-row-0370-native-recovery",
+      "phase": "student_8_candidates"
+    }
+  ],
+  "new_api_non200": 0,
+  "new_completed_proxy_requests": 467,
+  "proxy_resets": 1,
+  "reset_client_score_completed_normally": true,
+  "reset_score_attempts": 1,
+  "normal_cli_api_errors_since_direct_switch": 0,
+  "inherited_episode_timeouts": 3,
+  "timeouts_are_model_zero": false,
+  "automatic_task_replays": 0,
+  "limitations": [
+    "Different task prefixes; not paired task-level comparison.",
+    "New-route long requests still in flight; complete-only means have right-censoring.",
+    "Block metric is slowest candidate generation+score including score-slot wait, not pure backend compute.",
+    "API request duration includes transfer; backend self-reported compute/serving time is much shorter.",
+    "Post-switch SFT closures include trajectories begun over SSH.",
+    "Wave tail has3 workers at19:07, configured capacity8; no unscheduled units in current59-record derived plan."
+  ]
+}
