@@ -1,5 +1,15 @@
 # Transport recovery — 2026-11-04
 
+**Stopped by explicit user request on 2026-11-04. Do not resume automatically.**
+`PRODUCTION_SELECTION.json.user_stop` and the selected roots' `USER_STOP.json`
+are authoritative. The compatibility `STOP_PROVIDER` marker records a user stop,
+not a provider policy failure. At 08:08 +08:00 no owned production/scoring process
+remained; all four interrupted file captures were retained, and their four
+sandbox IDs were absent from the running-sandbox list. The 16 admitted SFT files,
+17 normal student results, original failures/cost evidence and 14 unattempted
+inputs remain preserved. Interrupted attempts are cancellations, not model zeros.
+Evidence: `data/user-stop-20261104/`. Other experiments are outside this stop scope.
+
 Owned MindLab root: `/vePFS-Mindverse/user/intern/fanqi/tb4-research/projection-agent-20261102`.
 Evidence: `data/transport-diagnosis-20261104/`. Existing raw attempts remain immutable.
 
