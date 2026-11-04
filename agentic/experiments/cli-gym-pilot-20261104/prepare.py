@@ -56,7 +56,7 @@ def prepare(row, index, output):
     tag = "append-rewrite/cligym:" + hashlib.sha256(frozen.encode()).hexdigest()[:16]
     with (unit / "build.log").open("wb") as log:
         subprocess.run(
-            ["docker", "build", "-t", tag, str(unit)],
+            ["docker", "build", "--network", "none", "-t", tag, str(unit)],
             check=True,
             stdout=log,
             stderr=log,
@@ -108,7 +108,7 @@ def prepare(row, index, output):
         "cwd": "/testbed",
         "artifacts": ["/app/output/"],
         "restore_reset_paths": ["/app/output/"],
-        "solver_network": "bridge",
+        "solver_network": "none",
         "source": {
             "kind": "cli-gym",
             "row_index": index,

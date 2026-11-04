@@ -24,14 +24,22 @@ generation retries are added. The original task's episode timeout applies;
 there is no model-turn limit. Candidate generation respects Qwen's actual 262144
 context capacity. Expert parameters and approved policy/route are unchanged.
 
-This pilot executes isolated Docker containers on MindLab (4 CPU/8GiB each),
+MindLab controls this pilot; isolated Docker containers execute on a study-owned
+ECS daemon (4 CPU/8GiB each), with its entire data root on the ECS data disk.
+An authenticated private SSH socket tunnel connects the controller to that daemon.
+The initial MindLab shared-Docker pull failed unpaid on backing-store exhaustion;
+its preparation receipt is retained, and that shared daemon is not used or changed.
+Alibaba Sandbox snapshot capability was also tested without model calls and
+returned `400: sandbox runtime does not support snapshot`; no snapshot support is
+assumed. The selected Docker backend therefore provides filesystem snapshots,
 reusing the pinned Harbor0.23 native loop, offline tmux, teacher/client/scorer and
 exporter. Global environment repairs require full filesystem image snapshots;
 /app-only copies are insufficient. Snapshot image IDs/manifests are retained,
 including held attempts; do not prune these study images. Docker daemon and
 other experiments/images are untouched. Solvers have no host mounts or API
-credentials; package repair uses bridge networking. Fresh graders use network
-none. This backend difference must be reported when comparing setup/wall time
+credentials. These selected offline-repair tasks, builds and fresh graders use
+network none, matching the old Alibaba solver's outbound isolation. This backend
+difference must be reported when comparing setup/wall time
 against the previous Alibaba runs; interaction/token counts are more comparable.
 
 Original run_tests scripts do not reliably propagate pytest's exit status.
