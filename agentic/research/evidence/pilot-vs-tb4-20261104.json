@@ -1,0 +1,62 @@
+{
+  "tb4_all_closed": {
+    "teacher": {
+      "n": 107,
+      "means": {
+        "turns": 62.89719626168224,
+        "minutes": 36.15329609119748,
+        "peak_generation_context": 72772.65420560748,
+        "shell_commands": 107.42990654205607,
+        "known_generation_prompt_tokens_including_cache": 4428954.121495327,
+        "known_generation_output_tokens": 297998.4579439252,
+        "attempted_score_input_tokens": 0
+      },
+      "sft_admitted": 0
+    },
+    "student": {
+      "n": 16,
+      "means": {
+        "turns": 9.8125,
+        "minutes": 17.13633042028329,
+        "peak_generation_context": 45629.5,
+        "shell_commands": 23.25,
+        "known_generation_prompt_tokens_including_cache": 3612350,
+        "known_generation_output_tokens": 44709.4375,
+        "attempted_score_input_tokens": 1246914.75
+      },
+      "sft_admitted": 15
+    }
+  },
+  "cli_gym": {
+    "teacher": {
+      "n": 4,
+      "means": {
+        "turns": 20.75,
+        "minutes": 16.52712116894933,
+        "peak_generation_context": 26412,
+        "shell_commands": 55.75,
+        "known_generation_prompt_tokens_including_cache": 404433.5,
+        "known_generation_output_tokens": 71723,
+        "attempted_score_input_tokens": 0
+      },
+      "sft_admitted": 0
+    },
+    "student": {
+      "n": 3,
+      "means": {
+        "turns": 11,
+        "minutes": 17.13940352532599,
+        "peak_generation_context": 45212.666666666664,
+        "shell_commands": 26.333333333333332,
+        "known_generation_prompt_tokens_including_cache": 4125520,
+        "known_generation_output_tokens": 30804,
+        "attempted_score_input_tokens": 1069356.3333333333
+      },
+      "sft_admitted": 3
+    }
+  },
+  "scope": "Normally completed fresh episodes only; candidates included in student usage. Operator-stopped/errors excluded from means, not free. Different environment backends.",
+  "pilot_source_tasks": 6,
+  "pilot_model_admitted_tasks": 4,
+  "pilot_student_errors": 1
+}

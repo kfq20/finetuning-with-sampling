@@ -1,0 +1,82 @@
+{
+  "checked_at": 1793764811.1765687,
+  "checked_cst": "2026-11-04T12:00:11.176579+08:00",
+  "campaign_phase": "existing_wave1_running",
+  "valid_sft": 26,
+  "supervised_tokens": 71444,
+  "train_sha256": "28356f7c671b8e473dd0195d33b24f095258b1d4a33d2d698a7fbaba80a33616",
+  "bundle_hash_verified": true,
+  "source_identities_unique": true,
+  "prepared": 56,
+  "build_holds": 38,
+  "runs": [
+    {
+      "states": {
+        "completed": 3,
+        "hold": 4
+      },
+      "roles": {
+        "teacher": {
+          "normal": 4
+        },
+        "student": {
+          "normal": 3,
+          "sft": 3
+        }
+      },
+      "provider_stop": false,
+      "cohort": "pilot"
+    },
+    {
+      "states": {
+        "completed": 23,
+        "hold": 19,
+        "native_teacher": 2,
+        "student_8_candidates": 2,
+        "teacher_not_successful": 1
+      },
+      "roles": {
+        "teacher": {
+          "normal": 29,
+          "model_zero": 1,
+          "before_model_error": 1
+        },
+        "student": {
+          "normal": 23,
+          "sft": 23,
+          "started_error": 3
+        }
+      },
+      "provider_stop": false,
+      "cohort": "wave1"
+    }
+  ],
+  "active_labels": [
+    {
+      "unit": "cligym-row-0036",
+      "phase": "native_teacher"
+    },
+    {
+      "unit": "cligym-row-0063",
+      "phase": "native_teacher"
+    },
+    {
+      "unit": "cligym-row-0069",
+      "phase": "student_8_candidates"
+    },
+    {
+      "unit": "cligym-row-0098",
+      "phase": "student_8_candidates"
+    }
+  ],
+  "controllers": {
+    "campaign": true,
+    "production": true
+  },
+  "data_disk_free_gib": 154.07,
+  "notes": [
+    "Pilot mirrored raw hold count includes the superseded unpaid row46 selector gate; six canonical sources, not seven.",
+    "Pilot error.json was not mirrored; original frozen report records one student502, add it explicitly to cumulative error denominator.",
+    "Technical SFT admission is not weight training or measured learning benefit."
+  ]
+}

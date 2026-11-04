@@ -1,0 +1,44 @@
+{
+  "scope": "wave1; retained journals read alongside the2026-11-04 12:00 snapshot; no model retries",
+  "episodes": [
+    {
+      "unit": "cligym-row-0032",
+      "stage": "student_generation",
+      "turn": 4,
+      "http_status": 502,
+      "failed_candidates": 1,
+      "elapsed_sec": [
+        0.16327764745801687
+      ]
+    },
+    {
+      "unit": "cligym-row-0019",
+      "stage": "student_generation",
+      "turn": 4,
+      "http_status": 499,
+      "failed_candidates": 4,
+      "elapsed_sec": [
+        30.51587783638388,
+        30.469270460307598,
+        30.49878981616348,
+        30.490446102805436
+      ]
+    },
+    {
+      "unit": "cligym-row-0065",
+      "stage": "student_generation",
+      "turn": 3,
+      "http_status": 499,
+      "failed_candidates": 4,
+      "elapsed_sec": [
+        30.822074458934367,
+        30.51718429569155,
+        30.592185771092772,
+        30.585920370183885
+      ]
+    }
+  ],
+  "counting": "one failed episode per unit, not one per candidate",
+  "logprob_scoring_failure": false,
+  "root_cause": "not established by status code alone"
+}
