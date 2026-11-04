@@ -90,7 +90,8 @@ def main():
     for p in (run / 'units').glob('*/student/receipt.json'):
         existing[str(p)] = hashlib.sha256(p.read_bytes()).hexdigest()
     for p in (run / 'units').glob('*/student/train.jsonl'):
-        existing[str(p)] = hashlib.sha256(p.read_bytes()).hexdigest()
+        if str(p.with_name('receipt.json')) in existing:
+            existing[str(p)] = hashlib.sha256(p.read_bytes()).hexdigest()
     before = {'campaign': campaign, 'coordinator': coordinator, 'claims': claims,
               'existing_result_hashes': existing, 'workers': workers, 'checked_at': time.time()}
     dump(handoff / 'before.json', before)
