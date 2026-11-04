@@ -17,3 +17,31 @@ TB2.1 task set with Harbor0.23/Terminus-2 and Alibaba Sandbox.
 - Official tests/reward are unchanged. Infrastructure/transport failures are
   retained separately from valid model0; no automatic paid model retry.
 - Existing CLI-Gym16-worker acquisition is not paused or reconfigured.
+
+## Runtime and accounting
+
+ECS root: `/mnt/ecs-tb4/evaluations/qwen38-tb21-base-20261104`.
+`dataset-manifest.json` pins the original89 tasks; `images/` records digest-preserving
+ACR copies. Official instructions, solution and verifier files stay byte-identical.
+Original dataset files remain untouched. `evaluation-tasks/` additionally rounds
+CPU/memory upward only where Alibaba's1–4GiB-perCPU constraint requires it;
+`resource-allocations.json` records every difference. This is our consistent
+pre/post-SFT evaluation configuration, not a leaderboard submission or exact
+reproduction of CLI-Gym's OpenHands/Qwen3-32B numbers.
+
+`run_baseline.py` reuses the original canary once, waits for normal capture and
+finite official reward (a valid0 is accepted), verifies Oracle1/NOP0, then starts
+only the other88 tasks at4parallel. It uses an exclusive controller lock and a
+persistent dispatch receipt; transport/runtime errors never trigger paid replays.
+`full-config.json`, `full-launch.json` and `baseline-summary.json` are authoritative
+for dispatch and results. No benchmark trajectory enters the CLI-Gym SFT collector.
+
+Two original no-model template failures are retained: missing registry credentials,
+then ACR credentials mistakenly used with DockerHub. The successful control uses
+an unchanged manifest mirrored into ACR, not credentials from another registry.
+
+Primary references:
+- https://arxiv.org/html/2602.10999v1 (§4, Table3)
+- https://github.com/LiberCoders/CLI-Gym
+- https://www.tbench.ai/news/terminal-bench-2-1
+- https://github.com/harbor-framework/terminal-bench-2-1
