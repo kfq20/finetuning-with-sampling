@@ -140,15 +140,24 @@ class DockerWorld:
         )
         if reset.exit_code:
             raise RuntimeError("FrozenTestsRestoreFailed")
-        q = self.run(
-            "bash /tests/run-original.sh",
-            cwd="/testbed",
-            timeout=contract["timeout_sec"],
-        )
-        try:
-            log = self.read("/test.log")
-        except RuntimeError:
-            log = ""
+        if contract.get("explicit_pytest_argv"):
+            q = self.run(
+                "source /opt/miniconda3/bin/activate; conda activate testbed; "
+                + shlex.join(contract["explicit_pytest_argv"]),
+                cwd="/testbed",
+                timeout=contract["timeout_sec"],
+            )
+            log = q.stdout + q.stderr
+        else:
+            q = self.run(
+                "bash /tests/run-original.sh",
+                cwd="/testbed",
+                timeout=contract["timeout_sec"],
+            )
+            exists = self.run("test -f /test.log")
+            if exists.exit_code and exists.stderr:
+                raise RuntimeError("GradingLogTransportFailed")
+            log = self.read("/test.log") if exists.exit_code == 0 else ""
         wanted = contract["test_ids"]
         self.write(
             "/tests/canary.py", "def test_expected_failure():\n    assert False\n"
