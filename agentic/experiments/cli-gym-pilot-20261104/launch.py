@@ -23,10 +23,11 @@ def main():
     p.add_argument("--root", type=Path, required=True)
     p.add_argument("--legacy-root", type=Path, required=True)
     p.add_argument("--source-commit", required=True)
+    p.add_argument("--prepared", type=Path, required=True)
     a = p.parse_args()
     r, old = a.root, a.legacy_root
     source = Path(__file__).resolve().parents[3]
-    plan = r / "prepared-private-v3/plan.json"
+    plan = a.prepared / "plan.json"
     complete = plan.parent / "complete.json"
     while not plan.exists() or not json.loads(plan.read_text())["units"]:
         if complete.exists() or (r / "USER_STOP.json").exists():
@@ -109,6 +110,8 @@ def main():
             str(r),
             "--legacy-root",
             str(old),
+            "--prepared",
+            str(a.prepared),
         ],
         check=True,
     )

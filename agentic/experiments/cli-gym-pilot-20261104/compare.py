@@ -50,6 +50,7 @@ def main():
     p = argparse.ArgumentParser(__doc__)
     p.add_argument("--root", type=Path, required=True)
     p.add_argument("--legacy-root", type=Path, required=True)
+    p.add_argument("--prepared", type=Path, required=True)
     a = p.parse_args()
     old = summarize(a.legacy_root / "data/append-production-transport-v1")
     new = summarize(a.root / "run")
@@ -81,7 +82,7 @@ def main():
     ]
     for name, state in sorted(new["states"].items()):
         lines.append(f"| {name} | {state['phase']} | {state.get('error_type', '')} |")
-    prep = a.root / "prepared-private-v3/complete.json"
+    prep = a.prepared / "complete.json"
     if prep.exists():
         for hold in json.loads(prep.read_text()).get("held", []):
             lines.append(
