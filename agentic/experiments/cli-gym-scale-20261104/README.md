@@ -49,3 +49,17 @@ Operational authority: `active_runtime_selection.json`, explicit prepared plan,
 source commit and process launch identities. Model teacher remains approved
 DeepSeek Flash/mintcn; student remains the existing Qwen3.8-27B Fleet deployment.
 Do not choose a runtime by largest version suffix or call a launcher an inference.
+
+`campaign.py` freezes the remaining public source pages with revision checks,
+observes wave1 without relaunching it, then serially admits new100-row waves.
+Each later wave has an explicit selection and exclusive launch. Only one wave
+dispatches at a time, retaining the4/2 student/scorer setting. It publishes the
+canonical `campaign-sft/train.jsonl` and `manifest.json`, and stops after a wave
+reaches500 admitted trajectories (at most99 additional successes in that wave),
+or on source exhaustion, low data-disk space, provider stop or infrastructure
+failure. It cannot guarantee500/1000 positives from a finite1655-source pool.
+This is a finite authorized production worker, not a recurring automation.
+Its separate `campaign-selection.json` identifies future-wave code; it never
+changes wave1's frozen source or repeats a paid attempt. A held campaign needs
+diagnosis rather than blind restart, because later-wave launch records are
+exclusive and original attempts must not be repeated.
