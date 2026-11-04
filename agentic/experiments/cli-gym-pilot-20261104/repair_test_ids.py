@@ -42,9 +42,12 @@ def main():
     finally:
         sb.kill()
     mapping = {}
+    transport = str.maketrans("", "", "\\\"'")
     for requested in wanted:
         matches = [
-            x for x in collected if x.replace("\\", "") == requested.replace("\\", "")
+            x
+            for x in collected
+            if x.translate(transport) == requested.translate(transport)
         ]
         if len(matches) != 1:
             raise ValueError("Selector mapping is missing or ambiguous")
@@ -83,6 +86,7 @@ def main():
                 "new_model_requests": 0,
                 "test_functions_unchanged": True,
                 "source_instruction_unchanged": True,
+                "normalization": "drop shell quote/backslash characters; require unique bijection",
                 "created_at": time.time(),
             },
             indent=2,
