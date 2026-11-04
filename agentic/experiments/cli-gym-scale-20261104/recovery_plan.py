@@ -72,10 +72,17 @@ def transfer(root, recovery, wave, worker):
         'canonical_input_identity':r['input_identity']})
     if external_worker_alive(worker):
         os.kill(worker['pid'],signal.SIGTERM)
+        # During exit Linux can clear cmdline before publishing Z/X. Identity was
+        # verified before SIGTERM; now only wait for that exact PID/start to retire.
         for _ in range(100):
-            if not external_worker_alive(worker):break
+            try:
+                fields = (Path('/proc')/str(worker['pid'])/'stat').read_text().split(') ')[1].split()
+                retired = fields[19] != str(worker['start_ticks']) or fields[0] in {'Z','X','x'}
+            except FileNotFoundError:
+                retired = True
+            if retired:break
             time.sleep(.05)
-        assert not external_worker_alive(worker), 'Original worker did not retire'
+        assert retired, 'Original worker did not retire'
     return {'unit_id':uid,'lane':'native-recovery','spec_path':str(path)}
 
 
