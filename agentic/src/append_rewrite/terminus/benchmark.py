@@ -4,10 +4,13 @@ One native generation per decision. No teacher, candidate pool, likelihood
 selection, SFT export, or automatic generation retry. Official task/verifier
 resources and deadlines remain the responsibility of Harbor's trial runner.
 """
+import os
 import time
 from pathlib import Path
 
+from e2b import AsyncTemplate, Template
 from harbor.agents.terminus_2.terminus_2 import Terminus2, Terminus2Options
+from harbor.environments.e2b import E2BEnvironment
 
 from .episode import EpisodeLLM
 from .tokenizer import PinnedTokenizer
@@ -46,11 +49,6 @@ class QwenBenchmarkAgent(Terminus2):
 
 # Alibaba's E2B-compatible image converter requires the registry credentials
 # already provisioned with this account. They stay in the controller process.
-import os
-from e2b import AsyncTemplate, Template
-from harbor.environments.e2b import E2BEnvironment
-
-
 class AlibabaBenchmarkEnvironment(E2BEnvironment):
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
