@@ -2,6 +2,7 @@
 
 Reuse completed experts; never retry a started student or interrupt an expert.
 """
+import argparse
 import hashlib
 import json
 import os
@@ -32,6 +33,7 @@ def alive(v):
 
 
 def main():
+    parser=argparse.ArgumentParser(__doc__);parser.add_argument("--continue-after-worker-retirement",action="store_true");options=parser.parse_args()
     r=ROOT;rec=r/'native-endpoint-recovery-20261104';src=rec/'frozen-production-be4b594'
     review=json.loads((rec/'CANARY-REVIEW.json').read_text())
     assert review['passed'] and not review['teacher_replayed']
@@ -41,9 +43,18 @@ def main():
     w=Path(json.loads((r/'campaign-progress.json').read_text())['wave']);assert w.name=='wave-0300'
     assert (w/'run/STOP_PROVIDER').exists()
     owners=[json.loads((r/'campaign-launch.json').read_text()),json.loads((w/'production-launch.json').read_text())]
-    archive=rec/'scheduler-before';archive.mkdir(mode=0o700,exist_ok=False)
-    for owner in owners:
-        assert alive(owner);os.kill(owner['pid'],signal.SIGSTOP)
+    archive=rec/'scheduler-before'
+    if options.continue_after_worker_retirement:
+        assert archive.is_dir() and not (rec/'resume-receipt.json').exists()
+        assert not (rec/'coordinator-native.log').exists() and not (rec/'dispatch-plan.json').exists()
+        prior=json.loads((rec/'resume-operation-output.json').read_text())
+        assert prior['returncode']==1 and 'Adopted worker command identity drift' in prior['stderr']
+        owners=[json.loads((archive/name).read_text()) for name in ['campaign-launch.json','coordinator-launch.json']]
+        assert not any(alive(owner) for owner in owners)
+    else:
+        archive.mkdir(mode=0o700,exist_ok=False)
+        for owner in owners:
+            assert alive(owner);os.kill(owner['pid'],signal.SIGSTOP)
     # Stable current dispatch, while actual expert unit processes stay alive.
     workers=[]
     for p in Path('/proc').iterdir():
@@ -63,10 +74,12 @@ def main():
                     'campaign-progress':r/'campaign-progress.json','wave-selection':w/'active_runtime_selection.json',
                     'coordinator-launch':w/'production-launch.json','coordinator-state':w/'run/coordinator.json',
                     'provider-hold':r/'PROVIDER_HOLD.json','wave-provider-stop':w/'run/STOP_PROVIDER'}.items():
-        (archive/(label+'.json')).write_bytes(p.read_bytes())
+        if not options.continue_after_worker_retirement:
+            (archive/(label+'.json')).write_bytes(p.read_bytes())
     for owner in owners:
-        os.kill(owner['pid'],signal.SIGTERM)
-        if alive(owner):os.kill(owner['pid'],signal.SIGCONT)
+        if not options.continue_after_worker_retirement:
+            os.kill(owner['pid'],signal.SIGTERM)
+            if alive(owner):os.kill(owner['pid'],signal.SIGCONT)
     for _ in range(100):
         if not any(alive(v) for v in owners):break
         time.sleep(.1)
@@ -74,6 +87,15 @@ def main():
     helper=Path(json.loads((rec/'recovery-operations.json').read_text())['plan_producer_entry'])
     transfer=runpy.run_path(str(helper))['transfer']
     plan=json.loads((w/'prepared/plan.json').read_text());late=[]
+    if options.continue_after_worker_retirement:
+        for previous in sorted((rec/'status-before').glob('*.json')):
+            old=w/'run/units'/previous.stem;status=json.loads((old/'status.json').read_text())
+            assert status['phase']=='existing_method_attempt_reused' and not (old/'student').exists()
+            teacher=json.loads((old/'teacher/receipt.json').read_text());assert teacher['expert_admitted']
+            target=Path(status['source']);uid=target.name
+            spec_path=rec/'canary-spec.json' if uid==json.loads((rec/'canary-spec.json').read_text())['unit_id'] else rec/'specs'/(uid+'.json')
+            spec=json.loads(spec_path.read_text());assert spec['identity']==teacher['input_identity']
+            plan['units'].append({'unit_id':uid,'lane':'native-recovery','spec_path':str(spec_path)})
     for worker in workers:
         item=transfer(r,rec,w,worker)
         if item:plan['units'].append(item)

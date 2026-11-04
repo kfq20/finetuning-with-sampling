@@ -11,7 +11,25 @@ from pathlib import Path
 import signal
 import time
 
-from append_rewrite.terminus.production import dump, external_worker_alive
+from append_rewrite.terminus.production import dump
+
+def external_worker_alive(worker):
+    """Accept a terminal proc race; reject any live command/identity drift."""
+    proc = Path("/proc") / str(worker["pid"])
+    try:
+        fields = (proc / "stat").read_text().split(") ")[1].split()
+        if fields[19] != str(worker["start_ticks"]) or fields[0] in {"Z", "X", "x"}:
+            return False
+        command = (proc / "cmdline").read_bytes()
+        after = (proc / "stat").read_text().split(") ")[1].split()
+        if after[19] != str(worker["start_ticks"]) or after[0] in {"Z", "X", "x"}:
+            return False
+        if hashlib.sha256(command).hexdigest() != worker["cmdline_sha256"]:
+            raise ValueError("Live worker identity drift")
+        return True
+    except FileNotFoundError:
+        return False
+
 
 
 def checksum(path):
