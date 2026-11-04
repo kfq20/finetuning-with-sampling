@@ -36,7 +36,7 @@ def test_ids(script):
     raise ValueError("No explicit pytest test IDs")
 
 
-def prepare(row, index, output):
+def prepare(row, index, output, *, canonicalize_selectors=False):
     unit = output / (f"row-{index:04d}")
     unit.mkdir(mode=0o700)
     dump(unit / "original-row.json", row)
@@ -122,6 +122,19 @@ def prepare(row, index, output):
     )
     spec["identity"] = digest(spec)
     dump(unit / "spec.json", spec)
+    spec_path = unit / "spec.json"
+    if canonicalize_selectors and any(re.search(r"[\\\"']", x) for x in ids):
+        # Repair transport escaping before any paid attempt; assertions unchanged.
+        import sys
+
+        repaired = unit / "selector-transport"
+        subprocess.run(
+            [sys.executable, str(Path(__file__).with_name("repair_test_ids.py")),
+             "--spec", str(spec_path), "--output", str(repaired)],
+            check=True,
+        )
+        spec_path = repaired / "spec.json"
+        spec = json.loads(spec_path.read_text())
     dump(
         unit / "preparation.json",
         {
@@ -136,7 +149,7 @@ def prepare(row, index, output):
     return {
         "unit_id": spec["unit_id"],
         "lane": f"lane-{index % 4}",
-        "spec_path": str(unit / "spec.json"),
+        "spec_path": str(spec_path),
     }
 
 
@@ -144,9 +157,11 @@ def main():
     p = argparse.ArgumentParser(__doc__)
     p.add_argument("--rows", type=Path, nargs="+", required=True)
     p.add_argument("--output", type=Path, required=True)
+    p.add_argument("--indices", type=int, nargs="+", default=[1, 15, 16, 87, 29, 46])
+    p.add_argument("--canonicalize-selectors", action="store_true")
     a = p.parse_args()
     a.output.mkdir(mode=0o700, parents=True, exist_ok=False)
-    wanted = [1, 15, 16, 87, 29, 46]
+    wanted = a.indices
     rows = {
         x["row_idx"]: x["row"]
         for f in a.rows
@@ -158,12 +173,19 @@ def main():
     # Parallel projects share base pulls, so prepare one case per project first.
     from concurrent.futures import ThreadPoolExecutor, as_completed
 
-    groups = [[1, 15], [16, 87], [29, 46]]
+    grouped = {}
+    for i in wanted:
+        base = re.search(r"^FROM\s+(\S+)", rows[i]["dockerfile"], re.M).group(1)
+        grouped.setdefault(base, []).append(i)
+    groups = list(grouped.values())
 
     def group(indices):
         for i in indices:
             try:
-                item = prepare(rows[i], i, a.output)
+                item = prepare(
+                    rows[i], i, a.output,
+                    canonicalize_selectors=a.canonicalize_selectors,
+                )
                 with lock:
                     plan.append(item)
                     dump(a.output / "plan.json", {"units": plan})
