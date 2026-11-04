@@ -485,7 +485,7 @@ def reuse_teacher(spec, path, out):
         if not (r.get('expert_admitted') and r.get('normal_completed') and r['input_identity'] == spec['identity']
                 and r['score']['reward'] == r['fresh_score']['reward'] == 1 and not r.get('private_path_hits')):
             raise ValueError('Native teacher was not admitted')
-        history = public_messages(json.loads((old / 'public-messages.json').read_text()))
+        public_messages(json.loads((old / 'public-messages.json').read_text()))
         out.mkdir(mode=0o700)
         shutil.copy2(old / 'public-messages.json', out / 'public-messages.json')
         dump(out / 'receipt.json', {'expert_admitted': True, 'reused_from': str(old),

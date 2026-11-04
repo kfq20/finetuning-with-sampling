@@ -26,6 +26,7 @@ def main():
     p.add_argument("--prepared", type=Path, required=True)
     p.add_argument("--skip-comparison", action="store_true")
     p.add_argument("--workers", type=int)
+    p.add_argument("--fleet-config", type=Path)
     a = p.parse_args()
     r, old = a.root, a.legacy_root
     source = Path(__file__).resolve().parents[3]
@@ -86,7 +87,7 @@ def main():
     ]
     for k, path in {
         "teacher-config": old / "private/terminus-deepseek.json",
-        "fleet-config": old / "private/fleet.json",
+        "fleet-config": a.fleet_config or old / "private/fleet.json",
         "tokenizer": old / "tokenizers/qwen38-27b-1d4bf0f",
         "sandbox-credentials": old / "private/sandbox.env",
         "runtime-assets": old / "runtime-assets/tmux-linux-x86_64-v1",

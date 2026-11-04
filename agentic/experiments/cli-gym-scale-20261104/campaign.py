@@ -79,6 +79,7 @@ def main():
     p.add_argument("--source-commit", required=True)
     p.add_argument("--workers", type=int, default=4)
     p.add_argument("--resume", action="store_true")
+    p.add_argument("--fleet-config", type=Path)
     a = p.parse_args()
     root = a.root
     if a.workers < 1:
@@ -138,6 +139,7 @@ def main():
             "automatic_paid_retry": False, "student_target": a.workers,
             "worker_capacity": a.workers, "queue_policy": "shared",
             "score_prefill_concurrency": 2, "candidates_per_block": 8,
+            "fleet_config_sha256": hashlib.sha256(a.fleet_config.read_bytes()).hexdigest() if a.fleet_config else None,
         })
         with (wave / "preparation.log").open("xb") as log:
             prep = subprocess.Popen([
@@ -146,12 +148,15 @@ def main():
                 "--canonicalize-selectors", "--storage-root", str(root),
             ], stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)
         with (wave / "pipeline.log").open("xb") as log:
-            pipeline = subprocess.Popen([
+            command = [
                 sys.executable, str(entries / "launch.py"), "--root", str(wave),
                 "--legacy-root", str(root / "support"), "--prepared", str(wave / "prepared"),
                 "--source-commit", a.source_commit, "--skip-comparison",
                 "--workers", str(a.workers),
-            ], stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)
+            ]
+            if a.fleet_config:
+                command += ['--fleet-config', str(a.fleet_config)]
+            pipeline = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)
         runs.append(wave / "run")
         dump(wave / "controllers.json", {"preparation_pid": prep.pid, "pipeline_pid": pipeline.pid,
               "started_at": time.time(), "source_commit": a.source_commit})
