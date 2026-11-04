@@ -1,0 +1,193 @@
+{
+  "checked_at": "2026-11-04T18:06:15.868257+08:00",
+  "valid_sft": 119,
+  "supervised_tokens": 361162,
+  "train_sha256": "ab6fb43a35aaec12ecb352e7312d27410928d62ea0ab044b76c391259cadd8a6",
+  "target": 500,
+  "campaign": {
+    "pid": 1274708,
+    "alive": true,
+    "source_commit": "be4b594"
+  },
+  "coordinator": {
+    "pid": 1312160,
+    "alive": true,
+    "source_commit": "be4b594"
+  },
+  "workers": [
+    {
+      "unit": "cligym-row-0392",
+      "pid": 1274709,
+      "phase": "student_8_candidates",
+      "native_config": true,
+      "complete_student_responses": 8,
+      "complete_student_scores": 8,
+      "proposal_http_status": {
+        "200": 16
+      },
+      "student_errors": 0
+    },
+    {
+      "unit": "cligym-row-0322",
+      "pid": 1274711,
+      "phase": "student_8_candidates",
+      "native_config": true,
+      "complete_student_responses": 8,
+      "complete_student_scores": 2,
+      "proposal_http_status": {
+        "200": 8
+      },
+      "student_errors": 0
+    },
+    {
+      "unit": "cligym-row-0327",
+      "pid": 1274712,
+      "phase": "student_8_candidates",
+      "native_config": true,
+      "complete_student_responses": 8,
+      "complete_student_scores": 3,
+      "proposal_http_status": {
+        "200": 8
+      },
+      "student_errors": 0
+    },
+    {
+      "unit": "cligym-row-0328",
+      "pid": 1274713,
+      "phase": "native_teacher",
+      "native_config": true,
+      "complete_student_responses": 0,
+      "complete_student_scores": 0,
+      "proposal_http_status": {},
+      "student_errors": 0
+    },
+    {
+      "unit": "cligym-row-0375",
+      "pid": 1278138,
+      "phase": "student_8_candidates",
+      "native_config": true,
+      "complete_student_responses": 0,
+      "complete_student_scores": 0,
+      "proposal_http_status": {},
+      "student_errors": 0
+    },
+    {
+      "unit": "cligym-row-0382-selectors-v2",
+      "pid": 1284483,
+      "phase": "student_8_candidates",
+      "native_config": true,
+      "complete_student_responses": 16,
+      "complete_student_scores": 10,
+      "proposal_http_status": {
+        "200": 16
+      },
+      "student_errors": 0
+    },
+    {
+      "unit": "cligym-row-0391",
+      "pid": 1285149,
+      "phase": "student_8_candidates",
+      "native_config": true,
+      "complete_student_responses": 1,
+      "complete_student_scores": 0,
+      "proposal_http_status": {
+        "200": 1
+      },
+      "student_errors": 0
+    },
+    {
+      "unit": "cligym-row-0371",
+      "pid": 1290566,
+      "phase": "native_teacher",
+      "native_config": true,
+      "complete_student_responses": 0,
+      "complete_student_scores": 0,
+      "proposal_http_status": {},
+      "student_errors": 0
+    }
+  ],
+  "worker_capacity": 8,
+  "student_capacity": 8,
+  "score_prefill_capacity": 2,
+  "candidates_per_block": 8,
+  "provider_hold": false,
+  "provider_stop": false,
+  "core_commit": "be4b594",
+  "operations_commit": "b861041",
+  "priority_commit": "d918112",
+  "completed_expert_reuse_candidates": [
+    {
+      "unit": "cligym-row-0379-native-recovery",
+      "source_receipt_sha256": "1f30156f4d595a3eb6e7d3354753cddea7ea8b3bb284e296659ea74ed2749c2a",
+      "already_dispatched": false
+    },
+    {
+      "unit": "cligym-row-0352-native-recovery",
+      "source_receipt_sha256": "a10d471989455574101f1a5235f97597ccad95edd2f48615f331d63c7c45e816",
+      "already_dispatched": false
+    },
+    {
+      "unit": "cligym-row-0370-native-recovery",
+      "source_receipt_sha256": "713313fe152d305ccfe381a9c600292cb29afb018af13e2708c7f25ddd3267b8",
+      "already_dispatched": false
+    },
+    {
+      "unit": "cligym-row-0317-native-recovery",
+      "source_receipt_sha256": "e7fbfc0eb395bd576c058ad80c831447da0277cd7bac510870dadfca9c68505b",
+      "already_dispatched": false
+    },
+    {
+      "unit": "cligym-row-0347-native-recovery",
+      "source_receipt_sha256": "54b40dfe33686cc97eb9f705b535079c03726692e1d7028e6e8ceb48b14f2e81",
+      "already_dispatched": false
+    }
+  ],
+  "expert_replays": 0,
+  "paid_student_replays": 0,
+  "canary": {
+    "passed": true,
+    "reviewed_at": "2026-11-04T18:00:47.441469+08:00",
+    "teacher_replayed": false,
+    "student_receipt_sha256": "9ec041d843f9385b671f2b2f20185dac87c7e94b492ee5de52469d85895c149a",
+    "native_config_sha256": "83b3910a34bb833e9fa79bf7538de21381184c1ca2a3db4a4e3ffc50c57a1d9a",
+    "normal_completed": true,
+    "reward": 1,
+    "fresh_reward": 1,
+    "expected_tests": 9,
+    "passed_tests": 9,
+    "executed_interactions": 5,
+    "shell_command_count": 12,
+    "elapsed_sec": 1420.809813208878,
+    "supervised_tokens": 1615,
+    "total_sft_tokens": 7344,
+    "sft_sha256": "0c45e77d26cd735e3471f9574997a2c94b64c316a20ca85410f56b68379ed926",
+    "usage": {
+      "generation_prompt_tokens": 865872,
+      "generation_completion_tokens": 12039,
+      "generation_cached_tokens": 802176,
+      "score_prefill_tokens": 193671
+    },
+    "candidate_count": 40,
+    "generation_and_score_input_alignment_independently_verified": true,
+    "legacy_score_alignment_flag": "False retained unchanged; direct request IDs, pinned render, candidate boundaries and returned token IDs independently verified by this report",
+    "sft_mask_recomputed_exactly": true,
+    "private_path_hits": [],
+    "scoring_reference_removed": true,
+    "new_model_attempts": 1,
+    "automatic_generation_retry": false,
+    "transport_note": "First streams used slow uncompressed SSH; new TCP connections use owned compressed SSH tunnel. No canary generation replay.",
+    "thinking_mode": "Original public Terminus action protocol retained; native hidden thinking disabled by pinned template. Thinking-on is a separate protocol experiment."
+  },
+  "canary_review_sha256": "61f371411730f3cfc7f35a1af583b6f4a3c1325d82ac4410c17e46deed9821f5",
+  "native_config_sha256": "83b3910a34bb833e9fa79bf7538de21381184c1ca2a3db4a4e3ffc50c57a1d9a",
+  "transport": "ECS-owned pinned SSH tunnel with compression; same owned loopback native /generate route",
+  "free_data_gib": 144.44,
+  "thinking_mode": "disabled for original Terminus public JSON protocol; thinking-on requires separate protocol validation",
+  "model_id": "Qwen/Qwen3.8-27B",
+  "tokenizer_template_match": true,
+  "weight_equality_with_previous_service": "not established",
+  "preserved_old_student_errors": 14,
+  "current_wave_old_student_errors": 10,
+  "new_error_records_not_valid_scores": true,
+  "recovery_operations": "Two finite controller handoff failures preserved; no model replay; terminal worker retirement polling fixed."
+}
