@@ -64,6 +64,10 @@ def transfer(root, recovery, wave, worker):
 def main():
     p=argparse.ArgumentParser(__doc__);p.add_argument('--manifest',type=Path,required=True);a=p.parse_args()
     v=json.loads(a.manifest.read_text());root=Path(v['root']);recovery=Path(v['recovery']);wave=Path(v['wave'])
+    review=json.loads((recovery/'CANARY-REVIEW.json').read_text())
+    assert review['passed'] and review['teacher_replayed'] is False
+    assert checksum(Path(review['student_receipt'])) == review['student_receipt_sha256']
+    assert checksum(recovery/'qwen-native-private.json') == review['native_config_sha256']
     pending=list(v['late_workers']);plan=Path(v['plan']);complete=Path(v['complete'])
     while pending:
         for worker in list(pending):
