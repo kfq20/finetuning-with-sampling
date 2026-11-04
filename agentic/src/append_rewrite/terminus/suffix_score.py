@@ -59,8 +59,11 @@ def file_slot(root, capacity):
 
 
 def score_slot():
-    """Two simultaneous scoring prefills, independent of four student episodes."""
-    return file_slot(os.environ.get("APPEND_REWRITE_SCORE_POOL"), 2)
+    """Explicit per-run prefill capacity; legacy workers retain their two slots."""
+    capacity = int(os.environ.get("APPEND_REWRITE_SCORE_CAPACITY", "2"))
+    if capacity < 1:
+        raise ValueError("Positive score-prefill capacity required")
+    return file_slot(os.environ.get("APPEND_REWRITE_SCORE_POOL"), capacity)
 
 
 class NativeSuffixStreamClient(NativeStreamClient):

@@ -1,4 +1,4 @@
-"""Feed one eight-worker queue across preparation batches, without wave barriers.
+"""Feed one explicitly sized worker queue across preparation batches, without wave barriers.
 
 Preparation stays source-batched; paid dispatch is global, exclusive and rolling.
 The existing500-SFT objective and all per-task quality/transport rules are retained.
@@ -51,7 +51,10 @@ def main():
     catalog=json.loads((root/'catalog/manifest.json').read_text())
     for path,sha in catalog['pages'].items():
         assert hashlib.sha256(Path(path).read_bytes()).hexdigest()==sha
-    preparing=Path(cfg['initial_preparation_wave']);next_offset=cfg['next_offset'];wave_records=[str(preparing)]
+    capacity=int(cfg.get('worker_capacity',8))
+    if capacity<1:raise ValueError('Positive worker capacity required')
+    preparing=Path(cfg['initial_preparation_wave']) if cfg.get('initial_preparation_wave') else None
+    next_offset=cfg['next_offset'];wave_records=list(cfg.get('preparation_waves',[str(preparing)] if preparing else []))
     stopping=None
     while True:
         plan=json.loads(plan_path.read_text())
@@ -72,9 +75,9 @@ def main():
             elif not alive(launch):
                 stopping='preparation_infrastructure_hold'
         backlog=pending(plan,work/'run')
-        # Maintain ready work ahead of eight slots, while at most one preparation
+        # Maintain ready work ahead of the execution slots, while at most one preparation
         # batch runs. This is a prefetch watermark, not extra model concurrency.
-        if not stopping and preparing is None and backlog<8:
+        if not stopping and preparing is None and backlog<capacity:
             if next_offset>=1655:stopping='source_pool_exhausted_drain'
             elif shutil.disk_usage(root).free<20*1024**3:stopping='storage_hold_drain'
             else:
@@ -100,7 +103,7 @@ def main():
             stopping='coordinator_missing';dump(work/'runtime-hold.json',{'reason':stopping,'checked_at':time.time()})
         progress={'checked_at':time.time(),'phase':stopping or 'rolling_running','valid_sft':count,'target':500,
                   'requested_range':[500,1000],'runs':list(map(str,runs)),'wave':str(work),
-                  'queue_policy':'cross_wave_shared','worker_capacity':8,'ready_backlog':backlog,
+                  'queue_policy':'cross_wave_shared','worker_capacity':capacity,'ready_backlog':backlog,
                   'preparing_wave':str(preparing) if preparing else None,'preparation_waves':wave_records,
                   'next_source_offset':next_offset,'published_units':len(plan['units']),'old_attempt_replays':0}
         dump(root/'campaign-progress.json',progress);dump(work/'progress.json',progress)
