@@ -1,88 +1,28 @@
-# CLI-Gym production expansion — 2026-11-04
+# CLI-Gym acquisition: rolling dispatch
 
-Goal: 500–1000 distinct, scored, format-validated student trajectories. Candidate
-generations and expert trajectories do not count toward that goal. No weight
-training or training gain is claimed by acquisition.
+The selected ECS run is `/mnt/ecs-tb4/cli-gym-scale-20261104/rolling-acquisition-20261104`.
+Read root `campaign-selection.json`, `campaign-progress.json` and
+`transport-selection.json` before using any historical launch receipt.
 
-The six-source pilot closed with four successful experts, three admitted
-students and one student upstream502. Two other sources failed pre-model gates.
-All original attempts and costs remain intact, with no automatic paid retries.
+- `rolling.py` owns the campaign lock, validates the existing catalog, publishes
+  the cumulative hash-bound SFT pack, prepares source groups, and appends ready
+  immutable inputs to one discovery plan. It does not call a model.
+- `production.batch` provides the single eight-slot queue. Adopted workers retain
+  their exact PID/start identity and original output directory. New output lives
+  in the rolling run. A completed/failed original attempt is never redispatched.
+- Source preparation remains in groups of100, using the existing Docker
+  preparation script and per-task controls. When fewer than8 prepared inputs
+  remain unclaimed, the producer starts the next source group. This watermark
+  does not increase model concurrency or impose a token budget.
+- Student capacity8, score-prefill capacity2, candidates8, task deadlines,
+  native Terminus protocol, verifier/fresh-score and training admission are
+  unchanged. Existing model attempts finish normally or retain original errors.
+- `activate_rolling.py` is an already-executed, exclusive one-time scheduler
+  handoff. Do not rerun it as a resume command. Check `ACTIVATED.json`, current
+  process identities, `source-binding.json` and `ACCEPTANCE.json` first.
 
-Wave1 uses the remaining94 of the already-frozen official rows0–99, excluding
-pilot rows1/15/16/29/46/87;22 projects occur across those100 rows. Selection is
-by original row index, never by model success. This first expansion is not a
-claim of500 completed samples. Later waves must use new source identities and
-update the explicit selection rather than silently extending a frozen plan.
-
-Execution reuses the pilot's committed prepare/launch entries and Terminus-2
-pipeline. Prepare now accepts explicit row indices, groups by original base
-image and optionally repairs quote/backslash selector transport by unique
-collection mapping before any paid dispatch. Original instructions, tests,
-assertions, recipes and old failed gates remain retained.
-
-Controls require initial0/healthy1 before expert inference. Expert must have
-normal completion and original1/fresh1 before the student starts. Student uses
-the full expert reference,8 proposals per action block, reference-free student
-logprob ranking, and only executes the selected action. Original1/fresh1,
-private-path/reference-attribution checks and assistant-only label validation
-precede SFT publication. Generation errors stay errors, not model zeros.
-
-The new controller and its large artifacts live on the ECS data disk:
-`/mnt/ecs-tb4/cli-gym-scale-20261104`. MindLab's root has insufficient free space
-for this wave. It uses the existing study-owned private Docker daemon; neither
-shared Docker nor existing images/experiments are changed. The exact SDK package
-copy is tested on the ECS Python3.13 runtime before dispatch. Credentials stay in
-private controller support, never solver containers or Git.
-
-Four task lanes, target4 student slots and2 score-prefill slots. Native task
-timeouts remain unchanged. No new model-turn cap, credential fallback, automatic
-paid retry, author session, subagent or recurring automation is introduced.
-Old TB4 USER_STOP remains in force. No source task is dispatched twice.
-
-`collect.py` validates receipt/SFT hashes, final scores and loss-mask consistency,
-deduplicates input identities and atomically publishes a cumulative JSONL and
-manifest. It may run as a finite read-only follower until the coordinator closes;
-it cannot send model requests or dispatch tasks. Preserve source receipts,
-snapshots, rejected candidates, failures and costs independently of this export.
-
-Operational authority: `active_runtime_selection.json`, explicit prepared plan,
-source commit and process launch identities. Model teacher remains approved
-DeepSeek Flash/mintcn; student remains the existing Qwen3.8-27B Fleet deployment.
-Do not choose a runtime by largest version suffix or call a launcher an inference.
-
-`campaign.py` freezes the remaining public source pages with revision checks,
-observes wave1 without relaunching it, then serially admits new100-row waves.
-Each later wave has an explicit selection and exclusive launch. Only one wave
-dispatches at a time, retaining the4/2 student/scorer setting. It publishes the
-canonical `campaign-sft/train.jsonl` and `manifest.json`, and stops after a wave
-reaches500 admitted trajectories (at most99 additional successes in that wave),
-or on source exhaustion, low data-disk space, provider stop or infrastructure
-failure. It cannot guarantee500/1000 positives from a finite1655-source pool.
-This is a finite authorized production worker, not a recurring automation.
-Its separate `campaign-selection.json` identifies future-wave code; it never
-changes wave1's frozen source or repeats a paid attempt. A held campaign needs
-diagnosis rather than blind restart, because later-wave launch records are
-exclusive and original attempts must not be repeated.
-
-## Explicit concurrency upgrade
-
-The user authorized raising concurrency on2026-11-04. The selected upgrade uses
-`--workers8`: one shared queue replaces the four static lanes, student capacity8,
-score-prefill capacity unchanged2, eight candidates per action unchanged.
-Legacy lane behavior remains available when `production batch --workers` is
-omitted. Existing frozen sources are never edited.
-
-The coordinator supports `--adopt-workers <manifest>` to occupy slots with
-already-running exact PID/start-ticks/cmdline-hash identities. It waits for their
-original closure; it never restarts them. Existing claim directories are skipped,
-and pre-frozen pending specs must byte-match. Any adopted process disappearance
-without a terminal status is retained as infrastructure failure, not replayed.
-
-Migration first quiesces only the two scheduling controllers, records claims and
-owned live workers, and retires only those exact controller identities. The old
-unit processes continue. A single new coordinator reacquires the existing lock;
-`campaign --resume --workers8` observes it before admitting later100-row waves.
-Original selections, receipts, controller logs and model costs remain bound in
-the handoff archive. `concurrency-upgrade-selection.json` selects the new source
-and handoff evidence; `campaign-selection.json` and current wave selection must
-explicitly describe mixed old/new worker sources rather than hiding them.
+The existing500-valid-SFT objective, source exhaustion, user/provider stop, and
+physical storage admission remain the stopping conditions. Already-published
+work drains when the production target is reached. Errors are not model0 or SFT.
+Raw traces, credentials, images and results stay outside Git. Selected code is
+frozen; a later documentation commit does not change that running identity.

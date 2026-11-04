@@ -1,0 +1,96 @@
+{
+  "checked_at": "2026-11-04T19:31:59.287934+08:00",
+  "source_commit": "6f2753c",
+  "source_scope": "agentic runtime; unchanged source reused with all tracked runtime files independently SHA verified",
+  "queue_policy": "cross_wave_shared",
+  "worker_capacity": 8,
+  "active_workers": [
+    {
+      "pid": 1396605,
+      "unit": "cligym-row-0379-native-recovery",
+      "phase": "student_8_candidates",
+      "original_adopted": true,
+      "complete_teacher_responses": 0,
+      "complete_student_responses": 63
+    },
+    {
+      "pid": 1410059,
+      "unit": "cligym-row-0317-native-recovery",
+      "phase": "student_8_candidates",
+      "original_adopted": true,
+      "complete_teacher_responses": 0,
+      "complete_student_responses": 31
+    },
+    {
+      "pid": 1519738,
+      "unit": "cligym-row-0402",
+      "phase": "native_teacher",
+      "original_adopted": false,
+      "complete_teacher_responses": 8,
+      "complete_student_responses": 0
+    },
+    {
+      "pid": 1519739,
+      "unit": "cligym-row-0408",
+      "phase": "native_teacher",
+      "original_adopted": false,
+      "complete_teacher_responses": 7,
+      "complete_student_responses": 0
+    },
+    {
+      "pid": 1519741,
+      "unit": "cligym-row-0489",
+      "phase": "student_8_candidates",
+      "original_adopted": false,
+      "complete_teacher_responses": 7,
+      "complete_student_responses": 0
+    },
+    {
+      "pid": 1519743,
+      "unit": "cligym-row-0449",
+      "phase": "student_8_candidates",
+      "original_adopted": false,
+      "complete_teacher_responses": 7,
+      "complete_student_responses": 8
+    },
+    {
+      "pid": 1527040,
+      "unit": "cligym-row-0468",
+      "phase": "native_teacher",
+      "original_adopted": false,
+      "complete_teacher_responses": 10,
+      "complete_student_responses": 0
+    },
+    {
+      "pid": 1530634,
+      "unit": "cligym-row-0499",
+      "phase": "native_teacher",
+      "original_adopted": false,
+      "complete_teacher_responses": 8,
+      "complete_student_responses": 0
+    }
+  ],
+  "ready_backlog": 49,
+  "published_new_units": 58,
+  "source_rows_prepared": 58,
+  "next_preparation_when_ready_backlog_below": 8,
+  "next_source_offset": 500,
+  "valid_sft": 127,
+  "supervised_tokens": 377795,
+  "train_sha256": "cccd69af3897965eaa435f87e052e4567383a4a1fdc7692782f448b705d54b53",
+  "tests_run": 118,
+  "tests_skipped": 2,
+  "tests_passed": 116,
+  "controller_alive": true,
+  "campaign_alive": true,
+  "old_paid_workers_restarted": 0,
+  "completed_attempt_replays": 0,
+  "old_closed_receipts_unchanged": 122,
+  "transport": "direct-http; existing selected bridge unchanged",
+  "candidates_per_block": 8,
+  "score_prefill_capacity": 2,
+  "generation_scoring_capture_changed": false,
+  "provider_stop": false,
+  "adopted_external_run_outputs_preserved": true,
+  "preparation_is_source_batched_not_paid_dispatch_batched": true
+}
