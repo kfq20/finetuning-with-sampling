@@ -13,6 +13,7 @@ import json
 import math
 from pathlib import Path
 from urllib.request import Request, urlopen
+from urllib.parse import urlsplit
 
 from .protocol import digest
 
@@ -150,12 +151,20 @@ class NativeInputScorer:
         if p.stat().st_mode & 0o077:
             raise PermissionError("Private controller credentials required")
         self.config = json.loads(p.read_text())
-        self.endpoint = (
+        self.endpoint = self.config.get('native_endpoint') or (
             self.config["base_url"].rstrip("/")
             + "/d/"
             + self.config["task_id"]
             + "/generate"
         )
+        if self.config.get('native_endpoint'):
+            parsed = urlsplit(self.endpoint)
+            if parsed.scheme != 'http' or parsed.hostname != '127.0.0.1' or parsed.path != '/generate' or parsed.query or parsed.fragment or parsed.username:
+                raise ValueError('Direct native endpoint must be an explicitly owned loopback tunnel')
+
+    def request_headers(self):
+        auth = {'Authorization': 'Bearer ' + self.config['api_key']} if self.config.get('native_endpoint') else {'x-api-key': self.config['api_key']}
+        return {**auth, 'Content-Type': 'application/json'}
 
     def score(self, rendered, *, journal, timeout=120):
         rendered.validate()
@@ -179,10 +188,7 @@ class NativeInputScorer:
         request = Request(
             self.endpoint,
             data=json.dumps(body).encode(),
-            headers={
-                "x-api-key": self.config["api_key"],
-                "Content-Type": "application/json",
-            },
+            headers=self.request_headers(),
         )
         try:
             with urlopen(request, timeout=timeout) as reply:

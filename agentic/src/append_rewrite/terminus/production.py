@@ -469,6 +469,29 @@ async def episode(spec, args, out, role, teacher=None):
 def reuse_teacher(spec, path, out):
     """Bind an admitted legacy native teacher without repeating it."""
     old = Path(path)
+    if (old / 'receipt.json').exists():
+        binding = spec['teacher_reuse_binding']
+        for name, key in [('receipt.json', 'receipt_sha256'), ('public-messages.json', 'history_sha256')]:
+            if sha(old / name) != binding[key]:
+                raise ValueError('Native teacher reuse bytes drift')
+        source = Path(binding['source_spec'])
+        if sha(source) != binding['source_spec_sha256']:
+            raise ValueError('Native teacher source spec drift')
+        original = json.loads(source.read_text())
+        for key in ['identity', 'template_id', 'task_manifest', 'state_manifest', 'cwd', 'task_path', 'state_path', 'instruction_path']:
+            if original[key] != spec[key]:
+                raise ValueError('Native teacher reuse input mismatch')
+        r = json.loads((old / 'receipt.json').read_text())
+        if not (r.get('expert_admitted') and r.get('normal_completed') and r['input_identity'] == spec['identity']
+                and r['score']['reward'] == r['fresh_score']['reward'] == 1 and not r.get('private_path_hits')):
+            raise ValueError('Native teacher was not admitted')
+        history = public_messages(json.loads((old / 'public-messages.json').read_text()))
+        out.mkdir(mode=0o700)
+        shutil.copy2(old / 'public-messages.json', out / 'public-messages.json')
+        dump(out / 'receipt.json', {'expert_admitted': True, 'reused_from': str(old),
+             'source_receipt_sha256': binding['receipt_sha256'], 'source_history_sha256': binding['history_sha256'],
+             'input_identity': spec['identity'], 'new_model_attempts': 0, 'normal_completed_in_source': True})
+        return
     r = json.loads((old / "teacher-receipt.json").read_text())
     if (
         not r["expert_admitted_for_mvp"]

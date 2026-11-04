@@ -32,10 +32,7 @@ class NativeClient(NativeInputScorer):
         req = Request(
             self.endpoint,
             data=json.dumps(body).encode(),
-            headers={
-                "x-api-key": self.config["api_key"],
-                "Content-Type": "application/json",
-            },
+            headers=self.request_headers(),
         )
         try:
             with urlopen(req, timeout=timeout) as response:

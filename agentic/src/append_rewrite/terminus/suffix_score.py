@@ -96,10 +96,7 @@ class NativeSuffixStreamClient(NativeStreamClient):
         request = Request(
             self.endpoint,
             data=json.dumps(body).encode(),
-            headers={
-                "x-api-key": self.config["api_key"],
-                "Content-Type": "application/json",
-            },
+            headers=self.request_headers(),
         )
         started = time.monotonic()
         try:
