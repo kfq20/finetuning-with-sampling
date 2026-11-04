@@ -9,7 +9,8 @@ TB2.1 task set with Harbor0.23/Terminus-2 and Alibaba Sandbox.
 - Dataset/results are evaluation-only, external to the training collector.
 - Student: current user-approved self-hosted `Qwen/Qwen3.8-27B`, native HTTP.
 - Plain unreferenced Pass@1: one proposal, no expert/likelihood selection.
-- Preserve task-specific resource requests and timeouts, no turn cap.
+- Preserve task-specific deadlines and minimum resources; record Alibaba-required
+  resource rounding explicitly. No turn cap.
 - Native nonthinking/public JSON protocol and temperature0.6 explicitly pinned.
   Standard Terminus context summarization enabled; report this configuration.
 - One no-model NOP/oracle control first, then one model canary; reuse that
@@ -45,3 +46,15 @@ Primary references:
 - https://github.com/LiberCoders/CLI-Gym
 - https://www.tbench.ai/news/terminal-bench-2-1
 - https://github.com/harbor-framework/terminal-bench-2-1
+
+## Launch snapshot (2026-11-04 23:21 CST)
+
+- Official89-image preparation complete, manifest digests preserved.
+- Actual ECS SDK regressions:124tests,122pass/2optional skips.
+- `fix-git`: Oracle1/NOP0, Qwen canary1/no exception;9decisions,24terminal
+  commands,53,438input/2,025output/38,912cached tokens,172.31agent seconds.
+- Original canary is reused once. Remaining88 launched at4concurrent; initial
+  live stats4running/84pending. See external root `launch-audit.json` for actual time.
+- Five1CPU/8GiB tasks are rounded to2CPU/8GiB; all other CPU/memory requests
+  preserved. No instruction/test/deadline changes.
+- Existing CLI-Gym16-worker production remains selected and unchanged.
