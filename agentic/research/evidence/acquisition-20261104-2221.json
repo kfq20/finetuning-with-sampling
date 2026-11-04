@@ -1,0 +1,50 @@
+{
+  "checked_at": "2026-11-04T22:21:50+08:00",
+  "valid_sft": 175,
+  "supervised_tokens": 482678,
+  "goal": 500,
+  "remaining": 325,
+  "worker_capacity": 16,
+  "active_workers": 16,
+  "active_phases": {
+    "student": 14,
+    "teacher": 2
+  },
+  "ready_backlog": 58,
+  "prepared_source_batches": [
+    400,
+    500,
+    600
+  ],
+  "published_units": 168,
+  "next_source_offset": 700,
+  "valid_sft_last30min": 9,
+  "valid_sft_last60min": 23,
+  "new_valid_since_2044": 36,
+  "recent_http_completed_requests": 1994,
+  "recent_http_status": {
+    "200": 1994
+  },
+  "recent_proxy_connection_close_records": {
+    "BrokenPipeError": 2,
+    "ConnectionResetError": 2
+  },
+  "connection_close_records_not_automatically_counted_as_failed_episodes": true,
+  "producer_alive": true,
+  "coordinator_alive": true,
+  "provider_stop": false,
+  "retired_terminal_workers": 8,
+  "rolling_run_phases": {
+    "native_teacher": 2,
+    "hold": 43,
+    "completed": 48,
+    "student_8_candidates": 14,
+    "teacher_not_successful": 3
+  },
+  "no_failed_task_replay": true,
+  "conditional_eta_hours": [
+    14.1,
+    18.1
+  ],
+  "eta_basis": "325remaining /18..23valid perhour; short recent wall-time rate, not paired task-level benchmark"
+}
