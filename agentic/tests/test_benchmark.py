@@ -26,14 +26,14 @@ class BenchmarkTests(unittest.IsolatedAsyncioTestCase):
             self.assertNotIn('expert_reference',generate.call_args.args[0]);self.assertEqual(llm.get_model_context_limit(),262144)
 
     async def test_registry_auth_and_resources_passed_only_to_builder(self):
-        env=object.__new__(AlibabaBenchmarkEnvironment);env.task_env_config=SimpleNamespace(docker_image='public/task:fixed');env._template_name='test'
+        env=object.__new__(AlibabaBenchmarkEnvironment);env.task_env_config=SimpleNamespace(docker_image='example.cr.aliyuncs.com/test/image@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');env._template_name='test'
         with patch.dict('os.environ',{'REGISTRY_USERNAME':'registry-user','REGISTRY_PASSWORD':'registry-test-secret'},clear=True),patch('append_rewrite.terminus.benchmark.Template') as template,patch('append_rewrite.terminus.benchmark.AsyncTemplate.build',new_callable=AsyncMock) as build,patch.object(AlibabaBenchmarkEnvironment,'_effective_cpus',1),patch.object(AlibabaBenchmarkEnvironment,'_effective_memory_mb',2048):
             await env._create_template()
-            template.return_value.from_image.assert_called_once_with('public/task:fixed',username='registry-user',password='registry-test-secret')
+            template.return_value.from_image.assert_called_once_with('example.cr.aliyuncs.com/test/image@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',username='registry-user',password='registry-test-secret')
             self.assertEqual(build.await_args.kwargs['cpu_count'],1);self.assertEqual(build.await_args.kwargs['memory_mb'],2048)
 
     async def test_failed_build_is_not_retried(self):
-        env=object.__new__(AlibabaBenchmarkEnvironment);env.task_env_config=SimpleNamespace(docker_image='public/task:fixed');env._template_name='test'
+        env=object.__new__(AlibabaBenchmarkEnvironment);env.task_env_config=SimpleNamespace(docker_image='example.cr.aliyuncs.com/test/image@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');env._template_name='test'
         with patch.dict('os.environ',{'REGISTRY_USERNAME':'user','REGISTRY_PASSWORD':'secret'},clear=True),patch('append_rewrite.terminus.benchmark.Template'),patch('append_rewrite.terminus.benchmark.AsyncTemplate.build',new_callable=AsyncMock,side_effect=RuntimeError('build failure')) as build,patch.object(AlibabaBenchmarkEnvironment,'_effective_cpus',1),patch.object(AlibabaBenchmarkEnvironment,'_effective_memory_mb',2048):
             with self.assertRaises(RuntimeError):await env._create_template()
             self.assertEqual(build.await_count,1)

@@ -52,13 +52,15 @@ class QwenBenchmarkAgent(Terminus2):
 class AlibabaBenchmarkEnvironment(E2BEnvironment):
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
-        self._template_name='tb21ali-v1-'+self.environment_id[:16]
+        self._template_name='tb21ali-v2-'+self.environment_id[:16]
 
     async def _create_template(self):
         if not self.task_env_config.docker_image:
             raise ValueError('Official pinned image required for this adapter')
         if not all(os.environ.get(k) for k in ['REGISTRY_USERNAME','REGISTRY_PASSWORD']):
             raise ValueError('Controller registry credentials missing')
+        if '.cr.aliyuncs.com/' not in self.task_env_config.docker_image or '@sha256:' not in self.task_env_config.docker_image:
+            raise ValueError('Mirror official image to ACR by digest before using ACR credentials')
         template=Template().from_image(
             self.task_env_config.docker_image,username=os.environ['REGISTRY_USERNAME'],
             password=os.environ['REGISTRY_PASSWORD'])
