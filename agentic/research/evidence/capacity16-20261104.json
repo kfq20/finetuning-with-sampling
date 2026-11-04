@@ -1,0 +1,252 @@
+{
+  "checked_at": "2026-11-04T20:44:54.067835+08:00",
+  "active_source_commit": "a078aca",
+  "initial_capacity_upgrade_commit": "f9733b2",
+  "worker_capacity": 16,
+  "student_capacity": 16,
+  "score_prefill_capacity": 4,
+  "candidates_per_block": 8,
+  "active_workers": [
+    {
+      "pid": 1662567,
+      "unit": "cligym-row-0407",
+      "phase": "native_teacher",
+      "complete_teacher_responses": 84,
+      "complete_student_responses": 0
+    },
+    {
+      "pid": 1670110,
+      "unit": "cligym-row-0413",
+      "phase": "student_8_candidates",
+      "complete_teacher_responses": 15,
+      "complete_student_responses": 54
+    },
+    {
+      "pid": 1703364,
+      "unit": "cligym-row-0418",
+      "phase": "student_8_candidates",
+      "complete_teacher_responses": 14,
+      "complete_student_responses": 80
+    },
+    {
+      "pid": 1705025,
+      "unit": "cligym-row-0420",
+      "phase": "student_8_candidates",
+      "complete_teacher_responses": 22,
+      "complete_student_responses": 48
+    },
+    {
+      "pid": 1730798,
+      "unit": "cligym-row-0425",
+      "phase": "student_8_candidates",
+      "complete_teacher_responses": 9,
+      "complete_student_responses": 56
+    },
+    {
+      "pid": 1758052,
+      "unit": "cligym-row-0411",
+      "phase": "student_8_candidates",
+      "complete_teacher_responses": 13,
+      "complete_student_responses": 24
+    },
+    {
+      "pid": 1758056,
+      "unit": "cligym-row-0479",
+      "phase": "student_8_candidates",
+      "complete_teacher_responses": 11,
+      "complete_student_responses": 48
+    },
+    {
+      "pid": 1761523,
+      "unit": "cligym-row-0457",
+      "phase": "native_teacher",
+      "complete_teacher_responses": 51,
+      "complete_student_responses": 0
+    },
+    {
+      "pid": 1766775,
+      "unit": "cligym-row-0477",
+      "phase": "student_8_candidates",
+      "complete_teacher_responses": 9,
+      "complete_student_responses": 31
+    },
+    {
+      "pid": 1771292,
+      "unit": "cligym-row-0494",
+      "phase": "native_teacher",
+      "complete_teacher_responses": 28,
+      "complete_student_responses": 0
+    },
+    {
+      "pid": 1774908,
+      "unit": "cligym-row-0447",
+      "phase": "student_8_candidates",
+      "complete_teacher_responses": 11,
+      "complete_student_responses": 26
+    },
+    {
+      "pid": 1826767,
+      "unit": "cligym-row-0462",
+      "phase": "native_teacher",
+      "complete_teacher_responses": 4,
+      "complete_student_responses": 0
+    },
+    {
+      "pid": 1864749,
+      "unit": "cligym-row-0445",
+      "phase": "student_8_candidates",
+      "complete_teacher_responses": 5,
+      "complete_student_responses": 22
+    },
+    {
+      "pid": 1867169,
+      "unit": "cligym-row-0498",
+      "phase": "native_teacher",
+      "complete_teacher_responses": 16,
+      "complete_student_responses": 0
+    },
+    {
+      "pid": 1869647,
+      "unit": "cligym-row-0423",
+      "phase": "student_8_candidates",
+      "complete_teacher_responses": 6,
+      "complete_student_responses": 9
+    },
+    {
+      "pid": 1888174,
+      "unit": "cligym-row-0452",
+      "phase": "native_teacher",
+      "complete_teacher_responses": 5,
+      "complete_student_responses": 0
+    }
+  ],
+  "active_phases": {
+    "native_teacher": 6,
+    "student_8_candidates": 10
+  },
+  "ready_backlog": 67,
+  "valid_sft": 139,
+  "supervised_tokens": 406487,
+  "train_sha256": "4d08008fddbfdc1d0438ab8093af099a0645d5852be67038ad9a9ef8beea7f90",
+  "post16_completed_proxy_requests": 759,
+  "post16_http_status": {
+    "200": 759
+  },
+  "post16_proxy_errors": {},
+  "failed_executor_retirements": [
+    {
+      "unit": "cligym-row-0317-native-recovery",
+      "signalled": true,
+      "original_error_context_history_hashes_unchanged": true
+    },
+    {
+      "unit": "cligym-row-0408",
+      "signalled": true,
+      "original_error_context_history_hashes_unchanged": true
+    }
+  ],
+  "old_closed_receipts_unchanged": 122,
+  "model_replays": 0,
+  "tests_run": 121,
+  "tests_skipped": 2,
+  "tests_passed": 119,
+  "score4_probe": {
+    "passed": true,
+    "concurrent_zero_generation_requests": 4,
+    "actual_generation_requests": 0,
+    "model_task_replays": 0,
+    "wall_sec": 55.89648230932653,
+    "results": [
+      {
+        "unit": "cligym-row-0499",
+        "input_tokens": 19539,
+        "candidate_tokens": 134,
+        "elapsed_sec": 6.998336885124445,
+        "mean_logprob": -0.13516314679559227,
+        "previous_mean_logprob": -0.13516314679559227,
+        "request_id": "7c5854905a4c461d9a7764515be8f73e",
+        "alignment_verified": true
+      },
+      {
+        "unit": "cligym-row-0489",
+        "input_tokens": 6890,
+        "candidate_tokens": 172,
+        "elapsed_sec": 3.6041528647765517,
+        "mean_logprob": -0.12890172726546806,
+        "previous_mean_logprob": -0.12890172726546806,
+        "request_id": "eb9eeec51a3d418fbbecebb79e6bd7c6",
+        "alignment_verified": true
+      },
+      {
+        "unit": "cligym-row-0482",
+        "input_tokens": 11644,
+        "candidate_tokens": 129,
+        "elapsed_sec": 55.89334960281849,
+        "mean_logprob": -0.08364257212469776,
+        "previous_mean_logprob": -0.08364257212469776,
+        "request_id": "829ac66c531f46a4a388fbaca9cbc354",
+        "alignment_verified": true
+      },
+      {
+        "unit": "cligym-row-0481",
+        "input_tokens": 9663,
+        "candidate_tokens": 170,
+        "elapsed_sec": 14.045382331125438,
+        "mean_logprob": -0.0931677655911835,
+        "previous_mean_logprob": -0.09431173861493358,
+        "request_id": "eb1ba8b3c47c45ca8a0b3721081c4326",
+        "alignment_verified": true
+      }
+    ]
+  },
+  "baseline_profile": {
+    "teacher": {
+      "completed_samples": 13,
+      "mean_sec": 258.10085280569126,
+      "median_sec": 222.55415334552526
+    },
+    "student": {
+      "completed_samples": 9,
+      "mean_sec": 1274.9619666928838,
+      "median_sec": 1183.4448264297098
+    },
+    "gen_client_sec": {
+      "n": 661,
+      "mean_sec": 34.565763481296656,
+      "median_sec": 10.386307833716273
+    },
+    "gen_backend_sec": {
+      "n": 661,
+      "mean_sec": 4.705017831584061,
+      "median_sec": 3.511402274016291
+    },
+    "score_request_sec": {
+      "n": 661,
+      "mean_sec": 8.40250319663052,
+      "median_sec": 3.9300253689289093
+    },
+    "score_wait_and_render_sec": {
+      "n": 661,
+      "mean_sec": 38.55097788850017,
+      "median_sec": 18.13619958702475
+    },
+    "candidate_sec": {
+      "n": 661,
+      "mean_sec": 81.51924456642735,
+      "median_sec": 51.47401331085712
+    }
+  },
+  "server_capacity_observation": {
+    "tp_size": 4,
+    "dp_size": 2,
+    "effective_max_running_requests_per_dp": 159,
+    "reported_token_capacity": 2081190,
+    "context_limit": 262144,
+    "gpu_short_samples_utilization_percent": 0,
+    "gpu_utilization_is_not_a_continuous_load_test": true,
+    "stream_interval": 1,
+    "metrics_endpoint_disabled": true
+  },
+  "provider_stop": false,
+  "thinking_and_scoring_formula_changed": false
+}
