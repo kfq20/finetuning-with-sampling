@@ -24,6 +24,7 @@ def main():
     p.add_argument("--legacy-root", type=Path, required=True)
     p.add_argument("--source-commit", required=True)
     p.add_argument("--prepared", type=Path, required=True)
+    p.add_argument("--skip-comparison", action="store_true")
     a = p.parse_args()
     r, old = a.root, a.legacy_root
     source = Path(__file__).resolve().parents[3]
@@ -102,6 +103,8 @@ def main():
         if fields[19] != rec["start_ticks"] or fields[0] == "Z":
             break
         time.sleep(10)
+    if a.skip_comparison:
+        return
     subprocess.run(
         [
             sys.executable,
