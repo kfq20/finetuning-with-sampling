@@ -14,6 +14,8 @@ import subprocess
 import sys
 import time
 
+from append_rewrite.terminus.lifecycle import retire_failed_workers
+
 
 def dump(path,value):
     p=path.with_suffix('.tmp');p.write_text(json.dumps(value,indent=2)+'\n');p.replace(path)
@@ -57,6 +59,8 @@ def main():
     next_offset=cfg['next_offset'];wave_records=list(cfg.get('preparation_waves',[str(preparing)] if preparing else []))
     stopping=None
     while True:
+        coordinator_state=json.loads((work/'run/coordinator.json').read_text()) if (work/'run/coordinator.json').exists() else {}
+        retire_failed_workers(work/'run',coordinator_state.get('adopted_workers',[]),work/'failed-worker-retirements')
         plan=json.loads(plan_path.read_text())
         result=publish(runs,root/'campaign-sft');count=result['valid_trajectories']
         if (root/'USER_STOP.json').exists():
