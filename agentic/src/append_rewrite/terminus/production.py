@@ -61,12 +61,21 @@ def restore(spec, args, owner, *, template_id=None, install_runtime=True):
     task = Path(spec["task_path"])
     if tree(state) != spec["state_manifest"] or tree(task) != spec["task_manifest"]:
         raise ValueError("Frozen input bytes/modes drift")
-    sb = sandbox.create(
-        task,
-        args.sandbox_credentials,
-        owner,
-        template_id=template_id or spec["template_id"],
-    )
+    if spec.get("environment_backend") == "docker":
+        from .docker_world import DockerWorld
+
+        sb = DockerWorld(
+            template_id or spec["template_id"],
+            owner,
+            network=spec.get("solver_network", "none"),
+        )
+    else:
+        sb = sandbox.create(
+            task,
+            args.sandbox_credentials,
+            owner,
+            template_id=template_id or spec["template_id"],
+        )
     try:
         sb.set_timeout(30000)
         resets = spec.get("restore_reset_paths")
@@ -106,6 +115,8 @@ def restore(spec, args, owner, *, template_id=None, install_runtime=True):
 
 
 def capture(sb, artifacts, dest):
+    if hasattr(sb, "snapshot"):
+        return sb.snapshot(dest)
     present = []
     missing = []
     for path in safe_artifacts(artifacts):
@@ -128,10 +139,18 @@ def apply_capture(sb, archive, artifacts):
 def grade(sb, task):
     # All task graders are frozen. Nonzero/no-reward remains a quality hold,
     # never silently mapped to a model zero.
-    return sandbox.grade(sb, task)
+    return sb.grade(task) if hasattr(sb, "grade") else sandbox.grade(sb, task)
 
 
 def fresh_grade(spec, args, archive, owner):
+    if spec.get("environment_backend") == "docker":
+        from .docker_world import snapshot_world
+
+        sb = snapshot_world(archive, owner)
+        try:
+            return grade(sb, Path(spec["task_path"]))
+        finally:
+            sb.kill()
     sb = restore(spec, args, owner, template_id=spec.get("verifier_template_id"))
     try:
         apply_capture(sb, archive, spec["artifacts"])
@@ -207,6 +226,26 @@ def controls(spec, args, out):
             },
         )
         raise RuntimeError("InitialStateAlreadySatisfiesTask")
+    if spec.get("environment_backend") == "docker":
+        from .docker_world import DockerWorld
+
+        sb = DockerWorld(spec["gold_template_id"], "cligym-gold-control")
+        try:
+            legal = grade(sb, Path(spec["task_path"]))
+        finally:
+            sb.kill()
+        dump(
+            out / "receipt.json",
+            {
+                "passed": legal["reward"] == 1,
+                "initial": initial,
+                "legal": legal,
+                "new_model_requests": 0,
+            },
+        )
+        if legal["reward"] != 1:
+            raise RuntimeError("LegalControlNotSuccessful")
+        return
     sb = restore(
         spec,
         args,
@@ -307,7 +346,10 @@ async def episode(spec, args, out, role, teacher=None):
                     28800,
                 )
             else:
-                await asyncio.wait_for(agent.run(instruction, env, ctx), 28800)
+                await asyncio.wait_for(
+                    agent.run(instruction, env, ctx),
+                    spec.get("episode_timeout_sec", 28800),
+                )
         finally:
             if agent._chat:
                 dump(
@@ -327,19 +369,24 @@ async def episode(spec, args, out, role, teacher=None):
             for m in (history[-3], history[-1])
         ):
             raise RuntimeError("NativeCompletionNotConfirmed")
-        captured = capture(sb, spec["artifacts"], out / "submission.tgz")
+        submission = out / (
+            "submission-image.json"
+            if spec.get("environment_backend") == "docker"
+            else "submission.tgz"
+        )
+        captured = capture(sb, spec["artifacts"], submission)
         sb.kill()
         sb = None
         # No agent process ever sees private graders; both scores use new worlds.
-        first = fresh_grade(spec, args, out / "submission.tgz", "production-grade-a")
-        second = fresh_grade(spec, args, out / "submission.tgz", "production-grade-b")
+        first = fresh_grade(spec, args, submission, "production-grade-a")
+        second = fresh_grade(spec, args, submission, "production-grade-b")
         hits = reference_attributions(history) if role == "student" else []
         private_hits = [
             i // 2 + 1
             for i, m in enumerate(history)
             if m["role"] == "assistant"
             and any(
-                path in c["keystrokes"]
+                re.search(r"(?<![\w/])" + re.escape(path), c["keystrokes"])
                 for c in action(m["content"])["commands"]
                 for path in ("/tests/", "/solution/", ".secrets")
             )
@@ -399,7 +446,16 @@ async def episode(spec, args, out, role, teacher=None):
             try:
                 dump(
                     out / "held-state.json",
-                    sandbox.capture(sb, ["/app/"], out / "held-state.tgz"),
+                    capture(
+                        sb,
+                        ["/app/"],
+                        out
+                        / (
+                            "held-state-image.json"
+                            if spec.get("environment_backend") == "docker"
+                            else "held-state.tgz"
+                        ),
+                    ),
                 )
             except Exception as e:
                 dump(out / "capture-error.json", {"error_type": type(e).__name__})

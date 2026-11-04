@@ -95,6 +95,10 @@ class NativeStreamClient(NativeClient):
         journal = Path(journal)
         journal.mkdir(parents=True, mode=0o700, exist_ok=False)
         ids = tokenizer.encode(prompt, add_special_tokens=False)
+        context_limit = self.config.get("context_limit", 262144)
+        max_tokens = min(max_tokens, context_limit - len(ids))
+        if max_tokens <= 0:
+            raise ValueError("Generation input exceeds serving context before POST")
         body = {
             "input_ids": ids,
             "sampling_params": {"max_new_tokens": max_tokens, "temperature": 0.6},
@@ -110,6 +114,8 @@ class NativeStreamClient(NativeClient):
                     "body_sha256": digest(body),
                     "automatic_retry": False,
                     "input_ids_supplied_explicitly": True,
+                    "serving_context_limit": context_limit,
+                    "effective_max_new_tokens": max_tokens,
                 }
             )
         )

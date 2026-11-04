@@ -57,7 +57,7 @@ class BlockwiseLLM:
         self.turn = int(self.cached_turn.name.split("-")[-1]) - 1 if cached_turn else 0
 
     def get_model_context_limit(self):
-        return 1000000
+        return self.client.config.get("context_limit", 262144)
 
     def get_model_output_limit(self):
         return 128000

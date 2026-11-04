@@ -4,8 +4,38 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
+from types import SimpleNamespace
 
-from append_rewrite.terminus.native_stream import consume
+from append_rewrite.terminus.native_stream import consume, NativeStreamClient
+
+
+class ContextBudget(unittest.TestCase):
+    def test_reserve_only_remaining_context_and_reject_full_prompt_before_post(self):
+        c = object.__new__(NativeStreamClient)
+        c.config = {"context_limit": 5, "api_key": "fixture", "model_id": "fixture"}
+        c.endpoint = "https://example.test/generate"
+        tokenizer = SimpleNamespace(encode=lambda *a, **k: [1, 2, 3])
+        with (
+            tempfile.TemporaryDirectory() as d,
+            patch(
+                "append_rewrite.terminus.native_stream.urlopen",
+                side_effect=TimeoutError,
+            ) as request,
+        ):
+            with self.assertRaises(TimeoutError):
+                c.generate("prompt", tokenizer, journal=Path(d) / "request")
+            body = json.loads((Path(d) / "request/request.json").read_text())
+            self.assertEqual(body["sampling_params"]["max_new_tokens"], 2)
+            self.assertEqual(request.call_count, 1)
+        c.config["context_limit"] = 3
+        with (
+            tempfile.TemporaryDirectory() as d,
+            patch("append_rewrite.terminus.native_stream.urlopen") as request,
+        ):
+            with self.assertRaises(ValueError):
+                c.generate("prompt", tokenizer, journal=Path(d) / "request")
+            request.assert_not_called()
 
 
 def event(text, finish=None, request_id="fixture"):

@@ -10,6 +10,7 @@ class SDKEnvironment:
 
     def __init__(self, sb, cwd, timeout=300):
         self.sb, self.cwd, self.timeout = sb, cwd, timeout
+        self.session_id = sb.sandbox_id
 
     async def exec(
         self, command, env=None, cwd=None, user=None, timeout_sec=None, **kwargs
