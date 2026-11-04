@@ -1,0 +1,85 @@
+{
+  "checked_at": "2026-11-04T18:50:55.987494+08:00",
+  "switched_at": "2026-11-04T18:49:15.590067+08:00",
+  "mode": "direct-http",
+  "model_id": "Qwen/Qwen3.8-27B",
+  "worker_capacity": 8,
+  "student_capacity": 8,
+  "score_prefill_capacity": 2,
+  "candidates_per_block": 8,
+  "active_workers": [
+    {
+      "unit": "cligym-row-0392",
+      "pid": 1274709,
+      "phase": "student_8_candidates",
+      "teacher_reused": false
+    },
+    {
+      "unit": "cligym-row-0327",
+      "pid": 1274712,
+      "phase": "student_8_candidates",
+      "teacher_reused": false
+    },
+    {
+      "unit": "cligym-row-0328",
+      "pid": 1274713,
+      "phase": "student_8_candidates",
+      "teacher_reused": false
+    },
+    {
+      "unit": "cligym-row-0375",
+      "pid": 1278138,
+      "phase": "student_8_candidates",
+      "teacher_reused": false
+    },
+    {
+      "unit": "cligym-row-0382-selectors-v2",
+      "pid": 1284483,
+      "phase": "student_8_candidates",
+      "teacher_reused": false
+    },
+    {
+      "unit": "cligym-row-0347-native-recovery",
+      "pid": 1392878,
+      "phase": "student_8_candidates",
+      "teacher_reused": true
+    },
+    {
+      "unit": "cligym-row-0379-native-recovery",
+      "pid": 1396605,
+      "phase": "student_8_candidates",
+      "teacher_reused": true
+    },
+    {
+      "unit": "cligym-row-0352-native-recovery",
+      "pid": 1401428,
+      "phase": "student_8_candidates",
+      "teacher_reused": true
+    }
+  ],
+  "valid_sft": 122,
+  "supervised_tokens": 367606,
+  "train_sha256": "bf901bb194942ca856431ceb3c6dfda5d4ba295776207025081da76232018747",
+  "post_switch_completed_http_requests": 36,
+  "post_switch_http_status": {
+    "200": 36
+  },
+  "post_switch_proxy_error_types": {},
+  "post_switch_request_mean_sec": 6.124279408689795,
+  "post_switch_request_median_sec": 3.945853127166629,
+  "model_replays": 0,
+  "existing_connections_preserved": true,
+  "closed_receipts_unchanged_at_switch": 122,
+  "no_ssh_fallback": true,
+  "direct_config_sha256": "ba2b45dbf35fd1076d1be6c1881b2a4d5c2884ae7ce933c4a06770a33f1cf5d9",
+  "switch_receipt_sha256": "5901d0ec5c0fdf10c395ca351f06049bb7777b15f51ab613c80f8125ef43139a",
+  "bridge_commit": "b828fe6",
+  "switch_commit": "f520ceb",
+  "core_commit": "be4b594",
+  "actual_sdk_bridge_test_passed": true,
+  "forced_candidate_score_token_alignment_passed": true,
+  "forced_candidate_score_equal_to_existing_canary_score": true,
+  "thinking_protocol_changed": false,
+  "production_generations_and_scores_observed": true,
+  "current_sft_increase_not_all_attributed_to_new_route": true
+}
