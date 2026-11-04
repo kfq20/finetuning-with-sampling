@@ -1,0 +1,46 @@
+{
+  "checked_cst": "2026-11-04T15:29:18+08:00",
+  "valid_sft": 77,
+  "supervised_tokens": 252151,
+  "train_sha256": "b0d232a04dca842a260bb9e278d08e1fe022f98ab377f1d92e54d4598b4a1e7e",
+  "bundle_hash_verified": true,
+  "jsonl_rows": 77,
+  "pilot_valid_sft": 3,
+  "wave1": {
+    "sources": 94,
+    "built": 56,
+    "build_holds": 38,
+    "valid_sft": 32,
+    "student_execution_errors": 3,
+    "finished": true
+  },
+  "wave2": {
+    "sources": 100,
+    "built": 55,
+    "build_holds": 45,
+    "valid_sft": 39,
+    "student_execution_errors": 0,
+    "finished": true
+  },
+  "wave3": {
+    "sources": 100,
+    "built": 62,
+    "build_holds": 38,
+    "valid_sft": 3,
+    "student_execution_errors": 0,
+    "actual_workers": 4,
+    "actual_stage_counts": {
+      "teacher": 2,
+      "student": 2
+    },
+    "pending_ready": 53,
+    "finished": false
+  },
+  "pilot_student_error_from_original_receipt": 1,
+  "cumulative_closed_student_errors": 4,
+  "all_closed_student_error_ratio": "4/(77+4)=4.94%",
+  "provider_stop": false,
+  "campaign_identity_alive": true,
+  "data_disk_free_gib": 146.15,
+  "experiment_changed_during_status_check": false
+}
