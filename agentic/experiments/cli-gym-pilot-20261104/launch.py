@@ -25,6 +25,7 @@ def main():
     p.add_argument("--source-commit", required=True)
     p.add_argument("--prepared", type=Path, required=True)
     p.add_argument("--skip-comparison", action="store_true")
+    p.add_argument("--workers", type=int)
     a = p.parse_args()
     r, old = a.root, a.legacy_root
     source = Path(__file__).resolve().parents[3]
@@ -91,6 +92,8 @@ def main():
         "runtime-assets": old / "runtime-assets/tmux-linux-x86_64-v1",
     }.items():
         argv += ["--" + k, str(path)]
+    if a.workers:
+        argv += ["--workers", str(a.workers)]
     if (r / "USER_STOP.json").exists():
         raise RuntimeError("User stop before dispatch")
     subprocess.run(argv, check=True)

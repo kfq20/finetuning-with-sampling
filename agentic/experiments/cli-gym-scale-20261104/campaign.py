@@ -77,8 +77,13 @@ def main():
     p = argparse.ArgumentParser(__doc__)
     p.add_argument("--root", type=Path, required=True)
     p.add_argument("--source-commit", required=True)
+    p.add_argument("--workers", type=int, default=4)
+    p.add_argument("--resume", action="store_true")
     a = p.parse_args()
     root = a.root
+    if a.workers < 1:
+        raise ValueError('Positive worker capacity required')
+    os.environ['APPEND_REWRITE_STUDENT_CAPACITY'] = str(a.workers)
     source = Path(__file__).resolve().parents[3]
     entries = source / "agentic/experiments/cli-gym-pilot-20261104"
     publish = runpy.run_path(str(Path(__file__).with_name("collect.py")))["publish"]
@@ -86,7 +91,8 @@ def main():
     import fcntl
     lock = (root / "campaign.lock").open("a+")
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    runs = [root / "pilot-evidence", root / "run"]
+    prior = json.loads((root / 'campaign-progress.json').read_text()) if a.resume else None
+    runs = [Path(x) for x in prior['runs']] if prior else [root / "pilot-evidence", root / "run"]
     pages = catalog(root)
 
     def refresh(phase, **extra):
@@ -98,13 +104,21 @@ def main():
         })
         return manifest["valid_trajectories"]
 
-    while not (root / "run/coordinator-finished.json").exists():
-        refresh("existing_wave1_running")
-        if (root / "USER_STOP.json").exists() or (root / "run/STOP_PROVIDER").exists():
+    current = Path(prior['wave']) if prior and prior.get('wave') else root
+    while not (current / "run/coordinator-finished.json").exists():
+        refresh("existing_wave_running", wave=str(current))
+        if (root / "USER_STOP.json").exists() or (current / "run/STOP_PROVIDER").exists():
             refresh("stopped"); return
+        if a.resume:
+            identity = json.loads((current / 'production-launch.json').read_text())
+            proc = Path('/proc') / str(identity['pid']) / 'stat'
+            fields = proc.read_text().split(') ')[1].split() if proc.exists() else []
+            if not fields or fields[0] == 'Z' or fields[19] != identity['start_ticks']:
+                refresh('current_coordinator_missing', wave=str(current)); return
         time.sleep(15)
-    for offset in range(100, 1655, 100):
-        if (root / "run/STOP_PROVIDER").exists():
+    first_offset = int(current.name.split('-')[1]) + 100 if current != root else 100
+    for offset in range(first_offset, 1655, 100):
+        if (current / "run/STOP_PROVIDER").exists():
             refresh("provider_hold"); return
         if refresh("between_waves") >= 500:
             refresh("target_reached"); return
@@ -121,7 +135,8 @@ def main():
         dump(wave / "active_runtime_selection.json", {
             "source_root": str(source), "source_commit": a.source_commit,
             "dataset_revision": REVISION, "source_rows": indices,
-            "automatic_paid_retry": False, "student_target": 4,
+            "automatic_paid_retry": False, "student_target": a.workers,
+            "worker_capacity": a.workers, "queue_policy": "shared",
             "score_prefill_concurrency": 2, "candidates_per_block": 8,
         })
         with (wave / "preparation.log").open("xb") as log:
@@ -135,6 +150,7 @@ def main():
                 sys.executable, str(entries / "launch.py"), "--root", str(wave),
                 "--legacy-root", str(root / "support"), "--prepared", str(wave / "prepared"),
                 "--source-commit", a.source_commit, "--skip-comparison",
+                "--workers", str(a.workers),
             ], stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT)
         runs.append(wave / "run")
         dump(wave / "controllers.json", {"preparation_pid": prep.pid, "pipeline_pid": pipeline.pid,
@@ -147,6 +163,7 @@ def main():
             refresh("wave_infrastructure_hold", wave=str(wave), exit_code=pipeline.returncode); return
         if (wave / "run/STOP_PROVIDER").exists():
             refresh("provider_hold", wave=str(wave)); return
+        current = wave
     refresh("source_pool_exhausted")
 
 

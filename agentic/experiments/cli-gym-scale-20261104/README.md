@@ -63,3 +63,26 @@ Its separate `campaign-selection.json` identifies future-wave code; it never
 changes wave1's frozen source or repeats a paid attempt. A held campaign needs
 diagnosis rather than blind restart, because later-wave launch records are
 exclusive and original attempts must not be repeated.
+
+## Explicit concurrency upgrade
+
+The user authorized raising concurrency on2026-11-04. The selected upgrade uses
+`--workers8`: one shared queue replaces the four static lanes, student capacity8,
+score-prefill capacity unchanged2, eight candidates per action unchanged.
+Legacy lane behavior remains available when `production batch --workers` is
+omitted. Existing frozen sources are never edited.
+
+The coordinator supports `--adopt-workers <manifest>` to occupy slots with
+already-running exact PID/start-ticks/cmdline-hash identities. It waits for their
+original closure; it never restarts them. Existing claim directories are skipped,
+and pre-frozen pending specs must byte-match. Any adopted process disappearance
+without a terminal status is retained as infrastructure failure, not replayed.
+
+Migration first quiesces only the two scheduling controllers, records claims and
+owned live workers, and retires only those exact controller identities. The old
+unit processes continue. A single new coordinator reacquires the existing lock;
+`campaign --resume --workers8` observes it before admitting later100-row waves.
+Original selections, receipts, controller logs and model costs remain bound in
+the handoff archive. `concurrency-upgrade-selection.json` selects the new source
+and handoff evidence; `campaign-selection.json` and current wave selection must
+explicitly describe mixed old/new worker sources rather than hiding them.

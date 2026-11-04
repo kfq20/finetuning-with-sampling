@@ -16,6 +16,7 @@ import shutil
 import sys
 import tarfile
 import time
+import hashlib
 
 from append_rewrite import sandbox
 from append_rewrite.collect import sha
@@ -525,7 +526,13 @@ async def unit(args):
             )
             return
         dump(out / "status.json", {"phase": "student_8_candidates"})
-        with file_slot(os.environ.get("APPEND_REWRITE_STUDENT_POOL"), 4):
+        student_capacity = int(os.environ.get("APPEND_REWRITE_STUDENT_CAPACITY", "4"))
+        if student_capacity < 1:
+            raise ValueError('Positive student capacity required')
+        with file_slot(
+            os.environ.get("APPEND_REWRITE_STUDENT_POOL"),
+            student_capacity,
+        ):
             r = await episode(spec, args, out / "student", "student", teacher)
         dump(
             out / "status.json",
@@ -548,6 +555,23 @@ async def unit(args):
         raise
 
 
+def external_worker_alive(worker):
+    """Read-only identity check; never signal, restart or infer model success."""
+    proc = Path('/proc') / str(worker['pid'])
+    try:
+        fields = (proc / 'stat').read_text().split(') ')[1].split()
+        if fields[19] != str(worker['start_ticks']) or fields[0] == 'Z':
+            return False
+        command = (proc / 'cmdline').read_bytes()
+        if not command and (proc / 'stat').read_text().split(') ')[1].split()[0] == 'Z':
+            return False
+        if hashlib.sha256(command).hexdigest() != worker['cmdline_sha256']:
+            raise ValueError('Adopted worker command identity drift')
+        return True
+    except FileNotFoundError:
+        return False
+
+
 async def batch(args):
     plan = json.loads(args.plan.read_text())
     args.output.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -556,6 +580,11 @@ async def batch(args):
     lanes = {}
     workers = []
     scheduled = set()
+    capacity = getattr(args, 'workers', None)
+    adopted = getattr(args, 'adopt_workers', None)
+    adopted = json.loads(adopted.read_text())['workers'] if adopted else []
+    if adopted and (not capacity or len(adopted) > capacity):
+        raise ValueError('Adopted workers must fit the explicit shared pool')
     dump(
         args.output / "coordinator.json",
         {
@@ -564,6 +593,9 @@ async def batch(args):
             "global_budget": None,
             "global_concurrency_cap": None,
             "incremental_discovery": bool(args.discovery_summary),
+            "worker_capacity": capacity,
+            "queue_policy": "shared" if capacity else "legacy_lanes",
+            "adopted_workers": adopted,
         },
     )
 
@@ -575,31 +607,17 @@ async def batch(args):
             if (args.output / "STOP_PROVIDER").exists():
                 return
             dest = args.output / "units" / item["unit_id"]
-            if dest.exists():
+            if item.get('_adopt'):
+                while external_worker_alive(item['_adopt']):
+                    await asyncio.sleep(2)
+                state = json.loads((dest / 'status.json').read_text())
+                if state['phase'] not in ('completed', 'hold', 'teacher_not_successful', 'existing_method_attempt_reused'):
+                    dump(dest / 'adoption-exit-error.json', {'previous_status': state, 'model_failure': False})
+                    dump(dest / 'status.json', {'phase': 'hold', 'error_type': 'ExternalWorkerExitedWithoutClosure', 'automatic_generation_retry': False})
+            elif dest.exists():
                 continue  # exclusive attempts are never restarted
-            argv = [
-                sys.executable,
-                "-m",
-                "append_rewrite.terminus.production",
-                "unit",
-                "--spec",
-                item["spec_path"],
-                "--output",
-                str(dest),
-            ]
-            for key in (
-                "teacher_config",
-                "fleet_config",
-                "tokenizer",
-                "sandbox_credentials",
-                "runtime_assets",
-            ):
-                argv += ["--" + key.replace("_", "-"), str(getattr(args, key))]
-            logs = args.output / "logs"
-            logs.mkdir(exist_ok=True)
-            with (logs / (item["unit_id"] + ".log")).open("xb") as log:
-                p = await asyncio.create_subprocess_exec(*argv, stdout=log, stderr=log)
-                await p.wait()
+            else:
+                await dispatch(item, dest)
             status = (
                 json.loads((dest / "status.json").read_text())
                 if (dest / "status.json").exists()
@@ -612,14 +630,43 @@ async def batch(args):
                 for x in (args.output / "units").iterdir()
                 if (x / "status.json").exists()
             }
-            dump(
-                args.output / "progress.json",
-                {
-                    "total_units": len(plan["units"]),
-                    "claimed_units": len(states),
-                    "states": states,
-                },
-            )
+            dump(args.output / "progress.json", {
+                "total_units": len(plan["units"]), "claimed_units": len(states), "states": states,
+            })
+
+    async def dispatch(item, dest):
+        argv = [
+            sys.executable,
+            "-m",
+            "append_rewrite.terminus.production",
+            "unit",
+            "--spec",
+            item["spec_path"],
+            "--output",
+            str(dest),
+        ]
+        for key in (
+            "teacher_config",
+            "fleet_config",
+            "tokenizer",
+            "sandbox_credentials",
+            "runtime_assets",
+        ):
+            argv += ["--" + key.replace("_", "-"), str(getattr(args, key))]
+        logs = args.output / "logs"
+        logs.mkdir(exist_ok=True)
+        with (logs / (item["unit_id"] + ".log")).open("xb") as log:
+            p = await asyncio.create_subprocess_exec(*argv, stdout=log, stderr=log)
+            await p.wait()
+
+    if capacity:
+        if capacity < 1:
+            raise ValueError('Positive worker capacity required')
+        lanes['shared'] = asyncio.Queue()
+        workers.extend(asyncio.create_task(lane(lanes['shared'])) for _ in range(capacity))
+        for worker in adopted:
+            scheduled.add(worker['unit_id'])
+            await lanes['shared'].put({'unit_id': worker['unit_id'], '_adopt': worker})
 
     while True:
         plan = json.loads(args.plan.read_text())
@@ -627,16 +674,23 @@ async def batch(args):
             key = item["unit_id"]
             if key in scheduled:
                 continue
+            if (args.output / 'units' / key).exists():
+                scheduled.add(key)
+                continue
             # Preserve the exact per-unit adapter contract used at dispatch.
             specs = args.output / "specs"
             specs.mkdir(exist_ok=True)
             frozen = specs / (key + ".json")
             content = Path(item["spec_path"]).read_bytes()
-            with frozen.open("xb") as f:
-                f.write(content)
+            if frozen.exists():
+                if frozen.read_bytes() != content:
+                    raise ValueError('Existing frozen dispatch spec drift')
+            else:
+                with frozen.open("xb") as f:
+                    f.write(content)
             item = dict(item, spec_path=str(frozen))
             scheduled.add(key)
-            name = item["lane"]
+            name = 'shared' if capacity else item["lane"]
             if name not in lanes:
                 lanes[name] = asyncio.Queue()
                 workers.append(asyncio.create_task(lane(lanes[name])))
@@ -649,9 +703,11 @@ async def batch(args):
             break
         await asyncio.sleep(5)
     for queue in lanes.values():
-        await queue.put(None)
+        for _ in range(capacity or 1):
+            await queue.put(None)
     await asyncio.gather(*workers)
     dump(args.output / "coordinator-finished.json", {"finished_at": time.time()})
+    lock.close()
 
 
 def main():
@@ -660,6 +716,8 @@ def main():
     p.add_argument("--spec", type=Path)
     p.add_argument("--plan", type=Path)
     p.add_argument("--discovery-summary", type=Path)
+    p.add_argument("--workers", type=int)
+    p.add_argument("--adopt-workers", type=Path)
     for name in (
         "teacher-config",
         "fleet-config",
