@@ -94,6 +94,9 @@ try:
             loss_fn_inputs={'target_tokens':payload['target_tokens'],'weights':payload['weights']})
     datum=read_datum('datum.json')
     eval_datum=read_datum('eval-datum.json')
+    observation_timeout=plan.get('smoke',{}).get('wait_timeout_seconds')
+    if not isinstance(observation_timeout,(int,float)) or observation_timeout<=0:
+        raise ValueError('Set an explicit positive smoke.wait_timeout_seconds; this bounds readiness observation, not rollout generation.')
     adam=mint.types.AdamParams(**plan['optimizer'])
     assert plan['training']['max_steps']==1 and plan['training']['batch_size']==1
     print('READY: transient credential JSON on stdin',flush=True)
@@ -138,7 +141,7 @@ try:
         'state_reloaded_with_optimizer':True,'post_reload_forward_finite':True,
         'session_id':session_id,'model_id':client.model_id,
         'supervised_tokens':plan['selected_example']['supervised_tokens']})
-    sampling=call('load_sampler',lambda:service.create_sampling_client(model_path=sampler.path))
+    sampling=call('register_sampler',lambda:service.create_sampling_client(model_path=sampler.path))
     sampled=call('sampler_smoke',lambda:sampling.sample(
         prompt=mint.types.ModelInput.from_ints(plan['smoke_prompt_ids']),num_samples=1,
         sampling_params=mint.types.SamplingParams(max_tokens=16,temperature=0,
