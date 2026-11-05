@@ -92,3 +92,22 @@ Selection: parent active_training_selection.json must explicitly identify the
 new continuation; never infer the winner from directory suffixes. Planned local
 root is training-batch16-v1 under the existing external experiment parent. Fleet
 deployment and TB2.1 handoff remain conditional on final training completion.
+
+## Superseding user decision: fresh batch16 run
+
+The user subsequently explicitly rejected continuation and requested both arms
+retrain fresh. The continuation and old batch1 controllers were retired before
+any new batch16 run; their records and outstanding operation handles remain
+archived. No continuation checkpoint is an initializer for the new experiment.
+
+Selected fresh configuration:531rows/arm, one epoch, batch16 (33full batches +
+one3-row tail =34optimizer updates), accumulation1, same shuffled task order,
+independent Qwen3.8-27B base/seed42 adapters. LR1e-4, Adam(.9,.999), eps1e-8,
+weight decay0, clip1, constant schedule/no warmup, rank32 attention+MLP, unembed
+false, max_length131072, frozen IDs/assistant-only masks remain unchanged.
+No additional base evaluation is launched by the training controller. Final
+selection is update34/all531examples. Old batch1/aborted handoff is never mixed
+into this training curve, optimizer state, update count, or checkpoint selection.
+
+Authoritative fresh root: training-batch16-fresh-v1 under the external parent;
+verify active_training_selection.json and new model IDs before claiming progress.
