@@ -130,8 +130,8 @@ def main(source, output, tokenizer_path):
                 files['method-paired'].write(line)
                 files['expert-paired'].write(json.dumps(expert, ensure_ascii=False) + '\n')
                 sm, em = metrics(student), metrics(expert)
-                sm['agent_seconds'] = json.loads((unit / 'student/receipt.json').read_text()).get('elapsed_sec')
-                em['agent_seconds'] = teacher.get('elapsed_sec')
+                sm['episode_seconds'] = json.loads((unit / 'student/receipt.json').read_text()).get('elapsed_sec')
+                em['episode_seconds'] = teacher.get('elapsed_sec')
                 pair = {'input_identity': identity, 'unit': unit.name, 'initial_prompt_equal_bytes': history[0] == student['messages'][0], 'prompt_comparison': 'exact task contract; real terminal observations retained; same input_identity', 'teacher_history_sha256': history_sha,
                         'teacher_receipt_sha256': sha(teacher_file), 'student_receipt_sha256': binding['receipt_sha256'],
                         'method': sm, 'expert': em}
