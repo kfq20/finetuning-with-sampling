@@ -4,6 +4,7 @@ import csv
 import hashlib
 import json
 import math
+import re
 from pathlib import Path
 import statistics
 import time
@@ -108,7 +109,10 @@ def main(source, output, tokenizer_path):
                     history = recovered['messages']
                     history_sha = recovered['sha256']
                 history = public_messages(history)
-                assert history[0] == student['messages'][0], 'Initial prompt mismatch'
+                # Separate real sandboxes have different ephemeral shell hostnames.
+                # Normalize ONLY Docker12-hex hostname for comparison; export original bytes.
+                normalize = lambda text: re.sub(r'(?<=root@)[0-9a-f]{12}(?=:)', '<container>', text)
+                assert normalize(history[0]['content']) == normalize(student['messages'][0]['content']), 'Task/prompt mismatch beyond ephemeral hostname'
                 # Reused teachers must match their already-bound public history.
                 alias = json.loads(teacher_file.read_text())
                 if 'source_history_sha256' in alias:
@@ -125,7 +129,7 @@ def main(source, output, tokenizer_path):
                 sm, em = metrics(student), metrics(expert)
                 sm['agent_seconds'] = json.loads((unit / 'student/receipt.json').read_text()).get('elapsed_sec')
                 em['agent_seconds'] = teacher.get('elapsed_sec')
-                pair = {'input_identity': identity, 'unit': unit.name, 'teacher_history_sha256': history_sha,
+                pair = {'input_identity': identity, 'unit': unit.name, 'initial_prompt_equal_bytes': history[0] == student['messages'][0], 'prompt_comparison': 'Docker12hex hostname only; original training bytes retained', 'teacher_history_sha256': history_sha,
                         'teacher_receipt_sha256': sha(teacher_file), 'student_receipt_sha256': binding['receipt_sha256'],
                         'method': sm, 'expert': em}
                 pairs.append(pair)
