@@ -41,6 +41,8 @@ def boundary(old):
         current = folder / 'steps' / f'{step:04d}'
         if not (current / 'intent.json').exists() or (current / 'optimizer-intent.json').exists():
             return None
+        if time.time() - (current/'intent.json').stat().st_mtime < 5:
+            return None
         if len(list((folder / 'steps').glob('*/optimizer.json'))) != step-1:
             return None
         result[arm] = {'pending_step': step, 'current_intent': json.loads((current / 'intent.json').read_text()),
@@ -96,7 +98,8 @@ def main():
                     response = client.get('/api/v1/models/'+record['identity']['model_id']+'/session_guard_state')
                     response.raise_for_status()
                     guards[arm] = response.json()
-                if all(guards[a]['next_expected_seq'] == 2*x['pending_step'] for a,x in state.items()):
+                if all(2*x['pending_step']-1 <= guards[a]['next_expected_seq'] <= 2*x['pending_step']
+                       for a,x in state.items()):
                     break
             os.kill(pid, signal.SIGCONT)
             held = False
@@ -125,9 +128,22 @@ def main():
                 write(out/(name+'-result.json'), value)
                 return value
         def save_arm(arm):
+            (root/arm).mkdir(exist_ok=True)
             record = state[arm]
             step = record['pending_step']
             model = record['identity']['model_id']
+            # Scheduler advances the guard on completion, not on submission.
+            # Keep the owner held while its already-submitted backward finishes;
+            # do not race its unrecorded optimizer or submit a second backward.
+            while True:
+                response = client.get('/api/v1/models/'+model+'/session_guard_state')
+                response.raise_for_status()
+                guard = response.json()
+                write(root/arm/'backward-drain-guard.json', guard)
+                if guard['next_expected_seq'] == 2*step:
+                    break
+                assert guard['next_expected_seq'] == 2*step-1 and guard['status'] == 'active'
+                time.sleep(2)
             optim = operation(arm, 'finish-pending-optimizer', '/api/v1/optim_step',
                 {'model_id': model, 'seq_id': 2*step, 'adam_params': plan['optimizer'], 'type': 'optim_step'})
             grad = optim.get('metrics', {}).get('grad_norm')
