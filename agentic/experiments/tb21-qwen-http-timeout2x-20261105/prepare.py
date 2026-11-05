@@ -9,8 +9,6 @@ import sys
 import time
 import tomllib
 
-import toml
-
 
 def sha(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -28,6 +26,7 @@ def doubled(config):
 
 
 def main():
+    import toml
     os.umask(0o077)
     root = Path(sys.argv[1]).resolve()
     assert not (root / 'launch-intent.json').exists(), 'Already dispatched; inspect, do not replay'
