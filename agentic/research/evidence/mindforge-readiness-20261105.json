@@ -1,0 +1,37 @@
+{
+  "checked_at": "2026-11-05T12:09:41.554721+08:00",
+  "mode": "inspect_only",
+  "authentication": "personal_bearer_token_verified_by_authenticated_CLI_queries",
+  "credentials_persisted": false,
+  "legacy_client_commit": "3e52e3f",
+  "isolated_client_adapter_commit": "cb0a77f",
+  "models": [
+    "Qwen/Qwen3.8-27B"
+  ],
+  "training_clusters": [
+    {
+      "id": "test",
+      "health": "ok",
+      "mf_active": 0,
+      "platform_runs": 0,
+      "schedulable": true
+    },
+    {
+      "id": "test3",
+      "health": "ok",
+      "mf_active": 0,
+      "platform_runs": 1,
+      "schedulable": true
+    }
+  ],
+  "serving_model_confirmed": true,
+  "training_session_created": false,
+  "dataset_uploaded": false,
+  "deployment_created": false,
+  "remaining_checks": [
+    "remote_training_renderer/tokenizer and assistant loss-mask equivalence",
+    "single-step actual training and checkpoint acceptance after reviewing configuration"
+  ],
+  "legacy_benchmark_list": "404; not a credential failure",
+  "note": "Read-only status is not a reservation or completed training proof."
+}
