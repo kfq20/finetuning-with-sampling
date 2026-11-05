@@ -1,0 +1,123 @@
+{
+  "method_all": 531,
+  "paired": 531,
+  "holds": [],
+  "source_manifest_sha256": "8b970b43fed5376d14028c93114c43f6cedb7edcc120dc2c6516650974bd0b24",
+  "source_train_sha256": "12d9b6f50e7ec126dbfcb3e846ca65afe167920694df885a1d773519b486871d",
+  "tokenizer_identity": "6212f739cd88998dfef7e3639160a679aa50cbd95bd9e252619271f1649702d8",
+  "no_truncation": true,
+  "new_model_requests": 0,
+  "training_started": false,
+  "metrics": {
+    "method": {
+      "turns": {
+        "sum": 4393,
+        "mean": 8.27306967984934,
+        "median": 7,
+        "p10": 5.0,
+        "p90": 12.0,
+        "max": 38
+      },
+      "tool_calls": {
+        "sum": 10202,
+        "mean": 19.21280602636535,
+        "median": 16,
+        "p10": 9.0,
+        "p90": 34.0,
+        "max": 104
+      },
+      "total_tokens": {
+        "sum": 5678942,
+        "mean": 10694.806026365348,
+        "median": 9014,
+        "p10": 5232.0,
+        "p90": 18224.0,
+        "max": 48205
+      },
+      "supervised_tokens": {
+        "sum": 1526318,
+        "mean": 2874.421845574388,
+        "median": 2386,
+        "p10": 1404.0,
+        "p90": 5080.0,
+        "max": 19073
+      },
+      "characters": {
+        "sum": 19139498,
+        "mean": 36044.252354048964,
+        "median": 31112,
+        "p10": 18379.0,
+        "p90": 60246.0,
+        "max": 169772
+      },
+      "over_context": {
+        "32768": 3,
+        "65536": 0,
+        "131072": 0,
+        "262144": 0
+      }
+    },
+    "expert": {
+      "turns": {
+        "sum": 6786,
+        "mean": 12.779661016949152,
+        "median": 10,
+        "p10": 7.0,
+        "p90": 22.0,
+        "max": 44
+      },
+      "tool_calls": {
+        "sum": 17945,
+        "mean": 33.79472693032015,
+        "median": 27,
+        "p10": 14.0,
+        "p90": 64.0,
+        "max": 153
+      },
+      "total_tokens": {
+        "sum": 10570674,
+        "mean": 19907.10734463277,
+        "median": 17331,
+        "p10": 8282.0,
+        "p90": 35539.0,
+        "max": 92153
+      },
+      "supervised_tokens": {
+        "sum": 2225915,
+        "mean": 4191.930320150659,
+        "median": 3326,
+        "p10": 1721.0,
+        "p90": 8071.0,
+        "max": 26805
+      },
+      "characters": {
+        "sum": 34103192,
+        "mean": 64224.4670433145,
+        "median": 57453,
+        "p10": 28544.0,
+        "p90": 110954.0,
+        "max": 232630
+      },
+      "over_context": {
+        "32768": 69,
+        "65536": 2,
+        "131072": 0,
+        "262144": 0
+      }
+    }
+  },
+  "files": {
+    "method-all/train.jsonl": {
+      "sha256": "12d9b6f50e7ec126dbfcb3e846ca65afe167920694df885a1d773519b486871d",
+      "bytes": 122322524
+    },
+    "method-paired/train.jsonl": {
+      "sha256": "12d9b6f50e7ec126dbfcb3e846ca65afe167920694df885a1d773519b486871d",
+      "bytes": 122322524
+    },
+    "expert-paired/train.jsonl": {
+      "sha256": "335cc9715ac8c22714326eabbc19a5a97bcc4347c81a63003fd966838894821b",
+      "bytes": 226348481
+    }
+  }
+}
