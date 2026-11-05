@@ -1,0 +1,97 @@
+{
+  "status": "HOLD_TEMPLATE_ALIGNMENT",
+  "dataset": {
+    "version": "sft_v4",
+    "rows": 531,
+    "platform_validation": {
+      "fatal": 0,
+      "warnings": 0
+    },
+    "source_sha256": "12d9b6f50e7ec126dbfcb3e846ca65afe167920694df885a1d773519b486871d",
+    "platform_input_sha256": "cd3817f2586a31ca6049f5825dde21710141aaa615315b6a73bfb6a35916613c",
+    "snapshot": "20248588:1793852176480230270:d9cdab00fd6c88da2565187846ba6bcd62c108953c1b42ce1302e8c8b5b3d824"
+  },
+  "payload": {
+    "kind": "sft",
+    "base_model": "Qwen/Qwen3.8-27B",
+    "base_version": "",
+    "reference_ref": null,
+    "data_ref": "sft_v4",
+    "hyperparams": {
+      "num_epochs": 1,
+      "batch_size": 1,
+      "max_steps": 1,
+      "learning_rate": 0.0001,
+      "weight_decay": 0.0,
+      "lr_schedule": "constant",
+      "warmup_steps": 0,
+      "warmup_ratio": 0.0,
+      "rank": 32,
+      "max_length": 131072,
+      "train_on_what": "all_assistant_messages",
+      "train_on_cot": false,
+      "sft_mode": "packed",
+      "auto_eval_benchmark": "",
+      "auto_eval_target": "official_test",
+      "auto_eval_split": "test",
+      "auto_eval_concurrency": 4,
+      "auto_eval_max_tokens": 65536,
+      "auto_eval_with_background": false,
+      "auto_eval_enable_thinking": false
+    },
+    "rollout_config": null,
+    "reward_config": null
+  },
+  "execution": {
+    "host": "https://mindforge.macaron.xin",
+    "mint_endpoint": "server account/default selection; not overridden",
+    "observed_schedulable_clusters": [
+      "test",
+      "test3"
+    ],
+    "credentials": "verified; value absent from this plan",
+    "wait_timeout_seconds": 60,
+    "poll_interval_seconds": 5,
+    "submission_count": 1,
+    "automatic_resubmission": false,
+    "cost": "unknown; no authoritative quote",
+    "training_gpu_count_type": "not exposed before submission",
+    "training_created": false,
+    "deployment_created": false,
+    "formal_sft_launch": false
+  },
+  "unexposed_backend_defaults": {
+    "source": "ECS trainer3e52e3f only, NOT verified production values",
+    "optimizer": "Adam",
+    "beta1": 0.9,
+    "beta2": 0.999,
+    "eps": 1e-08,
+    "seed": 42,
+    "save_every": 100,
+    "lora_targets": [
+      "mlp",
+      "attention",
+      "unembed"
+    ]
+  },
+  "acceptance": [
+    "same task and tokenizer/template prefixes as sampling; all assistant targets only",
+    "finite loss and actual optimizer step1, not merely session creation",
+    "exact dataset/model/rank identity and final checkpoint/sampler/version",
+    "loading/callability separately verified before saying artifact usable"
+  ],
+  "known_template_issue": {
+    "renderer": "MindLab/qwen35",
+    "assistant_targets_exact": true,
+    "prefixes_match": false,
+    "sample_rows": [
+      0,
+      177,
+      354,
+      41
+    ],
+    "nonthinking_history_preservation": "not aligned with frozen rollout template",
+    "whitespace_normalization": "additional differences confirmed",
+    "gate": "formal SFT blocked; diagnostic1step only if user chooses current template"
+  }
+}
