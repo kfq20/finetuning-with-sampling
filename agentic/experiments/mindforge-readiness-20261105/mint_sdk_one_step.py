@@ -57,9 +57,11 @@ def call(name, function):
 def nll(value, datum):
     outputs=value.loss_fn_outputs
     logprobs=outputs[0]['logprobs']
-    if hasattr(logprobs,'tolist'):logprobs=logprobs.tolist()
+    if hasattr(logprobs,'data'):logprobs=logprobs.data
+    elif hasattr(logprobs,'tolist'):logprobs=logprobs.tolist()
     weights=datum.loss_fn_inputs['weights']
-    if hasattr(weights,'tolist'):weights=weights.tolist()
+    if hasattr(weights,'data'):weights=weights.data
+    elif hasattr(weights,'tolist'):weights=weights.tolist()
     assert len(logprobs)==len(weights)
     assert all(math.isfinite(float(x)) for x,w in zip(logprobs,weights) if w)
     total=sum(weights)
@@ -71,8 +73,12 @@ try:
         assert hashlib.sha256((root/name).read_bytes()).hexdigest()==expected, name
     import mint
     import httpx
-    datum=mint.types.Datum.model_validate(json.loads((root/'datum.json').read_text()))
-    eval_datum=mint.types.Datum.model_validate(json.loads((root/'eval-datum.json').read_text()))
+    def read_datum(name):
+        payload=json.loads((root/name).read_text())
+        return mint.types.Datum(model_input=mint.types.ModelInput.from_ints(payload['model_input_ids']),
+            loss_fn_inputs={'target_tokens':payload['target_tokens'],'weights':payload['weights']})
+    datum=read_datum('datum.json')
+    eval_datum=read_datum('eval-datum.json')
     adam=mint.types.AdamParams(**plan['optimizer'])
     assert plan['training']['max_steps']==1 and plan['training']['batch_size']==1
     print('READY: transient credential JSON on stdin',flush=True)
