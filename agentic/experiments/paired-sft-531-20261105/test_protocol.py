@@ -5,7 +5,7 @@ import tempfile
 from types import SimpleNamespace
 import unittest
 
-from run import prepare_row, resolve
+from run import prepare_row, resolve, make_batches
 
 
 class ProtocolTests(unittest.TestCase):
@@ -49,6 +49,16 @@ class ProtocolTests(unittest.TestCase):
         info = SimpleNamespace(model_id='test')
         self.assertIs(resolve(info), info)
         self.assertIs(resolve(SimpleNamespace(result=lambda: info)), info)
+
+    def test_resumed_batch16_keeps_tail_without_replaying_old_rows(self):
+        order = list(reversed(range(531)))
+        batches = make_batches(order, 54, 16)
+        self.assertEqual(len(batches), 30)
+        self.assertEqual(len(batches[-1]), 13)
+        self.assertTrue(all(len(batch) == 16 for batch in batches[:-1]))
+        flat = [x for batch in batches for x in batch]
+        self.assertFalse(set(flat) & set(order[:54]))
+        self.assertEqual(order[:54] + flat, order)
 
 
 if __name__ == '__main__':

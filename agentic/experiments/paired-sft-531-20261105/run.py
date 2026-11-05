@@ -58,6 +58,13 @@ def prepare_row(row, mint):
         loss_fn_inputs={'target_tokens': ids[1:], 'weights': mask[1:]})
 
 
+def make_batches(order, offset, size):
+    assert isinstance(size, int) and size > 0 and 0 <= offset < len(order)
+    batches = [order[i:i+size] for i in range(offset, len(order), size)]
+    assert [item for batch in batches for item in batch] == order[offset:]
+    return batches
+
+
 def train(root, arm, plan, token, fleet_key):
     import httpx
     import mint
@@ -82,6 +89,13 @@ def train(root, arm, plan, token, fleet_key):
         order = list(range(len(rows)))
         random.Random(plan['training']['seed']).shuffle(order)
         write(out / 'order.json', order)
+        resume = plan.get('resume', {}).get(arm)
+        offset = resume['completed_examples'] if resume else 0
+        batch_size = plan['training']['batch_size']
+        batches = make_batches(order, offset, batch_size)
+        assert sorted([i for batch in batches for i in batch] + order[:offset]) == list(range(len(order)))
+        write(out / 'batch-order.json', {'batch_size': batch_size, 'previous_examples': offset,
+            'previous_rows': order[:offset], 'batches': batches, 'dropped_rows': []})
         service = mint.ServiceClient(api_key=token, base_url=plan['base_url'],
             timeout=120, max_retries=0, http_client=httpx.AsyncClient(timeout=120),
             user_metadata={'experiment': plan['experiment'], 'arm': arm})
@@ -91,27 +105,42 @@ def train(root, arm, plan, token, fleet_key):
             'model_id': client.model_id, 'credential_sha256': hashlib.sha256(token.encode()).hexdigest(),
             'mint_version': mint.__version__, 'tinker_version': mint.__tinker_version__})
         write(out / 'model-info.json', serial(resolve(client.get_info())))
+        if resume:
+            restored = resolve(client.load_state_with_optimizer(resume['state_path']))
+            write(out / 'optimizer-state-restored.json', {'source': resume, 'response': serial(restored)})
+            event('optimizer_state_restored', previous_examples=offset, batch_size=batch_size)
         adam = mint.types.AdamParams(**plan['optimizer'])
-        event('training_started', updates=len(order), model_id=client.model_id)
-        for step, index in enumerate(order, 1):
+        event('training_started', updates=len(batches), model_id=client.model_id,
+              batch_size=batch_size, previous_examples=offset, target_examples=len(order))
+        processed = offset
+        for step, indices in enumerate(batches, 1):
             if (root / 'STOP').exists():
                 raise RuntimeError('Operator STOP: no further updates dispatched')
-            row = rows[index]
-            assert len(row['input_ids']) <= plan['training']['max_length']
-            datum = prepare_row(row, mint)
+            batch = [rows[index] for index in indices]
+            assert all(len(row['input_ids']) <= plan['training']['max_length'] for row in batch)
+            datums = [prepare_row(row, mint) for row in batch]
             step_root = out / 'steps' / f'{step:04d}'
             step_root.mkdir(parents=True, exist_ok=False)
-            write(step_root / 'intent.json', {'row': index, 'source_identity': row['provenance']['input_identity'],
-                'sequence_tokens': len(row['input_ids']), 'supervised_tokens': sum(row['assistant_loss_mask']),
+            write(step_root / 'intent.json', {'rows': indices,
+                'source_identities': [row['provenance']['input_identity'] for row in batch],
+                'actual_batch_size': len(batch),
+                'sequence_tokens': sum(len(row['input_ids']) for row in batch),
+                'supervised_tokens': sum(sum(row['assistant_loss_mask']) for row in batch),
                 'automatic_replay': False})
             start = time.monotonic()
-            event('forward_backward', step=step, row=index)
-            result = client.forward_backward([datum], loss_fn='cross_entropy').result()
-            lp = result.loss_fn_outputs[0]['logprobs']
-            lp = lp.data if hasattr(lp, 'data') else lp
-            weights = row['assistant_loss_mask'][1:]
-            assert len(lp) == len(weights)
-            nll = -sum(float(x) * w for x, w in zip(lp, weights)) / sum(weights)
+            event('forward_backward', step=step, rows=indices, actual_batch_size=len(batch),
+                  completed_examples=processed)
+            result = client.forward_backward(datums, loss_fn='cross_entropy').result()
+            assert len(result.loss_fn_outputs) == len(batch)
+            numerator = denominator = 0
+            for output, row in zip(result.loss_fn_outputs, batch):
+                lp = output['logprobs']
+                lp = lp.data if hasattr(lp, 'data') else lp
+                weights = row['assistant_loss_mask'][1:]
+                assert len(lp) == len(weights)
+                numerator -= sum(float(x) * w for x, w in zip(lp, weights))
+                denominator += sum(weights)
+            nll = numerator / denominator
             assert math.isfinite(nll)
             write(step_root / 'forward.json', {'mean_nll': nll, 'metrics': serial(result.metrics),
                 'seconds': time.monotonic() - start})
@@ -119,17 +148,23 @@ def train(root, arm, plan, token, fleet_key):
             started = time.monotonic()
             optim = client.optim_step(adam).result()
             write(step_root / 'optimizer.json', {'response': serial(optim), 'seconds': time.monotonic()-started})
-            event('update_completed', step=step, row=index, mean_nll=nll, seconds=time.monotonic()-start)
-            if step % plan['training']['save_every'] == 0 or step == len(order):
+            processed += len(batch)
+            event('update_completed', step=step, rows=indices, mean_nll=nll,
+                  actual_batch_size=len(batch), completed_examples=processed,
+                  target_examples=len(order), seconds=time.monotonic()-start)
+            if step % plan['training']['save_every'] == 0 or step == len(batches):
                 name = f"{plan['experiment']}-{arm}-step{step:04d}"
                 state = client.save_state(name + '-state').result()
                 write(out / f'checkpoint-{step:04d}.json', serial(state))
                 event('checkpoint_saved', step=step, state_path=state.path)
         sampler = client.save_weights_for_sampler(name + '-sampler').result()
-        write(out / 'training-complete.json', {'optimizer_updates': len(order),
+        assert processed == len(order)
+        write(out / 'training-complete.json', {'optimizer_updates': len(batches),
+            'previous_optimizer_updates': offset, 'examples_trained_total': processed,
+            'batch_size': batch_size, 'previous_batch_size': 1 if resume else None,
             'state_path': state.path, 'sampler_path': sampler.path, 'arm': arm,
             'dataset_sha256': sha(dataset), 'completed_at': time.time()})
-        event('training_completed', optimizer_updates=len(order), state_path=state.path)
+        event('training_completed', optimizer_updates=len(batches), completed_examples=processed, state_path=state.path)
         deploy_and_evaluate(root, arm, plan, fleet_key, state.path)
         event('evaluation_launched')
     except Exception as error:
