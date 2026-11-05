@@ -20,6 +20,19 @@ def install():
 
 
 if __name__ == '__main__':
+    import sys
+    import json
     install()
-    from mindforge.cli import main
-    main()
+    # Explicit local read-only CLI extensions for documented production endpoints.
+    discovery = {('train', 'models'): '/api/models',
+                 ('train', 'clusters'): '/api/train/clusters/status'}
+    route = discovery.get(tuple(sys.argv[1:]))
+    if route:
+        from mindforge.cli.remote import remote_client
+        client = remote_client()
+        if client is None:
+            raise SystemExit('Authenticated remote mode required')
+        print(json.dumps(client.get(route), ensure_ascii=False))
+    else:
+        from mindforge.cli import main
+        main()
