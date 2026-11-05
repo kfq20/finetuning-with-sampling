@@ -58,3 +58,24 @@ Primary references:
 - Five1CPU/8GiB tasks are rounded to2CPU/8GiB; all other CPU/memory requests
   preserved. No instruction/test/deadline changes.
 - Existing CLI-Gym16-worker production remains selected and unchanged.
+
+## Authorized recovery (2026-11-05)
+
+User authorized one recovery wave after CLI-Gym acquisition reached531SFT and
+no production unit workers remained. Selected exactly51AgentTimeoutError plus6
+other execution errors. Retain the32normal original attempts, including10zeros.
+Never select the better score across original/recovery attempts.
+
+External recovery root: `retry57-20261105/` under the same evaluation root.
+Maintained entry: `retry_failed.py`; frozen controller source1ad38c5;
+agent/tokenizer/template/image/deadlines remain selectedruntime-v2. Fourparallel,
+Pass@1 perselected task, no automatic extra retry. `selection.json` binds all89
+original result hashes and separates selected57 from retained32. Read launch and
+actual jobs rather than starting another controller.
+
+Two unfinished requests from already-terminal original tasks were aborted by
+exactrequestID through model-host loopback8131; bothHTTP200. The public proxy's
+abort404 and old results are preserved. Only exactowned completed-job/controller
+processes were retired; shared bridge/modelservice and other experiments untouched.
+Report original run and recovery separately, then a merged cohort with recovery
+outcomes replacing those57, not an iid secondPass or best-of-two score.
