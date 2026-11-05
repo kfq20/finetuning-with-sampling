@@ -4,7 +4,7 @@ User authorized both formal SFT arms and post-training evaluation on2026-11-05.
 Use the validated direct MinT SDK route; this is not a MindForge training job.
 The prior one-step checkpoint is retained and is not either arm's initializer.
 
-## Fixed configuration
+## Fixed configuration (initial batch1 phase; current continuation below)
 
 | Parameter | Both training arms |
 |---|---|
@@ -65,3 +65,30 @@ acknowledgements, checkpoints, deployment and evaluation handoff receipts.
 Credentials enter the local process via stdin; evaluation credentials travel only
 through SSH stdin into an own mode0600 private file, never public configs or Git.
 Raw data/results remain outside Git. Run only committed immutable copies.
+
+## User correction: batch16 continuation,2026-11-05
+
+User explicitly required changing both formal SFT arms to batch16. LR and other
+optimizer/template/data settings remain unchanged. The initial batch1 phase is
+retained as a separate phase; this is NOT relabelled as a from-scratch batch16
+comparison. Each arm has its own different prior batch1 prefix length.
+
+The original worker lacks a drain hook. The exact verified controller is held
+only during already-submitted backwards with no optimizer intent. Server guard
+completion is observed, each pending update is finished exactly once, and an
+optimizer-level checkpoint is saved before retiring that owner. Original files
+remain unchanged; derived boundary receipts account for the externally completed
+update. The first zero-mutation observer is retained as retired, not a paid retry.
+
+New immutable workers restore their own checkpoint WITH Adam state, retain the
+same shuffled531-row order, and process ONLY the untrained suffix in batches16,
+including the final short batch. One forward_backward call receives16 datums and
+one optimizer step follows the whole batch. Report trained examples/531 and new
+optimizer updates separately; final selection means all531 examples consumed,
+not531 additional optimizer steps. Partial gradients are consumed before saving,
+not silently discarded or restored twice. No old inference or trained row replay.
+
+Selection: parent active_training_selection.json must explicitly identify the
+new continuation; never infer the winner from directory suffixes. Planned local
+root is training-batch16-v1 under the existing external experiment parent. Fleet
+deployment and TB2.1 handoff remain conditional on final training completion.
