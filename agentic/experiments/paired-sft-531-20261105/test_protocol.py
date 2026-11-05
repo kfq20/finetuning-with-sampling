@@ -5,7 +5,7 @@ import tempfile
 from types import SimpleNamespace
 import unittest
 
-from run import prepare_row
+from run import prepare_row, resolve
 
 
 class ProtocolTests(unittest.TestCase):
@@ -44,6 +44,11 @@ class ProtocolTests(unittest.TestCase):
         rendered = source.replace('entry.write_text(SOURCE)', 'entry.write_text(' + repr(source) + ')')
         compile(rendered, 'remote-ingress', 'exec')
         self.assertNotIn('sk-', rendered)
+
+    def test_sdk_sync_info_and_future_are_both_supported(self):
+        info = SimpleNamespace(model_id='test')
+        self.assertIs(resolve(info), info)
+        self.assertIs(resolve(SimpleNamespace(result=lambda: info)), info)
 
 
 if __name__ == '__main__':

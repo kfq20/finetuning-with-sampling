@@ -42,6 +42,11 @@ def serial(value):
     return value
 
 
+def resolve(value):
+    """SDK get_info is synchronous; training/checkpoint calls return futures."""
+    return value.result() if hasattr(value, 'result') else value
+
+
 def prepare_row(row, mint):
     ids, mask = row['input_ids'], row['assistant_loss_mask']
     assert len(ids) == len(mask) == len(row['labels'])
@@ -85,7 +90,7 @@ def train(root, arm, plan, token, fleet_key):
         write(out / 'identity.json', {'session_id': service.holder._session_id,
             'model_id': client.model_id, 'credential_sha256': hashlib.sha256(token.encode()).hexdigest(),
             'mint_version': mint.__version__, 'tinker_version': mint.__tinker_version__})
-        write(out / 'model-info.json', serial(client.get_info().result()))
+        write(out / 'model-info.json', serial(resolve(client.get_info())))
         adam = mint.types.AdamParams(**plan['optimizer'])
         event('training_started', updates=len(order), model_id=client.model_id)
         for step, index in enumerate(order, 1):
@@ -156,7 +161,8 @@ def main():
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
         jobs = [pool.submit(train, root, arm, plan, credentials['token'], credentials['fleet_key'])
                 for arm in ['method', 'expert']]
-        jobs.append(pool.submit(deploy_and_evaluate, root, 'base', plan, credentials['fleet_key'], None))
+        if plan.get('evaluate_base', True):
+            jobs.append(pool.submit(deploy_and_evaluate, root, 'base', plan, credentials['fleet_key'], None))
         for job in jobs:
             try:
                 job.result()
