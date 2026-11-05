@@ -1,0 +1,51 @@
+{
+  "checked_at": "2026-11-05T20:43:44.279319+08:00",
+  "dataset": {
+    "pairs": 531,
+    "method_full_pass_both_scores": 531,
+    "expert_full_pass_both_scores": 531,
+    "method_supervised_tokens": 1526318,
+    "expert_supervised_tokens": 2225915,
+    "training_reference_removed": true
+  },
+  "training": {
+    "method": {
+      "updates": 33,
+      "planned": 531,
+      "loss_first10": 0.18089079761013716,
+      "loss_last10": 0.1720896645044176,
+      "mean_update_seconds": 363.62786016530697,
+      "new_error": false
+    },
+    "expert": {
+      "updates": 45,
+      "planned": 531,
+      "loss_first10": 0.4591503297755894,
+      "loss_last10": 0.4060818351426222,
+      "mean_update_seconds": 271.68831908964137,
+      "new_error": false
+    }
+  },
+  "http_base_timeout2x": {
+    "checked_at": "2026-11-05T20:43:50.840721+08:00",
+    "planned": 89,
+    "ended": 5,
+    "normal_success": 2,
+    "normal_zero": 0,
+    "timeout_exceptions": 3,
+    "actual_active": 4,
+    "pending": 80
+  },
+  "fleet_one_step": {
+    "deployed": true,
+    "inference_http_status": 200,
+    "visible_output": "OK",
+    "elapsed_seconds": 0.8223902499303222
+  },
+  "interpretation": {
+    "online_nll_not_fixed_validation": true,
+    "matched_tasks_epochs_parameters_not_supervised_tokens": true,
+    "training_gain_measured": false
+  },
+  "cloud_worklog": "https://neocloud.feishu.cn/wiki/HO2jwjcfRiMEZKkR7iMcrV4Wnph#UrHTdJKCeoW6WExrI2JcNCGHnIb"
+}

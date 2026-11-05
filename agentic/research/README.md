@@ -4,7 +4,7 @@
 
 研究阶段：首版531条学生SFT与对应531条专家SFT已配对交付；尚未进行权重训练，训练收益待对照验证。
 
-最新数据核验：2026-11-05 11:36，Asia/Shanghai；历史运行快照在worklog与evidence保留。
+最新核验：2026-11-05 20:43，Asia/Shanghai。两组SFT已确认33/531、45/531更新；HTTP base×2时限评测正常2、超时3、运行4。历史快照保留于worklog与evidence。
 
 > **研究主张**：让强模型提供成功经验，让学生在真实环境中重新完成任务，再用学生自身的无参考 likelihood 选择行为，目标是构造可执行、可验证、与学生分布更相容的 SFT 数据。最终检验标准是训练后独立解决新任务的能力，而不是造数据时带参考能否拿到1分。
 
@@ -220,18 +220,19 @@ $$
 | 最长序列token | 48,205 | 92,153 |
 | 累计assistant监督token | 1,526,318 | 2,225,915 |
 | 超过32k / 64k | 3 / 0 | 69 / 2 |
-| 权重训练及训练收益 | 未开展 | 未开展 |
+| 权重训练（20:43） | 33/531更新 | 45/531更新 |
+| 训练后TB2.1收益 | 待训练与统一评测完成 | 待训练与统一评测完成 |
 
 两组使用同一冻结Qwen tokenizer/template与assistant-only loss mask，逐条完整重编码及标签验证通过；未截断，不包含额外专家参考或隐藏reasoning。4条复用专家追溯原收据，3份早期历史从原位置补齐。任务合同及初态身份一致，各自实际终端反馈保留。
 
-完整序列token是历史序列化一次，不是生产累计输入；工具计数为commands条目，不是候选数。学生平均轮次/序列更短不证明更易学习；相同531条下专家监督量为1.46倍，后续需匹配实际监督token预算。两组尚未作正式train/dev划分。[完整配对比较](paired-sft-comparison.md) · [统计与数据SHA](evidence/paired-sft-531-20261105.json)。
+完整序列token是历史序列化一次，不是生产累计输入；工具计数为commands条目，不是候选数。学生平均轮次/序列更短不证明更易学习；相同531条下专家监督量为1.46倍，等监督token预算仍是后续补充消融。本次全部531条用于训练，不额外留出dev；当前为同任务/同epoch/同参数对照，非等监督token预算。[完整配对比较](paired-sft-comparison.md) · [统计与数据SHA](evidence/paired-sft-531-20261105.json)。
 
 生产并发、传输切换及175条阶段快照留在11月4日worklog和既有evidence；不将历史运行状态标为当前。当前保留原生Terminus公开JSON和关闭额外thinking的模板，变更thinking须独立对齐协议。
 
 ## 7. 当前执行重点与近期里程碑
 
-1. **首版数据已交付**：531条方法SFT与531条对应专家SFT，原始证据与来源hash保留；继续冻结研究split、核对近重复及训练配置，不自动扩采或训练。
-2. **冻结第一版研究切分和基线**：建立同题三组小对照，量化无参考能力、参考增益、复制依赖及候选选择成本；从现有专家和学生产物准备匹配的E1/E2/E3。
-3. **训练验证**：先做最小SFT对照和无参考held-out评测，再决定是否扩大8选数据、加入更强教师修复或RL。文档中的实验设计不会自动触发新模型或训练请求。
+1. **数据质量已复核**：531对轨迹均正常完成且两份独立评分记录满分；方法训练输入无专家参考，token IDs及mask逐条对齐。
+2. **正式SFT运行中**：两组Qwen3.8-27B LoRA rank32、1 epoch、batch1、LR1e-4，固定最终531步产物。20:43方法33步、专家45步；最近10步平均NLL0.1721/0.4061，尚无训练收益结论。
+3. **部署和基线**：1-step产物Fleet加载与真实推理通过；HTTP base×2时限89题Pass@1四并发进行中。标准/增时时限和HTTP/Fleet分开报告，后续训练收益须统一服务与评测预算。[今日记录](worklog/2026-11.md) · [指标证据](evidence/sft-and-http-base-20261105.json)。
 
 工程实现已在[研究分支](https://github.com/kfq20/finetuning-with-sampling/tree/research/tool-boundary-rewrite)维护。当前方法入口包括[候选选择](https://github.com/kfq20/finetuning-with-sampling/blob/d899220/agentic/src/append_rewrite/terminus/blockwise.py)、[生成参考拼接](https://github.com/kfq20/finetuning-with-sampling/blob/d899220/agentic/src/append_rewrite/terminus/episode.py)、[SFT导出](https://github.com/kfq20/finetuning-with-sampling/blob/d899220/agentic/src/append_rewrite/terminus/export.py)和[分波生产](https://github.com/kfq20/finetuning-with-sampling/blob/d899220/agentic/experiments/cli-gym-scale-20261104/campaign.py)。论文、方法和运行身份分别版本化；本研究文档不更改已冻结实验。
