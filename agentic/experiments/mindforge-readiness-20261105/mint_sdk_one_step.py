@@ -4,6 +4,7 @@ Credentials arrive only on stdin. Dataset preparation and tokenization happen
 before this worker; no serving tokenizer can silently rewrite the frozen IDs.
 """
 import hashlib
+import dataclasses
 import json
 import logging
 import math
@@ -20,6 +21,7 @@ plan = json.loads((root/'plan.json').read_text())
 secret = ''
 service = None
 stage = 'preflight'
+failed = True
 
 def dump(name, value):
     path=root/name
@@ -39,10 +41,23 @@ def event(name, **values):
     print(text,flush=True)
 
 def result(value):
-    return value.result() if hasattr(value,'result') else value
+    if not hasattr(value,'result'):
+        return value
+    timeout = plan.get('smoke', {}).get('wait_timeout_seconds') if stage == 'sampler_smoke' else None
+    return value.result(timeout=timeout)
 
 def obj(value):
-    return value.model_dump(mode='json') if hasattr(value,'model_dump') else value
+    if hasattr(value, 'model_dump'):
+        return obj(value.model_dump(mode='json'))
+    if hasattr(value, 'to_numpy') and hasattr(value, 'dtype'):
+        return {'data':value.data,'dtype':value.dtype,'shape':value.shape}
+    if dataclasses.is_dataclass(value):
+        return {field.name:obj(getattr(value,field.name)) for field in dataclasses.fields(value)}
+    if isinstance(value,dict):
+        return {key:obj(item) for key,item in value.items()}
+    if isinstance(value,(list,tuple)):
+        return [obj(item) for item in value]
+    return value
 
 def call(name, function):
     global stage
@@ -135,6 +150,7 @@ try:
         'eval_nll_change':reload_loss-baseline_loss,'state_path':state.path,'sampler_path':sampler.path,
         'sampler_smoke_output_tokens':len(sampled.sequences[0].tokens),
         'formal_sft_started':False,'mindforge_job_created':False})
+    failed = False
     event('acceptance_passed',optimizer_steps=1,mean_nll=loss,
           reload_mean_nll=reload_loss,smoke_output_tokens=len(sampled.sequences[0].tokens))
 except Exception as error:
@@ -157,3 +173,6 @@ finally:
             except Exception as error:
                 dump('cleanup.json',{'session_id':session_id,'accepted':False,'error':str(error)})
     secret=''
+
+# A normal process exit must not mask an incomplete acceptance.
+sys.exit(1 if failed else 0)
