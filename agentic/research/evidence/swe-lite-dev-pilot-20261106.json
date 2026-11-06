@@ -1,0 +1,50 @@
+{
+  "checked_at": "2026-11-06T21:53:45.568430+08:00",
+  "run_root": "/mnt/ecs-tb4/evaluations/qwen38-swe-lite-dev6-20261106-a2",
+  "admitted_tasks": 5,
+  "preflight_held": 1,
+  "arms": {
+    "base": {
+      "model_requests_started": 11,
+      "normal_generations": 10,
+      "ended": []
+    },
+    "method": {
+      "model_requests_started": 7,
+      "normal_generations": 6,
+      "ended": []
+    },
+    "expert": {
+      "model_requests_started": 8,
+      "normal_generations": 7,
+      "ended": []
+    }
+  },
+  "runtime_preflight_sha256": "3e6cbf4d327220f0c4182e48d0588bb894b02c040c5b2410da4875f9801048a9",
+  "model_bindings": {
+    "base": {
+      "model_id": "fq-qwen38-base531-sft-20261105-a1",
+      "source": "base",
+      "checkpoint": null,
+      "cluster_id": "h20-qwen38-tp4",
+      "config_sha256": "19a5e9b44ce859210c9126c007a031e31c76548e9f5e3ec9fdff70458aeee597"
+    },
+    "method": {
+      "model_id": "fq-qwen38-method531-sft-20261105-a1",
+      "source": "lora",
+      "checkpoint": "tinker://01a1ac2f-6e65-71f8-82ce-e3efc27de21b_0/weights/qwen38-paired531-batch16-fresh-20261105-a1-method-step0034-state",
+      "cluster_id": "h20-qwen38-2p6d-1021",
+      "config_sha256": "fbf67b2fbd431ceced9e3089b01b224957393bfb067348b2fa1af428a75918f5"
+    },
+    "expert": {
+      "model_id": "fq-qwen38-expert531-sft-20261105-a1",
+      "source": "lora",
+      "checkpoint": "tinker://01a1ac2f-7007-77bf-bef3-945ac3dec98e_0/weights/qwen38-paired531-batch16-fresh-20261105-a1-expert-step0034-state",
+      "cluster_id": "h20-qwen38-tp4",
+      "config_sha256": "42e7076867ee1eff35b2d6f0d580afe6990e37e232a77c117916fdb4089c66db"
+    }
+  },
+  "dataset": "SWE-bench_Lite/dev",
+  "original_cohort": 6,
+  "planned_model_trials": 15
+}
