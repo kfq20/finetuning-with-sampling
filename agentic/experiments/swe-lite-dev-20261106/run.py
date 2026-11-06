@@ -195,6 +195,8 @@ def prepare_models(root):
         cfg.update(job_name='swe-lite-dev6', jobs_dir=str(dest / 'jobs'),
                    tasks=[{'path': str(p)} for p in tasks], n_attempts=1,
                    n_concurrent_trials=1, retry={'max_retries': 0})
+        if json.loads((root / 'plan.json').read_text()).get('environment_import_path'):
+            cfg['environment']['import_path'] = json.loads((root / 'plan.json').read_text())['environment_import_path']
         cfg['agents'][0]['kwargs'].update(native_config=str(dest / 'private.json'),
                                         inference_profile='cancellable-legacy')
         dump(dest / 'config.json', cfg)
