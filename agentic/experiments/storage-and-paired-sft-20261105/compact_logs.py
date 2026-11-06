@@ -11,10 +11,12 @@ ROOT = Path('/mnt/ecs-tb4/evaluations/qwen38-tb21-base-20261104')
 AUDIT = Path('/mnt/ecs-tb4/audits/storage-recovery-20261105')
 
 
-def main():
+def main(root=ROOT, audit=AUDIT, *, closed_turns=False):
+    AUDIT, ROOT = Path(audit), Path(root)
     AUDIT.mkdir(parents=True, exist_ok=True)
     journal = AUDIT / 'compression.jsonl'
-    files = list((ROOT / 'model-jobs').glob('*/*/agent/native-generation/turn-*/wire.jsonl'))
+    jobs = 'jobs' if closed_turns else 'model-jobs'
+    files = list((ROOT / jobs).glob('*/*/agent/native-generation/turn-*/wire.jsonl'))
     opened = set()
     for proc in Path('/proc').glob('[0-9]*'):
         try:
@@ -30,8 +32,12 @@ def main():
         if str(path) in opened or path.stat().st_size < 1024 * 1024:
             continue
         trial = path.parents[3]
-        result = json.loads((trial / 'result.json').read_text())
-        assert result['finished_at']
+        if closed_turns:
+            if not (path.parent / 'decision.json').exists():
+                continue
+        else:
+            result = json.loads((trial / 'result.json').read_text())
+            assert result['finished_at']
         original = path.stat()
         target = path.with_suffix(path.suffix + '.gz')
         if target.exists():
@@ -64,7 +70,7 @@ def main():
         path.unlink()
         freed += original.st_blocks * 512 - target.stat().st_blocks * 512
     (AUDIT / 'compression-summary.json').write_text(json.dumps({'finished_at': time.time(), 'net_freed_bytes': freed,
-        'original_result_files_unchanged': True, 'scope': 'closed original TB21 wire journals only; retry57 untouched'}) + '\n')
+        'original_result_files_unchanged': True, 'scope': str(ROOT), 'closed_turns': closed_turns}) + '\n')
     print('freed_bytes', freed, flush=True)
 
 
