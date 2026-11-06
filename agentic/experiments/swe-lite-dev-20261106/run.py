@@ -130,12 +130,18 @@ def admission(root):
         name = 'control-' + agent
         code = invoke(root, config(root, agent, tasks, name), name)
         dump(root / (name + '-exit.json'), {'exit_code': code, 'at': time.time()})
+    verify_controls(root)
+
+
+def verify_controls(root):
+    tasks = sorted((root / 'prepared-tasks').iterdir())
+    assert len(tasks) == 6
     receipts = {}
     for task in tasks:
         evidence = {}
         for agent, score in [('nop', 0), ('oracle', 1)]:
             matches = [(p, r) for p, r in trial_rows(root / 'controls' / ('control-' + agent))
-                       if p.parent.name.rsplit('__', 1)[0] == task.name]
+                       if r['task_name'] == task.name]
             assert len(matches) == 1 and valid(matches[0][1]), ('Invalid control', task.name, agent)
             p, row = matches[0]
             assert row['verifier_result']['rewards']['reward'] == score, (task.name, agent)
@@ -227,6 +233,20 @@ def models(root):
             f.close()
 
 
+def continue_after_controls(root):
+    # Only an unpaid admission bookkeeping repair; reuse all actual controls.
+    lock = (root / 'controller.lock').open('a')
+    fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    assert not (root / 'dispatch-claim.json').exists()
+    assert (root / 'hold.json').exists(), 'Wait for the original finite preparer to exit'
+    verify_controls(root)
+    dump(root / 'admission-repair.json', {'at': time.time(),
+        'original_hold_sha256': sha(root / 'hold.json'),
+        'reason': 'Canonical task_name matching, not truncated Harbor trial directory',
+        'replayed_controls': 0, 'replayed_models': 0})
+    models(root)
+
+
 def pipeline(root):
     os.umask(0o077)
     lock = (root / 'controller.lock').open('a')
@@ -252,7 +272,7 @@ def pipeline(root):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=['pipeline', 'collect'])
+    parser.add_argument('mode', choices=['pipeline', 'collect', 'continue'])
     parser.add_argument('root', type=Path)
     args = parser.parse_args()
-    {'pipeline': pipeline, 'collect': collect}[args.mode](args.root)
+    {'pipeline': pipeline, 'collect': collect, 'continue': continue_after_controls}[args.mode](args.root)

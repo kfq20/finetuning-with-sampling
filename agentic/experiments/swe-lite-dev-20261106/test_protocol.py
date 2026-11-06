@@ -30,6 +30,24 @@ class ProtocolTest(unittest.TestCase):
         self.assertEqual(grade.classify({'a': 'PASSED', 'b': 'FAILED'}, ['a', 'b']), 0)
         self.assertEqual(grade.classify({'a': 'PASSED', 'b': 'PASSED'}, ['a', 'b']), 1)
 
+    def test_canonical_id_survives_trial_name_truncation(self):
+        run = load('pilot', 'run.py')
+        import tempfile, json
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for i in range(6):
+                task = root / 'prepared-tasks' / ('long-task-name-' + str(i))
+                task.mkdir(parents=True)
+                (task / 'instruction.md').write_text('Task')
+                for agent, score in [('nop', 0), ('oracle', 1)]:
+                    trial = root / 'controls' / ('control-' + agent) / ('truncated__' + str(i))
+                    trial.mkdir(parents=True)
+                    (trial / 'result.json').write_text(json.dumps({
+                        'task_name': task.name, 'finished_at': 'now', 'exception_info': None,
+                        'verifier_result': {'rewards': {'reward': score}}}))
+            run.verify_controls(root)
+            self.assertEqual(len(json.loads((root / 'admission.json').read_text())['tasks']), 6)
+
     def test_raw_reward_does_not_override_exception(self):
         run = load('pilot', 'run.py')
         r = {'finished_at': 'now', 'exception_info': {'exception_type': 'AgentTimeoutError'},

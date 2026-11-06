@@ -22,7 +22,7 @@ def metrics(path, arm):
         (path.parent / 'native-generation').glob('turn-*/decision.json'))]
     reward = (raw.get('verifier_result') or {}).get('rewards', {}).get('reward')
     error = (raw.get('exception_info') or {}).get('exception_type')
-    return {'arm': arm, 'task': path.parent.name.rsplit('__', 1)[0],
+    return {'arm': arm, 'task': raw['task_name'],
         'result_path': str(path), 'finished': bool(raw.get('finished_at')),
         'error': error, 'valid': bool(raw.get('finished_at') and not error and reward in (0, 1)),
         'resolved': int(reward == 1) if not error and reward in (0, 1) else None,
