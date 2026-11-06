@@ -5,9 +5,12 @@ candidate scoring remains the existing zero-generation path with returned-ID
 validation. No fallback, hidden retries or partial response execution.
 """
 
+import asyncio
 import json
 from pathlib import Path
 import time
+import uuid
+from urllib.parse import urlsplit
 from urllib.request import Request, urlopen
 
 from .native import NativeClient
@@ -15,7 +18,7 @@ from .protocol import digest
 from .http_evidence import failure, headers
 
 
-def consume(response, journal, input_count, *, scoring=False):
+def _parser(journal, input_count, *, scoring=False):
     text, metadata, request_id = "", {}, None
     started = time.monotonic()
     first = None
@@ -23,7 +26,8 @@ def consume(response, journal, input_count, *, scoring=False):
     data = []
     journal = Path(journal)
     with (journal / "wire.jsonl").open("x") as wire:
-        for line in response:
+        while True:
+            line = yield
             if first is None:
                 first = time.monotonic() - started
             if isinstance(line, bytes):
@@ -87,10 +91,107 @@ def consume(response, journal, input_count, *, scoring=False):
                     )
                 )
                 return {"text": text, "meta_info": metadata}
-    raise ValueError("Native stream EOF without normal stop")
+
+
+def consume(response, journal, input_count, *, scoring=False):
+    parser = _parser(journal, input_count, scoring=scoring)
+    next(parser)
+    try:
+        for line in response:
+            try:
+                parser.send(line)
+            except StopIteration as stop:
+                return stop.value
+        raise ValueError("Native stream EOF without normal stop")
+    finally:
+        parser.close()
 
 
 class NativeStreamClient(NativeClient):
+    async def generate_async(self, prompt, tokenizer, *, journal, sampling_params,
+                             max_tokens=128000):
+        """Cancellation closes the socket before returning; no executor thread.
+
+        Optional SGLang abort targets ONLY our client-generated request ID. Abort
+        failure is recorded, never silently promoted to confirmed engine cleanup.
+        """
+        import httpx
+
+        journal = Path(journal)
+        journal.mkdir(parents=True, mode=0o700, exist_ok=False)
+        ids = tokenizer.encode(prompt, add_special_tokens=False)
+        maximum = min(max_tokens, self.config.get('context_limit', 262144) - len(ids))
+        if maximum <= 0:
+            raise ValueError('Generation input exceeds serving context before POST')
+        rid = uuid.uuid4().hex
+        body = {'input_ids': ids, 'rid': rid, 'stream': True,
+                'return_logprob': False,
+                'sampling_params': {**sampling_params, 'max_new_tokens': maximum}}
+        (journal / 'request.json').write_text(json.dumps(body))
+        (journal / 'intent.json').write_text(json.dumps({
+            'endpoint': self.endpoint, 'model_id': self.config['model_id'],
+            'request_id': rid, 'body_sha256': digest(body), 'automatic_retry': False,
+            'transport': 'async-httpx-sse', 'effective_max_new_tokens': maximum,
+        }))
+        parser = _parser(journal, len(ids))
+        next(parser)
+        started = time.monotonic()
+        try:
+            # The Harbor episode deadline owns total time. Do not add an
+            # unrelated 900s read deadline to a legitimate thinking generation.
+            timeout = httpx.Timeout(connect=30, read=None, write=60, pool=30)
+            async with httpx.AsyncClient(timeout=timeout, trust_env=False) as client:
+                async with client.stream('POST', self.endpoint, json=body,
+                                         headers=self.request_headers()) as response:
+                    (journal / 'http.json').write_text(json.dumps({
+                        'status': response.status_code,
+                        'headers_elapsed_sec': time.monotonic() - started,
+                    }))
+                    response.raise_for_status()
+                    async for line in response.aiter_lines():
+                        try:
+                            parser.send(line)
+                        except StopIteration as stop:
+                            result = stop.value
+                            if result['meta_info']['id'] != rid:
+                                raise ValueError('Client/server request identity drift')
+                            (journal / 'response.json').write_text(
+                                json.dumps(result, ensure_ascii=False))
+                            return result
+                    raise ValueError('Native stream EOF without normal stop')
+        except BaseException as exc:
+            # Stream context has exited before this handler: no late response
+            # writer or inference thread survives the cancelled coroutine.
+            cleanup = {'request_id': rid, 'socket_closed': True,
+                       'cancelled': isinstance(exc, asyncio.CancelledError),
+                       'automatic_retry': False, 'abort_acknowledged': False}
+            if self.config.get('scoped_abort') is True:
+                target = urlsplit(self.endpoint)
+                url = f'{target.scheme}://{target.netloc}/abort_request'
+                async def abort():
+                    async with httpx.AsyncClient(timeout=5, trust_env=False) as client:
+                        response = await client.post(url, headers=self.request_headers(),
+                                                     json={'rid': rid, 'abort_all': False})
+                        cleanup['abort_status'] = response.status_code
+                        cleanup['abort_acknowledged'] = response.status_code == 200
+                task = asyncio.create_task(abort())
+                try:
+                    await asyncio.shield(task)
+                except asyncio.CancelledError:
+                    # A second cancellation must not leave an unowned cleanup task.
+                    task.cancel()
+                    await asyncio.gather(task, return_exceptions=True)
+                    cleanup['abort_error'] = 'CleanupCancelled'
+                except Exception as abort_exc:
+                    cleanup['abort_error'] = type(abort_exc).__name__
+            cleanup['elapsed_sec'] = time.monotonic() - started
+            (journal / 'cleanup.json').write_text(json.dumps(cleanup))
+            (journal / 'error.json').write_text(json.dumps({
+                'error_type': type(exc).__name__, 'automatic_retry': False}))
+            raise
+        finally:
+            parser.close()
+
     def generate(self, prompt, tokenizer, *, journal, max_tokens=128000, timeout=900):
         journal = Path(journal)
         journal.mkdir(parents=True, mode=0o700, exist_ok=False)

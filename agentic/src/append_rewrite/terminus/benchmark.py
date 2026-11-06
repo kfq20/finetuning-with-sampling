@@ -27,6 +27,7 @@ class PlainQwenLLM(EpisodeLLM):
 class QwenBenchmarkOptions(Terminus2Options):
     native_config: str
     tokenizer_path: str
+    inference_profile: str = 'legacy'
 
 
 class QwenBenchmarkAgent(Terminus2):
@@ -34,9 +35,22 @@ class QwenBenchmarkAgent(Terminus2):
 
     def _init_llm(self,*args,**kwargs):
         if not getattr(self,'_native_backend',None):
-            self._native_backend=PlainQwenLLM(
-                self.options.native_config,PinnedTokenizer(self.options.tokenizer_path),
-                Path(self.logs_dir)/'native-generation')
+            profile = self.options.inference_profile
+            if profile == 'legacy':
+                self._native_backend=PlainQwenLLM(
+                    self.options.native_config,PinnedTokenizer(self.options.tokenizer_path),
+                    Path(self.logs_dir)/'native-generation')
+            elif profile in {'cancellable-thinking', 'cancellable-legacy'}:
+                from .benchmark_llm import CancellableQwenLLM
+                thinking = profile == 'cancellable-thinking'
+                if thinking and not self.options.interleaved_thinking:
+                    raise ValueError('Thinking benchmark requires retained reasoning history')
+                self._native_backend=CancellableQwenLLM(
+                    self.options.native_config,
+                    PinnedTokenizer(self.options.tokenizer_path, enable_thinking=thinking),
+                    Path(self.logs_dir)/'native-generation', thinking=thinking)
+            else:
+                raise ValueError('Unknown benchmark inference profile')
         return self._native_backend
 
     async def _query_llm(self,chat,prompt,original_instruction='',session=None):

@@ -159,8 +159,14 @@ class NativeInputScorer:
         )
         if self.config.get('native_endpoint'):
             parsed = urlsplit(self.endpoint)
-            if parsed.scheme != 'http' or parsed.hostname != '127.0.0.1' or parsed.path != '/generate' or parsed.query or parsed.fragment or parsed.username:
-                raise ValueError('Direct native endpoint must be an explicitly owned loopback tunnel')
+            origin = f'{parsed.scheme}://{parsed.netloc}'
+            owned_loopback = parsed.scheme == 'http' and parsed.hostname == '127.0.0.1'
+            authorized_direct = (
+                self.config.get('user_authorized_direct_origin') == origin
+                and parsed.scheme in {'http', 'https'}
+            )
+            if not (owned_loopback or authorized_direct) or parsed.path != '/generate' or parsed.query or parsed.fragment or parsed.username:
+                raise ValueError('Native endpoint requires owned loopback or exact authorized origin')
 
     def request_headers(self):
         auth = {'Authorization': 'Bearer ' + self.config['api_key']} if self.config.get('native_endpoint') else {'x-api-key': self.config['api_key']}

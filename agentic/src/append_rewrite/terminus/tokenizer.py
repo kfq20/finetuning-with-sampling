@@ -6,7 +6,8 @@ from pathlib import Path
 
 
 class PinnedTokenizer:
-    def __init__(self, root):
+    def __init__(self, root, *, enable_thinking=False):
+        self.enable_thinking = enable_thinking
         from tokenizers import Tokenizer
         from jinja2.sandbox import ImmutableSandboxedEnvironment
 
@@ -46,7 +47,9 @@ class PinnedTokenizer:
         value = self.template.render(
             messages=messages,
             add_generation_prompt=add_generation_prompt,
-            enable_thinking=False,
+            enable_thinking=self.enable_thinking,
+            preserve_thinking=True,
+            reasoning_effort="xhigh",
             tools=None,
             bos_token="",
             eos_token="<|im_end|>",
