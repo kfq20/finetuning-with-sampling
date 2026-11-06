@@ -49,3 +49,24 @@ an exclusive lock before model dispatch. No model or control replay for naming.
 Selected orchestration source f91e522, original shared inference library ecb151b;
 `active_runtime_selection.json` binds both. Original preparer/failed admission
 and retired idle handoff receipts remain under the same run root.
+
+## Zero-inference runtime correction
+
+Stock images lack tmux. Initial model jobs failed setup **before any model POST**;
+all were held/retired by exact owned PID/start identity and original receipts
+preserved. Selected repair root is
+`/mnt/ecs-tb4/evaluations/qwen38-swe-lite-dev6-20261106-a2`, bound explicitly by
+a1/startup-repair-selection.json and a2/active_runtime_selection.json.
+
+`prepare_offline.py` bundles public existing Ubuntu tmux, its loader/libraries and
+terminfo into a SHA-pinned isolated overlay. Only tmux uses its bundled loader;
+project Python, dependencies, source and base image remain unchanged. It does not
+install anything on the shared host or change a cached base template. A named
+controller-only adapter uploads the same public overlay to every model arm.
+
+Five actual Qwen/Terminus Harbor install-only trials must finish without error
+and zero inference, then actual NOP0/gold1 controls check the overlay. Exact prior
+controls remain explicitly bound for the other tasks. Only then dispatch five
+admitted tasks perarm,15 model attempts; original6-task denominator retains the
+one environment hold. No paid model attempt is replayed. Finite analysis exports
+trajectory counts, tokens, context and timings after completion.

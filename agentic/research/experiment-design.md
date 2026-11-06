@@ -109,6 +109,9 @@ E1–E3的完整成功episode采用全部必需检查通过的二元准入；par
 
 三组各Pass@1，共18次；固定当前已部署的epoch1 step34方法/专家适配器及base，不等待也不覆盖epoch2。使用相同Terminus-2、temperature0.6、nonthinking、262144上下文、每题1800秒agent时限、无max_turns、无自动付费重试。每组1并发，总并发3，相同任务顺序；共享服务负载与不同Fleet集群是延迟比较的混杂项，记录实际部署身份。原TB2.1与训练进程不变。若触及上下文上限，保留异常，不冒充模型0，也不临时修改某组协议。
 
-复用官方digest冻结镜像、官方eval_script、FAIL_TO_PASS/PASS_TO_PASS和官方日志解析。每题先验证原始提交不通过、gold patch全检查通过，且grader/gold不暴露solver；不通过门禁的题为infra hold，不用替换容易题凑6题。不启动模型来诊断环境。评测包含真实查看文件、改代码、执行工具及最终测试，不做静态补丁生成替代。
+复用官方digest冻结镜像、官方eval_script、FAIL_TO_PASS/PASS_TO_PASS和官方日志解析。每题先验证原始提交不通过、gold patch全检查通过，且grader/gold不暴露solver；不通过门禁的题为infra hold，不用替换容易题凑6题；合格任务独立派发，保留原6题总体与实际准入子集两个分母。不启动模型来诊断环境。评测包含真实查看文件、改代码、执行工具及最终测试，不做静态补丁生成替代。
 
 输出：每题二元resolved、异常原因、轮次/工具调用、输入/输出token、上下文峰值、agent与verifier/环境准备耗时、完整批次wall-time；同题配对差异、全6题覆盖与unknown分开。以实际耗时/异常率判断是否值得扩至dev23题，不以小样本排序宣布泛化优势。TB2.1保留阶段性综合测试，后续正式测试集合与使用次数另行冻结。
+
+
+P0接入记录：初次官方镜像缺少Terminus所需tmux，三组均在首个模型请求前失败；保留原记录后，仅对零推理启动做一次工程修复。新增同一离线tmux运行组件，保持原镜像digest、Python环境、repo、题面和裁判不变；5个准入任务的实际Terminus install-only验收全部通过。Pydicom-1139仍因pytest8与旧setup钩子不兼容而独立hold，不把官方gold的2项P2P失败转嫁给模型。新选择运行身份为`swe-lite-dev6-20261106-a2`，旧a1与原成本完整保留；不按后缀自动选运行。
