@@ -49,7 +49,8 @@ def main(root):
     for arm in ('base', 'method', 'expert'):
         part = [r for r in rows if r['arm'] == arm and r['finished']]
         valid = [r for r in part if r['valid']]
-        summary['arms'][arm] = {'planned': 6, 'ended': len(part), 'valid': len(valid),
+        admission = json.loads((root / 'admission.json').read_text())
+        summary['arms'][arm] = {'original_cohort': 6, 'planned': len(admission['tasks']), 'preflight_held': len(admission['held_tasks']), 'ended': len(part), 'valid': len(valid),
             'resolved': sum(r['resolved'] for r in valid), 'unknown': len(part) - len(valid),
             'medians_valid_only': {key: statistics.median([r[key] for r in valid if r[key] is not None])
                                   if any(r[key] is not None for r in valid) else None for key in

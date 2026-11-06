@@ -47,6 +47,15 @@ class ProtocolTest(unittest.TestCase):
                         'verifier_result': {'rewards': {'reward': score}}}))
             run.verify_controls(root)
             self.assertEqual(len(json.loads((root / 'admission.json').read_text())['tasks']), 6)
+            damaged = root / 'controls/control-oracle/truncated__0/result.json'
+            row = json.loads(damaged.read_text())
+            row['verifier_result']['rewards']['reward'] = 0
+            damaged.write_text(json.dumps(row))
+            run.verify_controls(root)
+            receipt = json.loads((root / 'admission.json').read_text())
+            self.assertEqual(len(receipt['tasks']), 5)
+            self.assertEqual(len(receipt['held_tasks']), 1)
+            self.assertEqual(receipt['replacement_tasks'], 0)
 
     def test_raw_reward_does_not_override_exception(self):
         run = load('pilot', 'run.py')

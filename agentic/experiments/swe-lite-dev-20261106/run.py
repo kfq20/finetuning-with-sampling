@@ -136,19 +136,30 @@ def admission(root):
 def verify_controls(root):
     tasks = sorted((root / 'prepared-tasks').iterdir())
     assert len(tasks) == 6
-    receipts = {}
+    receipts, holds = {}, {}
     for task in tasks:
         evidence = {}
         for agent, score in [('nop', 0), ('oracle', 1)]:
             matches = [(p, r) for p, r in trial_rows(root / 'controls' / ('control-' + agent))
                        if r['task_name'] == task.name]
-            assert len(matches) == 1 and valid(matches[0][1]), ('Invalid control', task.name, agent)
+            if len(matches) != 1:
+                holds[task.name] = {'reason': 'Missing/ambiguous control', 'agent': agent}
+                break
             p, row = matches[0]
-            assert row['verifier_result']['rewards']['reward'] == score, (task.name, agent)
-            evidence[agent] = {'result_path': str(p), 'result_sha256': sha(p), 'reward': score}
-        evidence['files'] = {str(p.relative_to(task)): sha(p) for p in task.rglob('*') if p.is_file()}
-        receipts[task.name] = evidence
-    dump(root / 'admission.json', {'at': time.time(), 'passed': True, 'tasks': receipts})
+            evidence[agent] = {'result_path': str(p), 'result_sha256': sha(p),
+                              'expected_reward': score, 'reward':
+                              (row.get('verifier_result') or {}).get('rewards', {}).get('reward')}
+            if not valid(row) or evidence[agent]['reward'] != score:
+                holds[task.name] = {'reason': 'Control did not meet required outcome',
+                                   'agent': agent, 'evidence': evidence[agent]}
+                break
+        else:
+            evidence['files'] = {str(p.relative_to(task)): sha(p) for p in task.rglob('*') if p.is_file()}
+            receipts[task.name] = evidence
+    assert receipts, 'No task passed actual controls; no model dispatch'
+    dump(root / 'admission.json', {'at': time.time(), 'passed': True,
+         'planned_tasks': 6, 'admitted_tasks': len(receipts), 'held_tasks': holds,
+         'tasks': receipts, 'replacement_tasks': 0})
 
 
 def prepare_models(root):
@@ -180,7 +191,7 @@ def prepare_models(root):
         assert status['model_id'] == c['task_id'] and status['base_model'] == 'Qwen/Qwen3.8-27B'
         assert status['source'] == ('lora' if checkpoint else 'base')
         assert not checkpoint or status.get('checkpoint') == checkpoint
-        tasks = [root / 'prepared-tasks' / name for name in json.loads((root / 'plan.json').read_text())['task_ids']]
+        tasks = [root / 'prepared-tasks' / name for name in json.loads((root / 'admission.json').read_text())['tasks']]
         cfg.update(job_name='swe-lite-dev6', jobs_dir=str(dest / 'jobs'),
                    tasks=[{'path': str(p)} for p in tasks], n_attempts=1,
                    n_concurrent_trials=1, retry={'max_retries': 0})
@@ -197,7 +208,7 @@ def collect(root):
     summary = {'at': time.time(), 'arms': {}}
     for arm in ARMS:
         rows = trial_rows(root / arm / 'jobs/swe-lite-dev6')
-        summary['arms'][arm] = {'planned': 6, 'ended': len(rows),
+        summary['arms'][arm] = {'original_cohort': 6, 'planned': len(json.loads((root / 'admission.json').read_text())['tasks']), 'preflight_held': len(json.loads((root / 'admission.json').read_text())['held_tasks']), 'ended': len(rows),
             'valid': sum(valid(r) for _, r in rows),
             'resolved': sum(valid(r) and r['verifier_result']['rewards']['reward'] == 1 for _, r in rows),
             'unknown': sum(not valid(r) for _, r in rows)}
@@ -212,7 +223,7 @@ def models(root):
         for relative, expected in evidence['files'].items():
             assert sha(root / 'prepared-tasks' / task / relative) == expected
     prepare_models(root)
-    dump(root / 'dispatch-claim.json', {'at': time.time(), 'planned': 18,
+    dump(root / 'dispatch-claim.json', {'at': time.time(), 'planned': 3 * len(json.loads((root / 'admission.json').read_text())['tasks']),
          'models_sha256': sha(root / 'models.json'), 'admission_sha256': sha(root / 'admission.json')})
     logs, children = [], {}
     try:
