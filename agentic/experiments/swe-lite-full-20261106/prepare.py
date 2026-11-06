@@ -40,11 +40,15 @@ def main(root, split):
     assert pilot.sha(archive) == json.loads((parent / 'plan.json').read_text())['offline_runtime_sha256']
     os.link(archive, root / 'offline-runtime.tar.gz')
     (root / 'private').mkdir()
+    (root / 'reference').mkdir()
+    shutil.copyfile('/mnt/ecs-tb4/evaluations/qwen38-tb21-base-20261104/oracle-launcher-v2.py', root / 'reference/launcher.py')
     bindings = json.loads((parent / 'models.json').read_text())
     for arm in ('base', 'method', 'expert'):
         target = root / 'private' / (arm + '.json')
         shutil.copyfile(parent / arm / 'private.json', target); target.chmod(0o600)
         bindings[arm]['private_config_sha256'] = pilot.sha(target)
+        assert pilot.sha(parent / arm / 'config.json') == bindings[arm]['config_sha256']
+        shutil.copyfile(parent / arm / 'config.json', root / 'reference' / (arm + '-config.json'))
     pilot.dump(root / 'models.json', bindings)
     registry = root / 'private/registry-auth'; registry.mkdir()
     values = dotenv_values('/mnt/ecs-tb4/cli-gym-scale-20261104/support/private/sandbox.env', interpolate=False)
@@ -66,7 +70,7 @@ def main(root, split):
                        'max_output_tokens': 128000, 'max_turns': None},
         'automatic_paid_retry': False, 'original_pilot_root': str(parent),
         'claim_convention': 'Runtime/control/provider failures are unknown, not valid model0'})
-    files = {str(p.relative_to(root)): pilot.sha(p) for folder in ('runtime', 'source')
+    files = {str(p.relative_to(root)): pilot.sha(p) for folder in ('runtime', 'source', 'reference')
              for p in (root / folder).rglob('*') if p.is_file() and '__pycache__' not in p.parts}
     files['models.json'] = pilot.sha(root / 'models.json')
     files['plan.json'] = pilot.sha(root / 'plan.json')

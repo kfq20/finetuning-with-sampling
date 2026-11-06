@@ -55,6 +55,7 @@ def prepare(root):
 
 
 def materialize(root, tasks, dataset='SWE-bench_Lite/dev'):
+    import toml
     parser = (root / 'source/python.py').read_text()
     assert parser.count('from swebench.harness.constants import TestStatus') == 1
     # Official parser function bodies stay byte-identical; only standalone imports

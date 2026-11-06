@@ -75,7 +75,7 @@ class Campaign:
         assert not path.exists(), 'Never repeat an existing job'
         dump(path, cfg)
         with (location / 'harbor.log').open('x') as log:
-            child = subprocess.Popen([SDK, LAUNCHER, str(path)], stdout=log, stderr=log)
+            child = subprocess.Popen([SDK, str(self.root / 'reference/launcher.py'), str(path)], stdout=log, stderr=log)
             dump(location / 'launch.json', {'pid': child.pid, 'at': time.time(),
                  'start_ticks': Path(f'/proc/{child.pid}/stat').read_text().split()[21]})
             code = child.wait()
@@ -85,9 +85,10 @@ class Campaign:
         return records[0], record, code
 
     def base_config(self, task, name, destination):
-        cfg = json.loads((PILOT / 'base/config.json').read_text())
+        cfg = json.loads((self.root / 'reference/base-config.json').read_text())
         cfg.update(job_name=name, jobs_dir=str(destination), tasks=[{'path': str(task)}],
                    n_concurrent_trials=1, n_attempts=1, retry={'max_retries': 0})
+        cfg['agents'][0]['kwargs']['native_config'] = str(self.root / 'private/base.json')
         return cfg
 
     def storage_ready(self):
@@ -182,7 +183,7 @@ class Campaign:
         dump(location / 'claim.json', {'at': time.time(), 'arm': arm, 'task': name,
              'admission_sha256': sha(self.root / 'gates' / name / 'admission.json'), 'automatic_retry': False})
         cfg = self.base_config(task, 'pass1', location / 'jobs')
-        cfg['agents'] = copy.deepcopy(json.loads((PILOT / arm / 'config.json').read_text())['agents'])
+        cfg['agents'] = copy.deepcopy(json.loads((self.root / 'reference' / (arm + '-config.json')).read_text())['agents'])
         cfg['agents'][0]['kwargs']['native_config'] = str(self.root / 'private' / (arm + '.json'))
         p, result, code = self.invoke(cfg, location)
         receipt = {'at': time.time(), 'arm': arm, 'task': name, 'result_path': str(p),
