@@ -31,3 +31,18 @@ Progress distinguishes finite normal grades, full-check success and errors.
 A timeout's raw reward0 stays diagnostic/unknown. Original results, checkpoints,
 failures and costs are preserved. Subsequent reporting must identify adaptive
 1x→4x recovery and keep the self-hosted HTTP/thinking canaries separate.
+
+## User-authorized no-progress stop,2026-11-06 15:35 CST
+
+Only base/build-pov-ray__kzQGGtq and method/build-pov-ray__wmi2imf were stopped
+through their exact independently verified sandbox IDs. No Harbor/controller or
+shared model process was signaled/restarted. Both trials finalized and their
+slots admitted new tasks; all3original Harbor process identities persisted and
+4actual trials perarm remained active. No retry of either stopped task.
+
+Read root/operator_stops.json before classifying exceptions: these two raw
+SandboxException results were caused by the authorized operator stop, not new
+provider/API failures or valid model0. Raw results/logs/costs remain preserved.
+Identity checks, trajectory snapshots, kill receipts and final result SHA bind
+under root/support/operator-stop-build-pov-ray-20261106. Maintained finite helper
+stop_no_progress.py refuses a repeated stop intent and already-ended tasks.
