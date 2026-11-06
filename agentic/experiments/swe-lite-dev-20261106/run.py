@@ -247,6 +247,28 @@ def continue_after_controls(root):
     models(root)
 
 
+def handoff_after_prepare(root):
+    # Finite dependency handoff, not a second model scheduler. The original
+    # preparer is allowed to finish all unpaid controls and retain its receipt.
+    original = json.loads((root / 'launch.json').read_text())
+    while True:
+        stat = Path(f"/proc/{original['pid']}/stat")
+        if not stat.exists():
+            break
+        parts = stat.read_text().split()
+        if parts[21] != original['start_ticks'] or parts[2] == 'Z':
+            break
+        if (root / 'dispatch-claim.json').exists():
+            raise RuntimeError('Original model dispatch already exists; no handoff')
+        time.sleep(15)
+    source = Path(__file__).parent
+    proof = json.loads((source / 'source.json').read_text())
+    for filename, expected in proof['files'].items():
+        assert sha(source / filename) == expected
+    assert json.loads((source / 'test-result.json').read_text())['exit_code'] == 0
+    continue_after_controls(root)
+
+
 def pipeline(root):
     os.umask(0o077)
     lock = (root / 'controller.lock').open('a')
@@ -272,7 +294,7 @@ def pipeline(root):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('mode', choices=['pipeline', 'collect', 'continue'])
+    parser.add_argument('mode', choices=['pipeline', 'collect', 'continue', 'handoff'])
     parser.add_argument('root', type=Path)
     args = parser.parse_args()
-    {'pipeline': pipeline, 'collect': collect, 'continue': continue_after_controls}[args.mode](args.root)
+    {'pipeline': pipeline, 'collect': collect, 'continue': continue_after_controls, 'handoff': handoff_after_prepare}[args.mode](args.root)
