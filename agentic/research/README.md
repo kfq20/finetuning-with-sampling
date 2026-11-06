@@ -1,10 +1,10 @@
 # 面向可执行 Agent 的学生分布轨迹适配
 
-**Research proposal & worklog · v0.4 · 2026-11-05**
+**Research proposal & worklog · v0.5 · 2026-11-06**
 
-研究阶段：首版531条学生SFT与对应531条专家SFT已配对交付；尚未进行权重训练，训练收益待对照验证。
+研究阶段：531对方法/专家数据已完成batch16、1epoch训练；两组正在继续第二个epoch。现有TB2.1三组评测包含超时补测与基础设施异常，训练收益尚待可靠配对验证。
 
-最新核验：2026-11-05 20:43，Asia/Shanghai。两组SFT已确认33/531、45/531更新；HTTP base×2时限评测正常2、超时3、运行4。历史快照保留于worklog与evidence。
+最近设计更新：2026-11-06，Asia/Shanghai。新增轻量SWE开发评测及后续优先级；运行进度以带时间的worklog和实验收据为准。
 
 > **研究主张**：让强模型提供成功经验，让学生在真实环境中重新完成任务，再用学生自身的无参考 likelihood 选择行为，目标是构造可执行、可验证、与学生分布更相容的 SFT 数据。最终检验标准是训练后独立解决新任务的能力，而不是造数据时带参考能否拿到1分。
 
@@ -229,10 +229,19 @@ $$
 
 生产并发、传输切换及175条阶段快照留在11月4日worklog和既有evidence；不将历史运行状态标为当前。当前保留原生Terminus公开JSON和关闭额外thinking的模板，变更thinking须独立对齐协议。
 
-## 7. 当前执行重点与近期里程碑
+## 7. 后续实验路线与当前重点
 
-1. **数据质量已复核**：531对轨迹均正常完成且两份独立评分记录满分；方法训练输入无专家参考，token IDs及mask逐条对齐。
-2. **正式SFT运行中**：两组Qwen3.8-27B LoRA rank32、1 epoch、batch1、LR1e-4，固定最终531步产物。20:43方法33步、专家45步；最近10步平均NLL0.1721/0.4061，尚无训练收益结论。
-3. **部署和基线**：1-step产物Fleet加载与真实推理通过；HTTP base×2时限89题Pass@1四并发进行中。标准/增时时限和HTTP/Fleet分开报告，后续训练收益须统一服务与评测预算。[今日记录](worklog/2026-11.md) · [指标证据](evidence/sft-and-http-base-20261105.json)。
+| 优先级 | 工作 | 关键对照 |
+|---|---|---|
+| P0 | 先建立更快的真实仓库修复开发评测；收尾第二轮训练 | Base / 专家SFT(E1) / 我们的方法(E3)，冻结产物与统一协议 |
+| P1 | 补直接参考、无候选的学生SFT(E2) | E1→E2检验改写；E2→E3检验8候选选择 |
+| P2 | 数据可学习性筛选 | 随机 / 学生无参考较难而参考可完成 / 难易混合，同监督token |
+| P3 | recipe | 配对比较1/2epoch，再单独改LR/训练token；不同时变多项 |
+| P4 | domain多样性 | 同token的同域加量与新域扩展，分开评估项目/领域迁移 |
+| P5 | 低成本与结构消融 | 在线E3对离线动作E4；K与随机选择后续单独比较 |
+
+P0先试SWE-bench Lite官方dev：固定3个较轻Python项目各2题，共6题×3模型Pass@1；先做原始失败/gold成功门禁，再运行模型，记录实际耗时与异常率。小试不是官方300题成绩，也不预设Lite单题一定快。固定当前epoch1 step34部署，epoch2不覆盖；TB2.1与训练继续保持原身份。
+
+现有531对是同任务/同epoch对照，方法与专家监督token不相等；后续构造消融以等监督token为主要比较轴。无参考数据分层只在训练素材进行，不能用评测失败题回流训练。详细假设、对照、准入、停止与报告规则见[实验设计](experiment-design.md)。
 
 工程实现已在[研究分支](https://github.com/kfq20/finetuning-with-sampling/tree/research/tool-boundary-rewrite)维护。当前方法入口包括[候选选择](https://github.com/kfq20/finetuning-with-sampling/blob/d899220/agentic/src/append_rewrite/terminus/blockwise.py)、[生成参考拼接](https://github.com/kfq20/finetuning-with-sampling/blob/d899220/agentic/src/append_rewrite/terminus/episode.py)、[SFT导出](https://github.com/kfq20/finetuning-with-sampling/blob/d899220/agentic/src/append_rewrite/terminus/export.py)和[分波生产](https://github.com/kfq20/finetuning-with-sampling/blob/d899220/agentic/experiments/cli-gym-scale-20261104/campaign.py)。论文、方法和运行身份分别版本化；本研究文档不更改已冻结实验。
