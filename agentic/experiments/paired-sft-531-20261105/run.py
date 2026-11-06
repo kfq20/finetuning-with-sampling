@@ -65,6 +65,22 @@ def make_batches(order, offset, size):
     return batches
 
 
+def epoch_schedule(rows, epochs, seed, batch_size, offset=0):
+    """Keep each epoch's tail; resume counts examples over the full run."""
+    assert rows > 0 and epochs > 0 and 0 <= offset < rows * epochs
+    order, batches = [], []
+    for epoch in range(epochs):
+        indices = list(range(rows))
+        random.Random(seed + epoch).shuffle(indices)
+        order.extend(indices)
+        skipped = max(0, min(rows, offset - epoch * rows))
+        if skipped < rows:
+            batches.extend({'epoch': epoch + 1, 'indices': batch}
+                           for batch in make_batches(indices, skipped, batch_size))
+    assert [i for item in batches for i in item['indices']] == order[offset:]
+    return order, batches
+
+
 def train(root, arm, plan, token, fleet_key):
     import httpx
     import mint
@@ -84,18 +100,21 @@ def train(root, arm, plan, token, fleet_key):
             json.dump({'plan_sha256': sha(root / 'plan.json'), 'at': time.time()}, f)
         dataset = Path(plan['datasets'][arm]['path'])
         assert sha(dataset) == plan['datasets'][arm]['sha256']
-        rows = [json.loads(line) for line in dataset.open()]
+        with dataset.open() as source:
+            rows = [json.loads(line) for line in source]
         assert len(rows) == plan['training']['rows']
-        order = list(range(len(rows)))
-        random.Random(plan['training']['seed']).shuffle(order)
-        write(out / 'order.json', order)
         resume = plan.get('resume', {}).get(arm)
         offset = resume['completed_examples'] if resume else 0
+        previous_updates = resume.get('completed_optimizer_updates', 0) if resume else 0
         batch_size = plan['training']['batch_size']
-        batches = make_batches(order, offset, batch_size)
-        assert sorted([i for batch in batches for i in batch] + order[:offset]) == list(range(len(order)))
+        epochs = plan['training'].get('num_epochs', 1)
+        order, schedule = epoch_schedule(len(rows), epochs, plan['training']['seed'], batch_size, offset)
+        batches = [item['indices'] for item in schedule]
+        write(out / 'order.json', order)
         write(out / 'batch-order.json', {'batch_size': batch_size, 'previous_examples': offset,
-            'previous_rows': order[:offset], 'batches': batches, 'dropped_rows': []})
+            'previous_rows': order[:offset], 'batches': batches, 'schedule': schedule,
+            'epochs': epochs, 'seed_per_epoch': [plan['training']['seed'] + e for e in range(epochs)],
+            'previous_optimizer_updates': previous_updates, 'dropped_rows': []})
         service = mint.ServiceClient(api_key=token, base_url=plan['base_url'],
             timeout=120, max_retries=0, http_client=httpx.AsyncClient(timeout=120),
             user_metadata={'experiment': plan['experiment'], 'arm': arm})
@@ -111,9 +130,10 @@ def train(root, arm, plan, token, fleet_key):
             event('optimizer_state_restored', previous_examples=offset, batch_size=batch_size)
         adam = mint.types.AdamParams(**plan['optimizer'])
         event('training_started', updates=len(batches), model_id=client.model_id,
-              batch_size=batch_size, previous_examples=offset, target_examples=len(order))
+              batch_size=batch_size, previous_examples=offset, target_examples=len(order), total_epochs=epochs)
         processed = offset
-        for step, indices in enumerate(batches, 1):
+        for new_step, item in enumerate(schedule, 1):
+            step, indices = previous_updates + new_step, item['indices']
             if (root / 'STOP').exists():
                 raise RuntimeError('Operator STOP: no further updates dispatched')
             batch = [rows[index] for index in indices]
@@ -121,7 +141,8 @@ def train(root, arm, plan, token, fleet_key):
             datums = [prepare_row(row, mint) for row in batch]
             step_root = out / 'steps' / f'{step:04d}'
             step_root.mkdir(parents=True, exist_ok=False)
-            write(step_root / 'intent.json', {'rows': indices,
+            write(step_root / 'intent.json', {'rows': indices, 'epoch': item['epoch'],
+                'global_optimizer_step': step,
                 'source_identities': [row['provenance']['input_identity'] for row in batch],
                 'actual_batch_size': len(batch),
                 'sequence_tokens': sum(len(row['input_ids']) for row in batch),
@@ -152,7 +173,7 @@ def train(root, arm, plan, token, fleet_key):
             event('update_completed', step=step, rows=indices, mean_nll=nll,
                   actual_batch_size=len(batch), completed_examples=processed,
                   target_examples=len(order), seconds=time.monotonic()-start)
-            if step % plan['training']['save_every'] == 0 or step == len(batches):
+            if step % plan['training']['save_every'] == 0 or new_step == len(batches):
                 name = f"{plan['experiment']}-{arm}-step{step:04d}"
                 state = client.save_state(name + '-state').result()
                 write(out / f'checkpoint-{step:04d}.json', serial(state))
@@ -160,13 +181,16 @@ def train(root, arm, plan, token, fleet_key):
         sampler = client.save_weights_for_sampler(name + '-sampler').result()
         assert processed == len(order)
         write(out / 'training-complete.json', {'optimizer_updates': len(batches),
-            'previous_optimizer_updates': offset, 'examples_trained_total': processed,
-            'batch_size': batch_size, 'previous_batch_size': 1 if resume else None,
+            'previous_optimizer_updates': previous_updates,
+            'total_optimizer_updates': previous_updates + len(batches),
+            'epochs_completed': epochs, 'unique_examples': len(rows), 'examples_trained_total': processed,
+            'batch_size': batch_size, 'previous_batch_size': resume.get('batch_size', 1) if resume else None,
             'state_path': state.path, 'sampler_path': sampler.path, 'arm': arm,
             'dataset_sha256': sha(dataset), 'completed_at': time.time()})
         event('training_completed', optimizer_updates=len(batches), completed_examples=processed, state_path=state.path)
-        deploy_and_evaluate(root, arm, plan, fleet_key, state.path)
-        event('evaluation_launched')
+        if plan.get('deploy_after_training', True):
+            deploy_and_evaluate(root, arm, plan, fleet_key, state.path)
+            event('evaluation_launched')
     except Exception as error:
         # Do not export request bodies, credentials, or unredacted server URLs.
         message = str(error).replace(token, '<redacted>').replace(fleet_key, '<redacted>')[:1000]

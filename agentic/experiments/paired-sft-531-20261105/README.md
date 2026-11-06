@@ -111,3 +111,24 @@ into this training curve, optimizer state, update count, or checkpoint selection
 
 Authoritative fresh root: training-batch16-fresh-v1 under the external parent;
 verify active_training_selection.json and new model IDs before claiming progress.
+
+## Total two epochs, user-authorized2026-11-06
+
+Selected continuation is training-epoch2-v1 under the same external parent.
+Each arm loads its own fresh-batch16 step34 full checkpoint WITH Adam state.
+Only epoch2 is submitted:531additional row exposures,34additional updates,
+1062cumulative exposures/68cumulative updates perarm. First-epoch data, checkpoints,
+models and raw results remain unchanged. This is total2epochs, not2extra epochs.
+
+Same dataset SHA, rank32, LR1e-4/constant, batch16/accumulation1, assistant-only
+shifted targets, no truncation and131072maximum length. Both arms share the same
+per-epoch shuffle: seed42for epoch1 and43for epoch2; each epoch retains its3-row
+tail. Step artifacts and checkpoints continue at0035–0068, without resetting Adam
+or replaying epoch1. Epoch-one order equivalence and the resume boundary are tested.
+
+Training-only phase: evaluate_base=false, deploy_after_training=false. The running
+Fleet epoch1 evaluation/deployments are not changed. Save final full state and
+sampler-compatible weights for later separate epoch2 deployment/evaluation.
+launch_epoch2.py accepts the previously approved SDK credential only via stdin,
+with terminal echo disabled and matching its original digest; no secret file or
+credential argv. Existing frozen training/evaluation controllers are not edited.
