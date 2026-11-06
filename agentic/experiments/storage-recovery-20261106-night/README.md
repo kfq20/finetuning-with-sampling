@@ -27,3 +27,20 @@ All original image IDs preserved, selected SWE controller PID/start unchanged.
 The finite worker completed; no daemon/model restart or paid replay occurred.
 The source root's ARCHIVED_API_JOURNALS_20261106.json points to the authoritative
 ledger. Full audit and large raw records remain outside Git.
+
+## Wave2,2026-11-07
+
+`archive_evaluations.py` handles only five explicit historical eval roots.
+Per-trial finished marker and file mtime must both be at least10min old, no open
+FD/symlink/multiple hardlinks. Failed/timeout partial streams can be archived
+without requiring a successful model decision; their original failures remain.
+The current SWE300 root is explicitly excluded. All historical result/trajectory
+SHAs are protected before/after; ledgers bind each journal to its result SHA.
+
+Selected source65b133a;3actualSDK tests pass. Finite worker completed25,349files,
+0errors,88.57GiB attributed recovery; free49.02→132.44GiB with concurrent writes.
+1,237result/trajectory hashes and415training-file hashes unchanged;12independent
+restoration samples pass, original images and SWE controller identity preserved.
+Audit: `/mnt/ecs-tb4/audits/storage-recovery-20261107-wave2`.
+Each source root has its own authoritative-archive notice. No model/Docker
+restart, paid replay, image deletion, task simplification or new automation.
