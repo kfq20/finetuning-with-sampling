@@ -44,3 +44,25 @@ All infrastructure errors remain unknown rather than valid model0.
 - Scoped abort identity and failed/unavailable abort reporting.
 - Native thinking/content separation and incomplete-thinking rejection.
 - Actual installed Harbor response/history compatibility (ECS preflight).
+
+## 2026-11-06 result
+
+Three first canaries (frozen2291c07) ended: polyglot-rust-c normal reward1,
+4 completed calls/16.46min; regex-log24 and password-recovery5 completed calls,
+both1800s AgentTimeout. Timeouts are unknown outcomes, not valid model0.
+No retries or full-batch dispatch followed.
+
+Followupfd34619 keeps inference journals outside agent sandbox uploads and
+records lossless text deltas; buffered SSE has an explicit scheduling checkpoint.
+Actual ECS26 regressions pass. A short real endpoint cancellation returned in
+0.000441s, with no late response97s later. These followups were not retroactively
+attributed to the original three paid canaries. The public abort route is404;
+operator SSH control of exactly three owned expired/probe IDs returned200 from
+internal8131 with abort_all=false. Automatic ECS remote abort remains unbound.
+
+Full metadata/evidence report (external data, not raw reasoning):
+`/Users/fancy/project/finetuning-with-sampling-data/tb21-cancellable-thinking-20261106/REVIEW.md`.
+Native cumulative SSE still creates quadratic network traffic; local incremental
+logging does not fix that transport. The password first call reported20.12s
+server e2e versus847.59s client time. Further timing isolation and incremental
+transport should precede a full evaluation rerun.
