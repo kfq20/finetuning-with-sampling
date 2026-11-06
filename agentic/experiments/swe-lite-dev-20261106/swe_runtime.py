@@ -26,6 +26,6 @@ class PreparedSWEEnvironment(AlibabaBenchmarkEnvironment):
                     '&& /opt/swe-runtime/bin/tmux -V', user='root', timeout_sec=60)
         if result.return_code != 0 or 'tmux ' not in result.stdout:
             raise RuntimeError('Offline tmux runtime did not start')
-        (self.trial_paths.trial_dir / 'offline-runtime.json').write_text(json.dumps({
+        (self.trial_paths.agent_dir.parent / 'offline-runtime.json').write_text(json.dumps({
             'archive_sha256': binding['archive_sha256'], 'tmux_version': result.stdout.strip(),
             'base_template_alias': self._template_name, 'network_install': False}))
