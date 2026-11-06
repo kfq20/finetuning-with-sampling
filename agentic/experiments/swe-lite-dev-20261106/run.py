@@ -41,6 +41,20 @@ def prepare(root):
     rows = json.loads((root / 'source/dev.json').read_text())
     tasks = selected(rows)
     assert len(rows) == 23 and len(tasks) == 6
+    materialize(root, tasks)
+    dump(root / 'plan.json', {'at': time.time(), 'dataset_revision':
+        json.loads((root / 'source/dataset-info.json').read_text())['sha'],
+        'parser_commit': json.loads((root / 'source/swebench-head.json').read_text())['sha'],
+        'source_sha256': sha(root / 'source/dev.json'),
+        'task_ids': [r['instance_id'] for r in tasks], 'arms': list(ARMS),
+        'selection': 'First two sorted instance IDs per predefined lightweight project',
+        'agent_timeout_sec': 1800, 'concurrency_per_arm': 1,
+        'generation': {'temperature': .6, 'thinking': False},
+        'checkpoint_selection': 'Frozen epoch1 step34; epoch2 not deployed',
+        'automatic_paid_retry': False, 'official_test_score': False})
+
+
+def materialize(root, tasks, dataset='SWE-bench_Lite/dev'):
     parser = (root / 'source/python.py').read_text()
     assert parser.count('from swebench.harness.constants import TestStatus') == 1
     # Official parser function bodies stay byte-identical; only standalone imports
@@ -62,7 +76,7 @@ def prepare(root):
             + row['problem_statement'] + '\n')
         (p / 'environment/Dockerfile').write_text('FROM ' + row['image'] + '\nWORKDIR /testbed\n')
         config = {'schema_version': '1.1', 'metadata': {
-            'category': 'software-engineering', 'dataset': 'SWE-bench_Lite/dev',
+            'category': 'software-engineering', 'dataset': dataset,
             'instance_id': row['instance_id']},
             'agent': {'timeout_sec': 1800}, 'verifier': {'timeout_sec': 600},
             'environment': {'docker_image': row['image'], 'build_timeout_sec': 1800,
@@ -82,16 +96,6 @@ def prepare(root):
         (p / 'solution/solve.sh').write_text('#!/bin/bash\nset -euo pipefail\n'
             'cd /testbed\ngit apply /solution/gold.patch\n')
         (p / 'solution/solve.sh').chmod(0o755)
-    dump(root / 'plan.json', {'at': time.time(), 'dataset_revision':
-        json.loads((root / 'source/dataset-info.json').read_text())['sha'],
-        'parser_commit': json.loads((root / 'source/swebench-head.json').read_text())['sha'],
-        'source_sha256': sha(root / 'source/dev.json'),
-        'task_ids': [r['instance_id'] for r in tasks], 'arms': list(ARMS),
-        'selection': 'First two sorted instance IDs per predefined lightweight project',
-        'agent_timeout_sec': 1800, 'concurrency_per_arm': 1,
-        'generation': {'temperature': .6, 'thinking': False},
-        'checkpoint_selection': 'Frozen epoch1 step34; epoch2 not deployed',
-        'automatic_paid_retry': False, 'official_test_score': False})
 
 
 def config(root, agent, tasks, job):

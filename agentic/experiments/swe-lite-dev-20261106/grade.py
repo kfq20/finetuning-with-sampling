@@ -12,13 +12,13 @@ def classify(status, required):
     return int(all(status[name] == 'PASSED' for name in required))
 
 
-def main(root, output):
+def main(root, output, timeout=540):
     import official_parsers
     record = json.loads((root / 'grading.json').read_text())
     output.mkdir(parents=True, exist_ok=True)
     result = subprocess.run(['bash', str(root / 'eval.sh')], cwd='/testbed',
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                            text=True, timeout=540)
+                            text=True, timeout=timeout)
     (output / 'test-output.txt').write_text(result.stdout)
     parser = getattr(official_parsers, record['log_parser'])
     status = parser(result.stdout, None)
@@ -33,4 +33,4 @@ def main(root, output):
 
 
 if __name__ == '__main__':
-    main(Path(sys.argv[1]), Path(sys.argv[2]))
+    main(Path(sys.argv[1]), Path(sys.argv[2]), int(sys.argv[3]) if len(sys.argv) > 3 else 540)
