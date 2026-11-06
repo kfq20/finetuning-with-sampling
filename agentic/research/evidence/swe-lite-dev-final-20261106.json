@@ -1,0 +1,101 @@
+{
+  "summary": {
+    "checked_at": "2026-11-06T22:59:37.147962+08:00",
+    "arms": {
+      "base": {
+        "original_cohort": 6,
+        "planned": 5,
+        "preflight_held": 1,
+        "ended": 5,
+        "valid": 5,
+        "resolved": 3,
+        "unknown": 0,
+        "medians_valid_only": {
+          "agent_sec": 565.843516,
+          "assistant_turns": 19,
+          "tool_calls": 39,
+          "peak_context": 16055,
+          "output_tokens": 4466
+        }
+      },
+      "method": {
+        "original_cohort": 6,
+        "planned": 5,
+        "preflight_held": 1,
+        "ended": 5,
+        "valid": 5,
+        "resolved": 5,
+        "unknown": 0,
+        "medians_valid_only": {
+          "agent_sec": 208.421754,
+          "assistant_turns": 14,
+          "tool_calls": 31,
+          "peak_context": 12467,
+          "output_tokens": 3920
+        }
+      },
+      "expert": {
+        "original_cohort": 6,
+        "planned": 5,
+        "preflight_held": 1,
+        "ended": 5,
+        "valid": 5,
+        "resolved": 3,
+        "unknown": 0,
+        "medians_valid_only": {
+          "agent_sec": 206.38622,
+          "assistant_turns": 16,
+          "tool_calls": 35,
+          "peak_context": 22195,
+          "output_tokens": 4756
+        }
+      }
+    }
+  },
+  "finished": {
+    "at": 1793976321.470661,
+    "results": {
+      "at": 1793976321.4706616,
+      "arms": {
+        "base": {
+          "original_cohort": 6,
+          "planned": 5,
+          "preflight_held": 1,
+          "ended": 5,
+          "valid": 5,
+          "resolved": 3,
+          "unknown": 0
+        },
+        "method": {
+          "original_cohort": 6,
+          "planned": 5,
+          "preflight_held": 1,
+          "ended": 5,
+          "valid": 5,
+          "resolved": 5,
+          "unknown": 0
+        },
+        "expert": {
+          "original_cohort": 6,
+          "planned": 5,
+          "preflight_held": 1,
+          "ended": 5,
+          "valid": 5,
+          "resolved": 3,
+          "unknown": 0
+        }
+      }
+    },
+    "exit_codes": {
+      "base": 0,
+      "method": 0,
+      "expert": 0
+    }
+  },
+  "dispatch": {
+    "at": 1793973140.8667474,
+    "planned": 15,
+    "models_sha256": "e127d0cb4f4f266c2222aa894e18e1194e4c82a870f0eb0fb79a59b00947711f",
+    "admission_sha256": "1631c8bae155ca4c6073753135b16e7762dc4cd82ed402a0ba750d569e3d3c9b"
+  }
+}
