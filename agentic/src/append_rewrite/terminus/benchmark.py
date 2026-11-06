@@ -48,7 +48,9 @@ class QwenBenchmarkAgent(Terminus2):
                 self._native_backend=CancellableQwenLLM(
                     self.options.native_config,
                     PinnedTokenizer(self.options.tokenizer_path, enable_thinking=thinking),
-                    Path(self.logs_dir)/'native-generation', thinking=thinking)
+                    # Controller evidence is not solver/verifier input. Harbor
+                    # uploads logs_dir into the sandbox before verification.
+                    Path(self.logs_dir).parent/'native-generation', thinking=thinking)
             else:
                 raise ValueError('Unknown benchmark inference profile')
         return self._native_backend

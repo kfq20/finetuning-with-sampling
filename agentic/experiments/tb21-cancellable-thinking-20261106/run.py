@@ -84,7 +84,9 @@ def collect(root):
     rows = []
     for path in sorted((root / 'jobs').glob('*/*/result.json')):
         value = json.loads(path.read_text())
-        gen = path.parent / 'agent/native-generation'
+        gen = path.parent / 'native-generation'
+        if not gen.exists():
+            gen = path.parent / 'agent/native-generation'
         decisions = [json.loads(p.read_text()) for p in sorted(gen.glob('turn-*/decision.json'))]
         cleanup = [json.loads(p.read_text()) for p in gen.glob('turn-*/cleanup.json')]
         usage = [d['usage'] for d in decisions]

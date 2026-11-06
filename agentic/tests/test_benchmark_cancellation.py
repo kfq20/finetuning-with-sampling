@@ -225,3 +225,29 @@ class BufferedCancellation(unittest.IsolatedAsyncioTestCase):
                     await task
             self.assertTrue(response.closed)
             self.assertFalse((Path(folder) / 'turn/response.json').exists())
+
+class IncrementalEvidence(unittest.TestCase):
+    def test_delta_journal_reconstructs_all_original_native_events(self):
+        from append_rewrite.terminus.native_stream import _parser
+        values = [{'text': text, 'meta_info': {'id': 'fixture', 'prompt_tokens': 3,
+            'finish_reason': {'type': 'stop'} if i == 2 else None}}
+            for i, text in enumerate(['a', 'abc', 'abcdef'])]
+        with tempfile.TemporaryDirectory() as folder:
+            parser = _parser(folder, 3, delta_capture=True)
+            next(parser)
+            for value in values:
+                parser.send('data: ' + json.dumps(value))
+                try:
+                    parser.send('')
+                except StopIteration as stop:
+                    result = stop.value
+            rows = [json.loads(line) for line in
+                    (Path(folder) / 'wire-deltas.jsonl').read_text().splitlines()]
+            text = ''
+            for expected, row in zip(values, rows):
+                text += row.pop('text_delta')
+                self.assertEqual(row.pop('capture_encoding'), 'cumulative-text-delta.v1')
+                row['text'] = text
+                self.assertEqual(row, expected)
+            self.assertEqual(result, values[-1])
+            self.assertFalse((Path(folder) / 'wire.jsonl').exists())

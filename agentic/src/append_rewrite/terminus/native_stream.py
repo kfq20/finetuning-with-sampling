@@ -18,14 +18,15 @@ from .protocol import digest
 from .http_evidence import failure, headers
 
 
-def _parser(journal, input_count, *, scoring=False):
+def _parser(journal, input_count, *, scoring=False, delta_capture=False):
     text, metadata, request_id = "", {}, None
     started = time.monotonic()
     first = None
     events = 0
     data = []
     journal = Path(journal)
-    with (journal / "wire.jsonl").open("x") as wire:
+    filename = 'wire-deltas.jsonl' if delta_capture else 'wire.jsonl'
+    with (journal / filename).open("x") as wire:
         while True:
             line = yield
             if first is None:
@@ -48,7 +49,12 @@ def _parser(journal, input_count, *, scoring=False):
             if raw == "[DONE]":
                 raise ValueError("Native stream ended before normal stop")
             value = json.loads(raw)
-            wire.write(json.dumps(value, ensure_ascii=False) + "\n")
+            captured = value
+            if delta_capture and isinstance(value.get('text'), str) and value['text'].startswith(text):
+                captured = {k: v for k, v in value.items() if k != 'text'}
+                captured['text_delta'] = value['text'][len(text):]
+                captured['capture_encoding'] = 'cumulative-text-delta.v1'
+            wire.write(json.dumps(captured, ensure_ascii=False) + "\n")
             wire.flush()
             events += 1
             if "error" in value or value.get("type") == "error":
@@ -133,7 +139,7 @@ class NativeStreamClient(NativeClient):
             'request_id': rid, 'body_sha256': digest(body), 'automatic_retry': False,
             'transport': 'async-httpx-sse', 'effective_max_new_tokens': maximum,
         }))
-        parser = _parser(journal, len(ids))
+        parser = _parser(journal, len(ids), delta_capture=True)
         next(parser)
         started = time.monotonic()
         try:
