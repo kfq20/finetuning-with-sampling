@@ -107,7 +107,7 @@ E1–E3的完整成功episode采用全部必需检查通过的二元准入；par
 
 来源：[官方Lite介绍](https://www.swebench.com/lite.html)与[SWE-bench_Lite](https://huggingface.co/datasets/SWE-bench/SWE-bench_Lite)。Lite有300测试题、23开发题，单题不保证更短。本次选择官方dev中的Marshmallow/Pydicom/Astroid各按instance_id排序前2题，共6题，选择规则在模型调用前冻结，只依据项目依赖范围及标识，不看模型结果或gold patch长度。其余dev17题尚未纳入；本次是开发小试，不是官方300题成绩。
 
-三组各Pass@1，共18次；固定当前已部署的epoch1 step34方法/专家适配器及base，不等待也不覆盖epoch2。使用相同Terminus-2、temperature0.6、nonthinking、262144上下文、每题1800秒agent时限、无max_turns、无自动付费重试。每组1并发，总并发3，轮换任务顺序；共享服务负载与不同Fleet集群是延迟比较的混杂项，记录实际部署身份。原TB2.1与训练进程不变。若触及上下文上限，保留异常，不冒充模型0，也不临时修改某组协议。
+三组各Pass@1，共18次；固定当前已部署的epoch1 step34方法/专家适配器及base，不等待也不覆盖epoch2。使用相同Terminus-2、temperature0.6、nonthinking、262144上下文、每题1800秒agent时限、无max_turns、无自动付费重试。每组1并发，总并发3，相同任务顺序；共享服务负载与不同Fleet集群是延迟比较的混杂项，记录实际部署身份。原TB2.1与训练进程不变。若触及上下文上限，保留异常，不冒充模型0，也不临时修改某组协议。
 
 复用官方digest冻结镜像、官方eval_script、FAIL_TO_PASS/PASS_TO_PASS和官方日志解析。每题先验证原始提交不通过、gold patch全检查通过，且grader/gold不暴露solver；不通过门禁的题为infra hold，不用替换容易题凑6题。不启动模型来诊断环境。评测包含真实查看文件、改代码、执行工具及最终测试，不做静态补丁生成替代。
 
