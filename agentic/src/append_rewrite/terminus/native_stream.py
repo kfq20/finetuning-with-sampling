@@ -149,6 +149,9 @@ class NativeStreamClient(NativeClient):
                     }))
                     response.raise_for_status()
                     async for line in response.aiter_lines():
+                        # Buffered async iterators can return without yielding.
+                        # Keep other trials and deadline cancellation runnable.
+                        await asyncio.sleep(0)
                         try:
                             parser.send(line)
                         except StopIteration as stop:

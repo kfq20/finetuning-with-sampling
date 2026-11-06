@@ -175,3 +175,53 @@ class BenchmarkHistory(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(rendered[0][1]['reasoning_content'], 'previous private reasoning')
             self.assertEqual(mocked.call_count, 1)
             self.assertEqual(mocked.call_args.kwargs['sampling_params'], THINKING_SAMPLING)
+
+class BufferedCancellation(unittest.IsolatedAsyncioTestCase):
+    async def test_already_buffered_sse_yields_to_deadline_cancellation(self):
+        from unittest.mock import patch
+        import httpx
+
+        class Response:
+            status_code = 200
+            closed = False
+            async def __aenter__(self):
+                return self
+            async def __aexit__(self, *args):
+                self.closed = True
+            def raise_for_status(self):
+                pass
+            async def aiter_lines(self):
+                for i in range(100):
+                    value = {'text': 'a' * (i + 1), 'meta_info': {
+                        'id': 'fixture', 'prompt_tokens': 3, 'finish_reason': None}}
+                    yield 'data: ' + json.dumps(value)
+                    yield ''
+                raise AssertionError('Buffered stream monopolized the event loop')
+
+        response = Response()
+        class Client:
+            def __init__(self, **kwargs):
+                pass
+            async def __aenter__(self):
+                return self
+            async def __aexit__(self, *args):
+                pass
+            def stream(self, *args, **kwargs):
+                return response
+
+        with tempfile.TemporaryDirectory() as folder:
+            client = object.__new__(NativeStreamClient)
+            client.config = {'model_id': 'fixture', 'context_limit': 128,
+                             'api_key': 'local', 'native_endpoint': True}
+            client.endpoint = 'http://127.0.0.1/generate'
+            tokenizer = SimpleNamespace(encode=lambda *a, **k: [1, 2, 3])
+            with patch.object(httpx, 'AsyncClient', Client):
+                task = asyncio.create_task(client.generate_async('prompt', tokenizer,
+                    journal=Path(folder) / 'turn', sampling_params=THINKING_SAMPLING))
+                await asyncio.sleep(0)
+                self.assertFalse(task.done())
+                task.cancel()
+                with self.assertRaises(asyncio.CancelledError):
+                    await task
+            self.assertTrue(response.closed)
+            self.assertFalse((Path(folder) / 'turn/response.json').exists())
