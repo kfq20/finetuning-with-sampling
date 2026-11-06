@@ -11,12 +11,14 @@ ROOT = Path('/mnt/ecs-tb4/evaluations/qwen38-tb21-base-20261104')
 AUDIT = Path('/mnt/ecs-tb4/audits/storage-recovery-20261105')
 
 
-def main(root=ROOT, audit=AUDIT, *, closed_turns=False):
+def main(root=ROOT, audit=AUDIT, *, closed_turns=False, max_freed_bytes=None):
     AUDIT, ROOT = Path(audit), Path(root)
     AUDIT.mkdir(parents=True, exist_ok=True)
     journal = AUDIT / 'compression.jsonl'
     jobs = 'jobs' if closed_turns else 'model-jobs'
     files = list((ROOT / jobs).glob('*/*/agent/native-generation/turn-*/wire.jsonl'))
+    if max_freed_bytes is not None:
+        files.sort(key=lambda p: p.stat().st_size, reverse=True)
     opened = set()
     for proc in Path('/proc').glob('[0-9]*'):
         try:
@@ -69,6 +71,8 @@ def main(root=ROOT, audit=AUDIT, *, closed_turns=False):
             os.fsync(log.fileno())
         path.unlink()
         freed += original.st_blocks * 512 - target.stat().st_blocks * 512
+        if max_freed_bytes is not None and freed >= max_freed_bytes:
+            break
     (AUDIT / 'compression-summary.json').write_text(json.dumps({'finished_at': time.time(), 'net_freed_bytes': freed,
         'original_result_files_unchanged': True, 'scope': str(ROOT), 'closed_turns': closed_turns}) + '\n')
     print('freed_bytes', freed, flush=True)
