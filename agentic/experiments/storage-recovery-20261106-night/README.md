@@ -17,3 +17,13 @@ Audit root: `/mnt/ecs-tb4/audits/storage-recovery-20261106-night`.
 `plan.json`, `ledger.jsonl`, `progress.json`, pre/post identity and disk snapshots
 are external artifacts. Attribute recovery by targeted file allocated blocks,
 not the full disk delta, because independent experiments write concurrently.
+
+## Completed verification
+
+2026-11-07 00:01CST:123,677 closed journals archived,0errors,45.18GiB allocated
+space recovered; available5.18→50.03GiB under concurrent writes.415training-file
+SHAs and all terminal contexts unchanged;12independent restoration samples pass.
+All original image IDs preserved, selected SWE controller PID/start unchanged.
+The finite worker completed; no daemon/model restart or paid replay occurred.
+The source root's ARCHIVED_API_JOURNALS_20261106.json points to the authoritative
+ledger. Full audit and large raw records remain outside Git.

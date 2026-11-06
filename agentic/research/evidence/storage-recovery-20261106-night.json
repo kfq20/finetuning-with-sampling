@@ -1,0 +1,58 @@
+{
+  "checked_at": "2026-11-07T00:01:57.182530+08:00",
+  "before_free_bytes": 5560733696,
+  "after_free_bytes": 53723607040,
+  "attributed_net_freed_bytes": 48509181952,
+  "archived_files": 123677,
+  "archive_errors": 0,
+  "all_terminal_contexts_unchanged": true,
+  "training_files_sha_verified": 415,
+  "full_decompression_checks_in_worker": 123677,
+  "independent_restore_samples": 12,
+  "prior_images_preserved": true,
+  "docker_images_removed_by_operation": 0,
+  "docker_or_model_restart_actions": 0,
+  "swe_primary_same_pid_and_start": true,
+  "swe_progress": {
+    "at": 1793980916.5635688,
+    "split": "test",
+    "cohort": 300,
+    "pending_gate_jobs": 285,
+    "pending_model_jobs": 14,
+    "arms": {
+      "base": {
+        "planned_max": 300,
+        "ended": 7,
+        "valid": 6,
+        "resolved": 3,
+        "errors_unknown": 1,
+        "claimed": 11,
+        "pre_model_held": 0,
+        "claimed_without_result_holds": 0
+      },
+      "method": {
+        "planned_max": 300,
+        "ended": 12,
+        "valid": 12,
+        "resolved": 6,
+        "errors_unknown": 0,
+        "claimed": 14,
+        "pre_model_held": 0,
+        "claimed_without_result_holds": 0
+      },
+      "expert": {
+        "planned_max": 300,
+        "ended": 9,
+        "valid": 8,
+        "resolved": 4,
+        "errors_unknown": 1,
+        "claimed": 13,
+        "pre_model_held": 0,
+        "claimed_without_result_holds": 0
+      }
+    },
+    "admitted": 14,
+    "preflight_held": 1
+  },
+  "ledger_sha256": "8afc0e42e2f6b70bfcb2760abffcd33182b0555baec694127c346023c8c431c2"
+}
