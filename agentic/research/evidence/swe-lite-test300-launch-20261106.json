@@ -1,0 +1,83 @@
+{
+  "checked_at": "2026-11-06T23:40:03.928047+08:00",
+  "root": "/mnt/ecs-tb4/evaluations/qwen38-swe-lite-test300-20261106-a1",
+  "selection": {
+    "root": "/mnt/ecs-tb4/evaluations/qwen38-swe-lite-test300-20261106-a1",
+    "split": "test300",
+    "launch": "/mnt/ecs-tb4/evaluations/qwen38-swe-lite-test300-20261106-a1/launch.json",
+    "source_manifest": "/mnt/ecs-tb4/evaluations/qwen38-swe-lite-test300-20261106-a1/source-files.json",
+    "plan_sha256": "ecc70604ff00d4f3b24aa33d0bbfe234e7b46d8a70a4753f0716fde4a52a0440",
+    "no_paid_retries": true,
+    "supporting_workers": {
+      "closed_journal_archive": "/mnt/ecs-tb4/evaluations/qwen38-swe-lite-test300-20261106-a1/support/reporting-ac1eefc/launch.json"
+    }
+  },
+  "progress": {
+    "at": 1793979596.4011927,
+    "split": "test",
+    "cohort": 300,
+    "pending_gate_jobs": 291,
+    "pending_model_jobs": 19,
+    "arms": {
+      "base": {
+        "planned_max": 300,
+        "ended": 2,
+        "valid": 2,
+        "resolved": 1,
+        "errors_unknown": 0,
+        "claimed": 6,
+        "pre_model_held": 0,
+        "claimed_without_result_holds": 0
+      },
+      "method": {
+        "planned_max": 300,
+        "ended": 3,
+        "valid": 3,
+        "resolved": 2,
+        "errors_unknown": 0,
+        "claimed": 7,
+        "pre_model_held": 0,
+        "claimed_without_result_holds": 0
+      },
+      "expert": {
+        "planned_max": 300,
+        "ended": 3,
+        "valid": 3,
+        "resolved": 1,
+        "errors_unknown": 0,
+        "claimed": 7,
+        "pre_model_held": 0,
+        "claimed_without_result_holds": 0
+      }
+    },
+    "admitted": 9,
+    "preflight_held": 0
+  },
+  "launch": {
+    "pid": 1535653,
+    "start_ticks": "634824403",
+    "at": 1793978642.8276632,
+    "entry_commit": "183287a",
+    "test_count": 8
+  },
+  "model_bindings": {
+    "base": {
+      "model_id": "fq-qwen38-base531-sft-20261105-a1",
+      "source": "base",
+      "checkpoint": null,
+      "cluster_id": "h20-qwen38-tp4"
+    },
+    "method": {
+      "model_id": "fq-qwen38-method531-sft-20261105-a1",
+      "source": "lora",
+      "checkpoint": "tinker://01a1ac2f-6e65-71f8-82ce-e3efc27de21b_0/weights/qwen38-paired531-batch16-fresh-20261105-a1-method-step0034-state",
+      "cluster_id": "h20-qwen38-2p6d-1021"
+    },
+    "expert": {
+      "model_id": "fq-qwen38-expert531-sft-20261105-a1",
+      "source": "lora",
+      "checkpoint": "tinker://01a1ac2f-7007-77bf-bef3-945ac3dec98e_0/weights/qwen38-paired531-batch16-fresh-20261105-a1-expert-step0034-state",
+      "cluster_id": "h20-qwen38-tp4"
+    }
+  }
+}

@@ -38,3 +38,23 @@ private configs and large runtime assets stay outside Git. The branch
 study/swe-lite-full-20261106 contains maintained orchestration. A dev-only mode
 can explicitly import the15 prior paid results and exclude those5 tasks from
 new requests; it is not the selected test300 protocol.
+
+## Selected source and artifacts
+
+The active controller is frozen183287a with original inference libraryecb151b.
+Later branch commits add read-only reporting and separate closed-journal archive
+support; they do not hotpatch the running controller. Actual SDK8protocol tests
+passed before launch, plus2archive tests before starting that supporting worker.
+
+The controller runs on ECS independently of SSH/laptop lifetime. Read
+`progress.json`/`finished.json`, and run maintained `report.py ROOT` to export
+`reports/summary.json` and `per-task.csv`; it generates no model requests.
+The copied reporting entry is in `support/reporting-ac1eefc/report.py`.
+
+Finished request/SSE journals may be authoritative `.gz` archives. Their ledger
+in `support/closed-journal-archives/ledger.jsonl` binds exact original SHA/length,
+archive SHA and terminal result SHA after full decompression verification.
+Result/trajectory/decision/verifier files stay unchanged. Do not delete archives
+as disposable cache; decompress if a later audit needs original request bytes.
+The worker never touches an active episode or another experiment's files, and
+exits after this controller ends. No scheduled automation was created.
