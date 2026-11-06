@@ -13,7 +13,9 @@ three total; existing TB2.1/epoch2 training untouched. Unequal backend placement
 and concurrent serving load must be recorded as timing confounders.
 
 Before model dispatch, pin dataset/source/parser/image digests and run actual
-Harbor/Ali NOP0 and gold1 controls for all six. Official eval_script and required
+Harbor/Ali NOP0 and gold1 controls for all six. Admit each passing task
+independently; preserve failed controls as environment holds, without replacing
+tasks or counting them as model0. Official eval_script and required
 FAIL_TO_PASS/PASS_TO_PASS tests determine binary success. Official parser bodies
 are unchanged; standalone imports replace only package type hints/status enum.
 Missing expected tests or execution errors are unknown, never valid model0.
@@ -32,3 +34,18 @@ per-task trajectory metrics and paired speed analysis follow completed trials.
 Sources: https://www.swebench.com/lite.html
 https://huggingface.co/datasets/SWE-bench/SWE-bench_Lite
 https://github.com/SWE-bench/SWE-bench
+
+## Initial environment finding
+
+Pydicom-1139 official gold fixes all three F2P tests, but two required P2P tests
+fail because pytest8 does not invoke the legacy nose-style `setup` hook (missing
+`self.tag`). This is an environment control hold, not a model failure. Original
+image, gold, test logs and score are preserved. No requirement is removed.
+
+Harbor truncates long trial directory names; admissions and analysis use the
+canonical `result.task_name`. Source-frozen finite followup reuses original
+control receipts, waits for the original zero-model preparer to finish and holds
+an exclusive lock before model dispatch. No model or control replay for naming.
+Selected orchestration source f91e522, original shared inference library ecb151b;
+`active_runtime_selection.json` binds both. Original preparer/failed admission
+and retired idle handoff receipts remain under the same run root.
