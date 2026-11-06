@@ -1,0 +1,53 @@
+{
+  "checked_at": "2026-11-06T21:57:11.099555+08:00",
+  "arms": {
+    "base": {
+      "original_cohort": 6,
+      "planned": 5,
+      "preflight_held": 1,
+      "ended": 0,
+      "valid": 0,
+      "resolved": 0,
+      "unknown": 0,
+      "medians_valid_only": {
+        "agent_sec": null,
+        "assistant_turns": null,
+        "tool_calls": null,
+        "peak_context": null,
+        "output_tokens": null
+      }
+    },
+    "method": {
+      "original_cohort": 6,
+      "planned": 5,
+      "preflight_held": 1,
+      "ended": 1,
+      "valid": 1,
+      "resolved": 1,
+      "unknown": 0,
+      "medians_valid_only": {
+        "agent_sec": 208.421754,
+        "assistant_turns": 14,
+        "tool_calls": 31,
+        "peak_context": 15223,
+        "output_tokens": 4053
+      }
+    },
+    "expert": {
+      "original_cohort": 6,
+      "planned": 5,
+      "preflight_held": 1,
+      "ended": 1,
+      "valid": 1,
+      "resolved": 1,
+      "unknown": 0,
+      "medians_valid_only": {
+        "agent_sec": 245.787947,
+        "assistant_turns": 19,
+        "tool_calls": 50,
+        "peak_context": 24581,
+        "output_tokens": 5052
+      }
+    }
+  }
+}
