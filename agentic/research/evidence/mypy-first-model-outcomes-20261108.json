@@ -1,0 +1,90 @@
+{
+  "at": 1794085315.0632548,
+  "first_mypy": {
+    "unit": "swegym-python__mypy-10432",
+    "receipt_sha256": "fcf21a830906da8bb5a3295810298e4e61ae34c08b59602600d4b59150daf486",
+    "classification": "valid_completed_model_zero",
+    "normal_completed": true,
+    "original_reward": 0,
+    "fresh_reward": 0,
+    "required_failed_tests": [
+      "mypy/test/testcheck.py::TypeCheckSuite::testIncrementalNestedTypeAlias"
+    ],
+    "negative_canary_rejected": true,
+    "capture_bytes": 4551,
+    "capture_sha256": "e5c815c5e15f6d4733e7703ee70300fcd9645e1c3804fdce7227b6b5bac39ddb",
+    "turns": 54,
+    "elapsed_sec": 827.3948206501082,
+    "student_launched": false,
+    "automatic_replay": false
+  },
+  "gold_control": {
+    "passed": true,
+    "initial_reward": 0.0,
+    "initial_failed_tests": 2,
+    "gold_reward": 1.0,
+    "gold_passed_tests": 1,
+    "gold_test_exit": 0,
+    "negative_canary": true,
+    "fresh_reward": 1.0,
+    "fresh_passed_tests": 1,
+    "restored_source_baseline_clean": true,
+    "model_requests": 0
+  },
+  "other_admitted_mypy_teachers": [
+    {
+      "unit": "swegym-python__mypy-10032",
+      "receipt_sha256": "eb298c097d352b1cb58b2e3e3c5ad929447edf3858f7cee4c97a1f83c63561ae",
+      "teacher_turns": 76,
+      "original_reward": 1,
+      "fresh_reward": 1,
+      "phase": "student_8_candidates"
+    },
+    {
+      "unit": "swegym-python__mypy-10415",
+      "receipt_sha256": "9d3dd8d1a41a2221eb26c69d834717ed25c485d0df0c4f6f758a19c2fd9d7005",
+      "teacher_turns": 51,
+      "original_reward": 1,
+      "fresh_reward": 1,
+      "phase": "student_8_candidates"
+    },
+    {
+      "unit": "swegym-python__mypy-10424",
+      "receipt_sha256": "b34b9dfcd22b0f189612f34ff2951a5a9c14f1e51333f0e1cab53d53a814c43b",
+      "teacher_turns": 40,
+      "original_reward": 1,
+      "fresh_reward": 1,
+      "phase": "student_8_candidates"
+    },
+    {
+      "unit": "swegym-python__mypy-10478",
+      "receipt_sha256": "8798ef57fb941bc1ab3eea10541c07f16ee8463ee21045becb687b98cbf452b0",
+      "teacher_turns": 42,
+      "original_reward": 1,
+      "fresh_reward": 1,
+      "phase": "student_8_candidates"
+    },
+    {
+      "unit": "swegym-python__mypy-10508",
+      "receipt_sha256": "d557215e7700d034f4c79b822296e16872121511a7950fa7ab7878aa4b4a42e8",
+      "teacher_turns": 53,
+      "original_reward": 1,
+      "fresh_reward": 1,
+      "phase": "student_8_candidates"
+    },
+    {
+      "unit": "swegym-python__mypy-10775",
+      "receipt_sha256": "e0ee3777ff1491b3d421b60709d60d9c280ab29ef98adebac880816f5bc1447e",
+      "teacher_turns": 40,
+      "original_reward": 1,
+      "fresh_reward": 1,
+      "phase": "student_8_candidates"
+    }
+  ],
+  "new_model_requests_by_review": 0,
+  "original_receipt_unchanged": "fcf21a830906da8bb5a3295810298e4e61ae34c08b59602600d4b59150daf486",
+  "live_counts_at_audit": {
+    "cli-gym": 604,
+    "swe-gym": 44
+  }
+}
