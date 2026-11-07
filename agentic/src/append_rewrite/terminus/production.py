@@ -65,6 +65,10 @@ def restore(spec, args, owner, *, template_id=None, install_runtime=True):
     if spec.get("environment_backend") == "docker":
         from .docker_world import DockerWorld
 
+        if spec.get('capture_format') == 'git-patch':
+            from .source_patch import ensure_image
+            ensure_image(spec)
+
         sb = DockerWorld(
             template_id or spec["template_id"],
             owner,
@@ -144,6 +148,16 @@ def grade(sb, task):
 
 
 def fresh_grade(spec, args, archive, owner):
+    if spec.get('capture_format') == 'git-patch':
+        from .docker_world import DockerWorld
+        from .source_patch import apply_patch, ensure_image
+        ensure_image(spec)
+        sb = DockerWorld(spec['template_id'], owner)
+        try:
+            apply_patch(sb, archive)
+            return grade(sb, Path(spec['task_path']))
+        finally:
+            sb.kill()
     if spec.get("environment_backend") == "docker":
         from .docker_world import snapshot_world
 
@@ -232,6 +246,14 @@ def controls(spec, args, out):
 
         sb = DockerWorld(spec["gold_template_id"], "cligym-gold-control")
         try:
+            if spec.get('legal_control_script'):
+                script = Path(spec['legal_control_script'])
+                if not script.resolve().is_relative_to(Path(spec['task_path']).resolve()):
+                    raise ValueError('Legal control outside frozen task')
+                sb.write('/solution/solve.sh', script.read_bytes())
+                q = sb.run('bash /solution/solve.sh', cwd=spec['cwd'], timeout=600)
+                if q.exit_code:
+                    raise RuntimeError('LegalControlRecipeFailed')
             legal = grade(sb, Path(spec["task_path"]))
         finally:
             sb.kill()
@@ -371,11 +393,16 @@ async def episode(spec, args, out, role, teacher=None):
         ):
             raise RuntimeError("NativeCompletionNotConfirmed")
         submission = out / (
+            'submission.patch' if spec.get('capture_format') == 'git-patch' else
             "submission-image.json"
             if spec.get("environment_backend") == "docker"
             else "submission.tgz"
         )
-        captured = capture(sb, spec["artifacts"], submission)
+        if spec.get('capture_format') == 'git-patch':
+            from .source_patch import capture_patch
+            captured = capture_patch(sb, submission)
+        else:
+            captured = capture(sb, spec["artifacts"], submission)
         sb.kill()
         sb = None
         # No agent process ever sees private graders; both scores use new worlds.
@@ -445,7 +472,11 @@ async def episode(spec, args, out, role, teacher=None):
         )
         if sb:
             try:
-                dump(
+                if spec.get('capture_format') == 'git-patch':
+                    from .source_patch import capture_patch
+                    dump(out / 'held-state.json', capture_patch(sb, out / 'held-state.patch'))
+                else:
+                    dump(
                     out / "held-state.json",
                     capture(
                         sb,
@@ -457,7 +488,7 @@ async def episode(spec, args, out, role, teacher=None):
                             else "held-state.tgz"
                         ),
                     ),
-                )
+                    )
             except Exception as e:
                 dump(out / "capture-error.json", {"error_type": type(e).__name__})
         raise

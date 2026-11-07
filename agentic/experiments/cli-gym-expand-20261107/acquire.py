@@ -96,7 +96,8 @@ def main(root):
 
     # Preparation is unpaid. The canary source row is never rebuilt/replayed.
     seed = read(plan)['units'] if plan.exists() else []
-    prepared_ids = {read(Path(x['spec_path']))['source']['row_index'] for x in seed}
+    prepared_ids = {read(Path(x['spec_path']))['source']['row_index'] for x in seed
+                    if read(Path(x['spec_path']))['source']['kind'] == 'cli-gym'}
     indices = sorted(eligible - {1517} - prepared_ids)
     prep_root = root / 'repaired-acquisition-mirror'
     if handoff.get('retained_preparation_launch'):
@@ -143,16 +144,36 @@ def main(root):
             candidates += read(prep_root / 'plan.json')['units']
         registry_path = root / 'environment-repair-plans.json'
         registry = read(registry_path) if registry_path.exists() else {'open': False, 'plans': []}
+        external = {}
         for extra in registry['plans']:
             path = Path(extra['plan'])
             assert path.resolve().is_relative_to(root.resolve())
             if path.exists():
-                candidates += read(path)['units']
+                added = read(path)['units']
+                if extra.get('source_manifest'):
+                    manifest = Path(extra['source_manifest'])
+                    assert manifest.resolve().is_relative_to(root.resolve())
+                    assert hashlib.sha256(manifest.read_bytes()).hexdigest() == extra['source_manifest_sha256']
+                    scope = read(manifest)
+                    for item in added:
+                        external[item['unit_id']] = scope
+                candidates += added
         for item in candidates:
             if item['unit_id'] in items:
                 assert items[item['unit_id']] == item
                 continue
             spec = read(Path(item['spec_path']))
+            if item['unit_id'] in external:
+                scope = external[item['unit_id']]
+                src = spec['source']
+                assert src['kind'] == 'swe-gym' and src['split'] == 'train'
+                assert src['dataset_revision'] == scope['revision']
+                assert scope['tasks'][src['task_id']] == src['row_sha256']
+                receipt = Path(item['spec_path']).parent / 'controls/receipt.json'
+                controls = read(receipt)
+                assert controls['passed'] and controls['initial']['reward'] == 0 and controls['legal']['reward'] == 1
+                items[item['unit_id']] = item
+                continue
             i = spec['source']['row_index']
             extra_scope = i in registry.get('extra_eligible_rows', [])
             assert (i in eligible or extra_scope) and i not in holdout and spec['solver_network'] == 'none'
