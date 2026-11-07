@@ -41,13 +41,17 @@ def verify(receipt):
     return actual
 
 
-def main(root):
-    x = root / 'support/mint-im-switch-20261107'
-    assert read(x / 'probe-result.json')['passed']
+def main(root, support_dir=None):
+    x = support_dir or root / 'support/mint-im-switch-20261107'
+    assert x.resolve().is_relative_to((root / 'support').resolve())
+    request = read(x / 'handoff-request.json') if (x / 'handoff-request.json').exists() else {}
+    runtime = Path(request.get('runtime', x / 'runtime'))
+    binding = Path(request.get('runtime_binding', x / 'runtime-binding.json'))
+    assert read(Path(request.get('probe_result', x / 'probe-result.json')))['passed']
     assert not (root / 'production/STOP_PROVIDER').exists()
     assert not (x / 'handoff.json').exists(), 'One-shot operator; inspect prior evidence'
-    for rel, digest in read(x / 'runtime-binding.json')['files'].items():
-        assert hashlib.sha256((x / 'runtime' / rel).read_bytes()).hexdigest() == digest
+    for rel, digest in read(binding)['files'].items():
+        assert hashlib.sha256((runtime / rel).read_bytes()).hexdigest() == digest
     coordinator = read(root / 'coordinator-launch.json')
     producer = read(root / 'acquisition-env-repairs-launch.json')
     owners = [producer, coordinator]
@@ -78,6 +82,21 @@ def main(root):
                 workers.append({**actual, 'unit_id': output.name, 'output': str(output)})
             except FileNotFoundError:
                 continue
+        # A second handoff must retain still-live workers adopted by the first
+        # coordinator too; their PPID is1, not the current coordinator PID.
+        old_argv = coordinator['argv']
+        if '--adopt-workers' in old_argv:
+            previous = read(Path(old_argv[old_argv.index('--adopt-workers') + 1]))['workers']
+            for worker in previous:
+                try:
+                    actual = identity(worker['pid'])
+                except FileNotFoundError:
+                    continue
+                if actual['start_ticks'] != worker['start_ticks'] or actual['state'] == 'Z':
+                    continue
+                assert actual['cmdline_sha256'] == worker['cmdline_sha256']
+                if worker['pid'] not in {w['pid'] for w in workers}:
+                    workers.append(worker)
         assert len(workers) <= 16
         write(x / 'adopt-workers.json', {'workers': workers})
         write(x / 'before.json', {'coordinator': coordinator, 'producer': producer,
@@ -111,12 +130,18 @@ def main(root):
                                      stdout=log, stderr=log, start_new_session=True)
             return {**identity(p.pid), 'argv': argv, 'started_at': time.time()}
         argv = coordinator['argv'].copy()
-        argv[argv.index('--teacher-config') + 1] = str(x / 'teacher-private.json')
-        argv += ['--adopt-workers', str(x / 'adopt-workers.json')]
-        env = dict(envs[1], PYTHONPATH=str(x / 'runtime/agentic/src'), PYTHONDONTWRITEBYTECODE='1')
+        argv[argv.index('--teacher-config') + 1] = str(request.get('teacher_config', x / 'teacher-private.json'))
+        if 'fleet_config' in request:
+            argv[argv.index('--fleet-config') + 1] = request['fleet_config']
+        if '--adopt-workers' in argv:
+            argv[argv.index('--adopt-workers') + 1] = str(x / 'adopt-workers.json')
+        else:
+            argv += ['--adopt-workers', str(x / 'adopt-workers.json')]
+        env = dict(envs[1], PYTHONPATH=str(runtime / 'agentic/src'), PYTHONDONTWRITEBYTECODE='1')
         new = launch(argv, env, 'coordinator.log')
-        new['source_root'] = str(x / 'runtime')
+        new['source_root'] = str(runtime)
         new['base_source_commit'], new['teacher_patch_commit'] = '3fbaa08', '43b16ee'
+        new['additional_patch_commits'] = request.get('additional_patch_commits', [])
         write(root / 'coordinator-launch.json', new)
         handoff = {'old_producer_exited': True, 'old_coordinator_exited': True,
                    'retained_preparation_launch': str(root / 'pool-mirror-preparation-launch.json'),
@@ -130,9 +155,11 @@ def main(root):
         new_producer['source_commit'] = producer['source_commit']
         write(root / 'acquisition-env-repairs-launch.json', new_producer)
         selection = read(root / 'active_runtime_selection.json')
-        selection.update(coordinator_source_commit='3fbaa08+teacher-43b16ee',
-                         teacher_route_policy=str(x / 'policy.json'),
-                         teacher_route_handoff=str(x / 'handoff.json'))
+        selection.update(coordinator_source_commit=request.get('source_identity', '3fbaa08+teacher-43b16ee'),
+                         coordinator_handoff=str(x / 'handoff.json'))
+        if not request:
+            selection.update(teacher_route_policy=str(x / 'policy.json'),
+                             teacher_route_handoff=str(x / 'handoff.json'))
         write(root / 'active_runtime_selection.json', selection)
         print(json.dumps({'coordinator_pid': new['pid'], 'producer_pid': new_producer['pid'],
                           'adopted_workers': len(workers), 'worker_capacity': 16}))
@@ -146,4 +173,4 @@ def main(root):
 
 
 if __name__ == '__main__':
-    main(Path(sys.argv[1]))
+    main(Path(sys.argv[1]), Path(sys.argv[2]) if len(sys.argv) > 2 else None)
