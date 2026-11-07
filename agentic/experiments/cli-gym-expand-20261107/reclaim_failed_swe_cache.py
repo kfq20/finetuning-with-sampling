@@ -22,8 +22,10 @@ def read(path):
 def main(root, output, target_gib=90):
     assert os.environ['DOCKER_HOST'] == 'unix:///mnt/ecs-tb4/cli-gym-pilot-20261104/runtime/docker.sock'
     output.mkdir(parents=True, exist_ok=False)
-    source = root / 'new-source-swegym/full-prepared-v2'
-    held = read(source / 'progress.json')['held']
+    sources = [root / 'new-source-swegym' / name
+               for name in ['full-prepared-v2', 'full-prepared-v3']]
+    held = [(source, item) for source in sources if (source / 'progress.json').exists()
+            for item in read(source / 'progress.json').get('held', [])]
     scope = read(root / 'new-source-swegym/scope.json')
     published = read(root / 'acquisition-plan.json')['units']
     task_ids = {x['unit_id'] for x in published}
@@ -34,7 +36,7 @@ def main(root, output, target_gib=90):
     before, removed, holds = shutil.disk_usage(root).free, [], []
     with (root / 'support/storage-maintenance.lock').open('a') as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
-        for item in held:
+        for source, item in held:
             name = item['task_id']
             if name == 'facebookresearch__hydra-2189' or 'swegym-' + name in task_ids:
                 continue

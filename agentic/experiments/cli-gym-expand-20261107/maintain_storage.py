@@ -96,6 +96,11 @@ def main(root, output):
         dump(output / 'complete.json', {'at': time.time(), 'before_free': before,
             'after_free': shutil.disk_usage(root).free, 'removed_source_cache': removed,
             'held_cache_operations': held, 'model_requests': 0, 'global_prune': False})
+    # This helper takes the same storage lock. Run after releasing our pass's
+    # lock so failed source downloads cannot refill the disk or deadlock us.
+    if shutil.disk_usage(root).free < 100 * 1024**3:
+        reclaim = runpy.run_path(str(Path(__file__).with_name('reclaim_failed_swe_cache.py')))['main']
+        reclaim(root, output / 'failed-source-caches')
 
 
 if __name__ == '__main__':
