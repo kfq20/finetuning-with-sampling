@@ -1,0 +1,117 @@
+{
+  "at": 1794087027.3808038,
+  "runtime_identity": "selected-720746d+export-022b765+recovery-ada9fe3",
+  "handoff": {
+    "old_producer_exited": true,
+    "old_coordinator_exited": true,
+    "retained_preparation_launch": "/mnt/ecs-tb4/cli-gym-expansion-20261107/pool-mirror-preparation-launch.json",
+    "old": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/export-trim-repair-20261108/before.json",
+    "new_coordinator": {
+      "pid": 942279,
+      "start_ticks": "645643874",
+      "cmdline_sha256": "78559462d706d5c6cbd2f2bf82f5fc68a66aae8e95965be37a3a9c3bfce6ac60",
+      "state": "R",
+      "ppid": 942152,
+      "argv": [
+        "/mnt/ecs-tb4/cli-gym-scale-20261104/support/sdk/bin/python",
+        "-m",
+        "append_rewrite.terminus.production",
+        "batch",
+        "--plan",
+        "/mnt/ecs-tb4/cli-gym-expansion-20261107/acquisition-plan.json",
+        "--discovery-summary",
+        "/mnt/ecs-tb4/cli-gym-expansion-20261107/acquisition-complete.json",
+        "--output",
+        "/mnt/ecs-tb4/cli-gym-expansion-20261107/production",
+        "--workers",
+        "16",
+        "--teacher-config",
+        "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/mint-im-switch-20261107/teacher-private.json",
+        "--fleet-config",
+        "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/resume-supply-20261107/qwen-native-private.json",
+        "--tokenizer",
+        "/mnt/ecs-tb4/cli-gym-scale-20261104/support/tokenizers/qwen38-27b-1d4bf0f",
+        "--sandbox-credentials",
+        "/mnt/ecs-tb4/cli-gym-scale-20261104/support/private/sandbox.env",
+        "--runtime-assets",
+        "/mnt/ecs-tb4/cli-gym-scale-20261104/support/runtime-assets/tmux-linux-x86_64-v1",
+        "--adopt-workers",
+        "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/export-trim-repair-20261108/adopt-workers.json"
+      ],
+      "started_at": 1794086837.5373554,
+      "source_root": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/export-trim-repair-20261108/runtime",
+      "base_source_commit": "3fbaa08",
+      "teacher_patch_commit": "43b16ee",
+      "additional_patch_commits": [
+        "022b765",
+        "6a33546",
+        "ada9fe3"
+      ]
+    },
+    "automatic_paid_retry": false,
+    "adopted_worker_count": 16
+  },
+  "recovery": {
+    "unit": "swegym-facebookresearch__hydra-1006",
+    "recovered_sft": 1,
+    "model_requests": 0,
+    "original_hashes_unchanged": 9,
+    "original_status_preserved": true,
+    "receipt_sha256": "d9a5c65695060e9cc14ab66b799e7f27cd13bed0837518d5316c6b3998c4ab26",
+    "sft_sha256": "cc57f2675dc0bf838419281c408c7e3549706b0ffcb55f482443d9443ece87e2"
+  },
+  "recovery_validation": {
+    "passed": true,
+    "new_model_requests": 0,
+    "full_tokenizer_reencoded": true,
+    "edge_trimmed_messages": [
+      3
+    ]
+  },
+  "previous_exported_rows_unchanged": 68,
+  "runtime_regressions_passed": 16,
+  "original_receipts_reverified": 1052,
+  "original_receipt_hash_changes": 0,
+  "other_error": {
+    "unit": "swegym-facebookresearch__hydra-989",
+    "stage": "candidate_public_action_validation",
+    "proposals": 8,
+    "rejected_hidden_reasoning_wrappers": 8,
+    "original_hold_preserved": true,
+    "model_replay": false
+  },
+  "current_counts": {
+    "cli-gym": 604,
+    "swe-gym": 49
+  },
+  "health": {
+    "checked_at": 1794087022.7297683,
+    "active_workers": 16,
+    "queued": 16,
+    "phase": "running",
+    "provider_holds": [],
+    "automatic_benchmark_retry": false
+  },
+  "free_GiB": 108.5,
+  "model_requests_by_repair": 0,
+  "recovery_grades": {
+    "a": 1.0,
+    "b": 1.0
+  },
+  "mypy_admitted_students": [
+    {
+      "unit": "swegym-python__mypy-10689",
+      "turns": 11,
+      "receipt_sha256": "826a7035c53cbd21184e4a38edbc416f4207c94f29ba42eb0e833a6827f2ee14",
+      "original_reward": 1,
+      "fresh_reward": 1
+    },
+    {
+      "unit": "swegym-python__mypy-11137",
+      "turns": 9,
+      "receipt_sha256": "413075e45dcee7db7f1fd6bb806ed74852d8c24a5a9f7d88842a45defe8f0513",
+      "original_reward": 1,
+      "fresh_reward": 1
+    }
+  ]
+}
