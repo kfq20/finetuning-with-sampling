@@ -72,6 +72,13 @@ def main(root):
         retire_failed_workers(run, [], root / 'failed-worker-retirements')
         status = read(canary / 'status.json')
         if coordinator is None:
+            owner = read(root / 'model-canary-launch.json')
+            proc = Path('/proc') / str(owner['pid']) / 'stat'
+            fields = proc.read_text().split(') ')[1].split() if proc.exists() else None
+            alive = fields and fields[19] == str(owner['start_ticks']) and fields[0] != 'Z'
+            if not alive and status['phase'] not in ('hold', 'teacher_not_successful', 'completed'):
+                dump(root / 'acquisition-hold.json', {'reason': 'canary_exited_without_closure', 'status': status})
+                return
             if status['phase'] == 'hold':
                 dump(root / 'acquisition-hold.json', {'reason': 'canary_execution_hold', 'status': status})
                 return
@@ -123,6 +130,8 @@ def main(root):
             dump(complete, {'plan_sha256': hashlib.sha256(plan.read_bytes()).hexdigest()})
         if prep.poll() is not None and not (prep_root / 'complete.json').exists():
             dump(root / 'acquisition-hold.json', {'reason': 'preparation_exited_without_closure'})
+            dump(run / 'STOP_PROVIDER', {'reason': 'preparation_exited_without_closure', 'new_model_requests': 0})
+            dump(complete, {'plan_sha256': hashlib.sha256(plan.read_bytes()).hexdigest()})
         dump(root / 'acquisition-progress.json', {'checked_at': time.time(), 'phase': phase,
              'valid_pairs': len(all_records), 'new_pairs': len(new['records']), 'target': 1000,
              'published_tasks': len(items), 'worker_capacity': 16, 'score_capacity': 4,
