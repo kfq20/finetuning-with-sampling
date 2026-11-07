@@ -13,20 +13,21 @@ import subprocess
 import time
 
 
-def main(root, support, runtime, old, episode_timeout_sec, *, workers=None):
+def main(root, support, runtime, old, episode_timeout_sec, *, workers=None, repair_pytest_snail=False):
     helpers = runpy.run_path(str(runtime / 'agentic/experiments/cli-gym-expand-20261107/switch_teacher.py'))
     verify, identity, write = (helpers[k] for k in ['verify', 'identity', 'write'])
     assert not (support / 'handoff.json').exists()
     prepared = root / 'new-source-swegym/full-prepared-v2'
     assert str(prepared) in old['argv']
-    verify(old)
+    initially_held = verify(old)['state'] == 'T'
     end = time.monotonic() + 1200
     stopped, deferred, download = False, None, None
     try:
         while time.monotonic() < end:
             verify(old)
             proc = Path('/proc') / str(old['pid'])
-            children = (proc / 'task' / str(old['pid']) / 'children').read_text().split()
+            children = [pid for task in (proc / 'task').iterdir()
+                        for pid in (task / 'children').read_text().split()]
             progress = json.loads((prepared / 'progress.json').read_text())
             candidate = None
             threads = int(next(line.split(':')[1] for line in (proc / 'status').read_text().splitlines() if line.startswith('Threads:')))
@@ -40,7 +41,8 @@ def main(root, support, runtime, old, episode_timeout_sec, *, workers=None):
                 os.kill(old['pid'], signal.SIGSTOP)
                 stopped = True
                 verify(old)
-                now_children = (proc / 'task' / str(old['pid']) / 'children').read_text().split()
+                now_children = [pid for task in (proc / 'task').iterdir()
+                                for pid in (task / 'children').read_text().split()]
                 if idle and not now_children and (proc / 'syscall').read_text().split()[0] == '230':
                     break
                 if candidate and now_children == [str(candidate['pid'])]:
@@ -57,6 +59,8 @@ def main(root, support, runtime, old, episode_timeout_sec, *, workers=None):
                         if len(matches) == 1:
                             download, deferred = candidate, matches[0].name
                             break
+                if initially_held:
+                    raise RuntimeError('Existing source hold is not an idle handoff boundary')
                 os.kill(old['pid'], signal.SIGCONT)
                 stopped = False
             write(support / 'progress.json', {'phase': 'waiting_for_safe_maker_boundary', 'old_pid': old['pid'], 'at': time.time(), 'new_model_requests': 0})
@@ -107,6 +111,8 @@ def main(root, support, runtime, old, episode_timeout_sec, *, workers=None):
                 argv[argv.index(option) + 1] = str(value)
             else:
                 argv += [option, str(value)]
+        if repair_pytest_snail and '--repair-pytest-snail' not in argv:
+            argv.append('--repair-pytest-snail')
         scratch = support / 'tmp'
         scratch.mkdir(exist_ok=True)
         env.update(PYTHONPATH=str(runtime / 'agentic/src'), PYTHONDONTWRITEBYTECODE='1', TMPDIR=str(scratch))
@@ -127,6 +133,6 @@ def main(root, support, runtime, old, episode_timeout_sec, *, workers=None):
             'handoff': str(support / 'handoff.json'), 'episode_timeout_sec': episode_timeout_sec})
         print(json.dumps(report), flush=True)
     finally:
-        if stopped:
+        if stopped and not initially_held:
             verify(old)
             os.kill(old['pid'], signal.SIGCONT)

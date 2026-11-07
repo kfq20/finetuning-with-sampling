@@ -191,6 +191,9 @@ def fresh_grade(spec, args, archive, owner):
         ensure_image(spec)
         sb = DockerWorld(spec['template_id'], owner)
         try:
+            if spec.get('pytest_snail_compat'):
+                from .pytest_snail_compat import apply
+                apply(sb, spec['pytest_snail_compat'])
             initialize_repo(sb, spec)
             apply_patch(sb, archive)
             return grade(sb, Path(spec['task_path']))

@@ -215,8 +215,13 @@ class DockerWorld:
         self.write(
             "/tests/canary.py", "def test_expected_failure():\n    assert False\n"
         )
+        # The pinned snail timing plugin requires pytest's cache provider.
+        # Use an isolated writable cache for that bound contract; keep the
+        # intentional assertion failure and all installed test hooks intact.
+        cache = ('-o cache_dir=/tmp/owned-pytest-canary-cache'
+                 if contract.get('pytest_canary_requires_cache') else '-p no:cacheprovider')
         canary = self.run(
-            "/opt/miniconda3/envs/testbed/bin/python -m pytest -p no:cacheprovider -q /tests/canary.py",
+            "/opt/miniconda3/envs/testbed/bin/python -m pytest " + cache + " -q /tests/canary.py",
             cwd="/testbed",
             timeout=120,
         )

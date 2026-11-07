@@ -93,6 +93,7 @@ def prepare(row, revision, output, assets, *, episode_timeout_sec=3000, repair_p
              '--disable-warnings', '--color=no', '--tb=no', '--verbose', *ids])
     dump(tests / 'contract.json', {'test_ids': ids, 'frozen_test_paths': paths,
          'explicit_pytest_argv': argv, 'timeout_sec': 3000,
+         'pytest_canary_requires_cache': bool(snail),
          'original_required_tests': required, 'resolved_fail_to_pass': f2p})
     (tests / 'run-original.sh').write_text('# Private exact-node evaluator; see contract.json\n')
     state = unit / 'state'
