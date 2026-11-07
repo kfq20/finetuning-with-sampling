@@ -126,7 +126,20 @@ def main(root):
     items = {x['unit_id']: x for x in seed}
     last_release = None
     exhausted_since = None
+    maintenance = None
+    next_maintenance = 0
     while True:
+        if time.time() >= next_maintenance and (maintenance is None or maintenance.poll() is not None):
+            output = root / 'support/storage-maintenance' / str(time.time_ns())
+            output.mkdir(parents=True)
+            argv = [sys.executable, str(source / 'agentic/experiments/cli-gym-expand-20261107/maintain_storage.py'), str(root), str(output)]
+            with (output / 'worker.log').open('xb') as log:
+                maintenance = subprocess.Popen(argv, env=env, stdin=subprocess.DEVNULL,
+                    stdout=log, stderr=log, start_new_session=True)
+            fields = (Path('/proc') / str(maintenance.pid) / 'stat').read_text().split(') ')[1].split()
+            dump(output / 'launch.json', {'pid': maintenance.pid, 'start_ticks': fields[19],
+                'argv': argv, 'finite_pass': True, 'new_model_requests': 0})
+            next_maintenance = time.time() + 300
         retire_failed_workers(run, [], root / 'failed-worker-retirements')
         status = read(canary / 'status.json')
         if coordinator is None:

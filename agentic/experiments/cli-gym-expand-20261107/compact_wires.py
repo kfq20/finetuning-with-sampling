@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import runpy
 import shutil
+import time
 
 
 def main(roots, output):
@@ -14,10 +15,20 @@ def main(roots, output):
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         archive = runpy.run_path(str(Path(__file__).parents[1] / 'swe-lite-full-20261106/archive_closed.py'))
         opened = archive['opened_paths']()
+        live = set()
+        for process in Path('/proc').glob('[0-9]*/cmdline'):
+            try:
+                argv = process.read_bytes().decode().strip('\0').split('\0')
+                if 'append_rewrite.terminus.production' in argv and 'unit' in argv and '--output' in argv:
+                    live.add(Path(argv[argv.index('--output') + 1]))
+            except OSError:
+                pass
         selected = []
         contexts = {}
         for root in roots:
             for status in root.rglob('units/*/status.json'):
+                if status.parent in live or time.time() - status.stat().st_mtime < 600:
+                    continue
                 if json.loads(status.read_text()).get('phase') not in ('hold', 'completed', 'teacher_not_successful'):
                     continue
                 digest = hashlib.sha256(status.read_bytes()).hexdigest()
@@ -25,7 +36,8 @@ def main(roots, output):
                 for wire in status.parent.glob('*/generation/turn-*/**/*'):
                     if wire.name not in ('wire.jsonl', 'response.json', 'request.json'):
                         continue
-                    if not wire.is_symlink() and str(wire) not in opened and wire.stat().st_size >= 131072:
+                    if (not wire.is_symlink() and str(wire) not in opened
+                        and wire.stat().st_size >= 131072 and time.time() - wire.stat().st_mtime >= 600):
                         selected.append((wire, root, status, digest))
         (output / 'plan.json').write_text(json.dumps({'files': [str(x[0]) for x in selected],
             'logical_bytes': sum(x[0].stat().st_size for x in selected)}, indent=2))

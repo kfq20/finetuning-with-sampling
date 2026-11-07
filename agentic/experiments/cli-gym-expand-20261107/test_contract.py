@@ -3,6 +3,7 @@ import unittest
 import json
 import runpy
 import tempfile
+import os
 from pathlib import Path
 from append_rewrite.terminus.cli_contract import (
     published_selectors, resolve_selectors, safe_test_paths, test_roots,
@@ -10,6 +11,26 @@ from append_rewrite.terminus.cli_contract import (
 
 
 class ContractTests(unittest.TestCase):
+    def test_source_cache_preserves_shared_pending_and_cli_images(self):
+        collect = runpy.run_path(str(Path(__file__).with_name('maintain_storage.py')))['source_images']
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            units = []
+            for uid, kind, image, closed in [('a', 'swe-gym', 'shared', True),
+                    ('b', 'swe-gym', 'shared', False), ('c', 'cli-gym', 'protected', True),
+                    ('d', 'swe-gym', 'protected', True), ('e', 'swe-gym', 'eligible', True)]:
+                spec = root / (uid + '.json')
+                spec.write_text(json.dumps({'source': {'kind': kind}, 'template_id': image,
+                    'capture_format': 'git-patch', 'source_registry_image': 'registry@sha256:abc'}))
+                units.append({'unit_id': uid, 'spec_path': str(spec)})
+                if closed:
+                    status = root / 'production/units' / uid / 'status.json'
+                    status.parent.mkdir(parents=True)
+                    status.write_text('{"phase":"completed"}')
+                    os.utime(status, (1, 1))
+            (root / 'acquisition-plan.json').write_text(json.dumps({'units': units}))
+            self.assertEqual(collect(root), {'eligible': 'registry@sha256:abc'})
+
     def test_source_targets_cannot_be_filled_by_another_dataset(self):
         partition = runpy.run_path(str(Path(__file__).with_name('acquire.py')))['partition_records']
         prior = {'unit': '/old/units/cli-original'}
