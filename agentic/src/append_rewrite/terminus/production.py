@@ -30,7 +30,7 @@ from .runtime import make_agent
 from .teacher import DeepSeekTeacher
 from .tokenizer import PinnedTokenizer
 from .suffix_score import file_slot
-from .provider_gate import status_of
+from .provider_gate import status_of, hold_path
 
 
 def dump(path, value):
@@ -63,13 +63,22 @@ async def wait_new_admission(output, *, adopted=False):
     if adopted:
         return True
     while True:
-        if (output / 'STOP_PROVIDER').exists():
+        if (output / 'STOP_PROVIDER').exists() or (output / 'DISPATCH_HOLD').exists():
             return False
         provider = any(p and p.exists() for p in (hold_path('teacher'), hold_path('student')))
         floor = int(os.environ.get('APPEND_REWRITE_MIN_FREE_GIB', '0'))
         if not provider and (not floor or shutil.disk_usage(output).free >= floor * 1024**3):
             return True
         await asyncio.sleep(5)
+
+
+def dispatcher_errors(workers):
+    failures = []
+    for index, worker in enumerate(workers):
+        if worker.done():
+            error = None if worker.cancelled() else worker.exception()
+            failures.append({'lane': index, 'error_type': type(error).__name__ if error else 'UnexpectedLaneExit'})
+    return failures
 
 
 def restore(spec, args, owner, *, template_id=None, install_runtime=True):
@@ -663,7 +672,7 @@ async def batch(args):
     workers = []
     scheduled = set()
     active = set()
-    from .provider_gate import hold_path, check_gates
+    from .provider_gate import check_gates
     capacity = getattr(args, 'workers', None)
     adopted = getattr(args, 'adopt_workers', None)
     adopted = json.loads(adopted.read_text())['workers'] if adopted else []
@@ -767,6 +776,13 @@ async def batch(args):
             await lanes['shared'].put({'unit_id': worker['unit_id'], '_adopt': worker})
 
     while True:
+        failures = dispatcher_errors(workers)
+        if failures and not (args.output / 'STOP_PROVIDER').exists():
+            dump(args.output / 'DISPATCH_HOLD', {'reason': 'dispatcher_lane_failure', 'failures': failures})
+            dump(args.output / 'runtime-health.json', {'checked_at': time.time(),
+                'active_workers': len(active), 'queued': sum(q.qsize() for q in lanes.values()),
+                'phase': 'dispatcher_error', 'failures': failures, 'automatic_benchmark_retry': False})
+            break
         plan = json.loads(args.plan.read_text())
         for item in plan["units"]:
             key = item["unit_id"]
@@ -812,9 +828,12 @@ async def batch(args):
     for queue in lanes.values():
         for _ in range(capacity or 1):
             await queue.put(None)
-    await asyncio.gather(*workers)
-    dump(args.output / "coordinator-finished.json", {"finished_at": time.time()})
+    await asyncio.gather(*workers, return_exceptions=True)
+    failed = (args.output / 'DISPATCH_HOLD').exists()
+    dump(args.output / "coordinator-finished.json", {"finished_at": time.time(), 'returncode': 1 if failed else 0})
     lock.close()
+    if failed:
+        raise RuntimeError('Dispatcher failed; paid workers drained, unclaimed tasks preserved')
 
 
 def main():

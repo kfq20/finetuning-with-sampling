@@ -7,7 +7,7 @@ from unittest.mock import patch
 from urllib.error import HTTPError
 from http.client import IncompleteRead
 
-from append_rewrite.terminus.production import safe_artifacts, tree, dump, fresh_grade, restore, wait_new_admission
+from append_rewrite.terminus.production import safe_artifacts, tree, dump, fresh_grade, restore, wait_new_admission, dispatcher_errors
 from append_rewrite.terminus.suffix_score import (
     NativeFullStreamClient,
     ResilientFullStreamClient,
@@ -15,6 +15,21 @@ from append_rewrite.terminus.suffix_score import (
 
 
 class ProductionSafety(unittest.TestCase):
+    def test_dispatcher_failure_is_visible_without_cancelling_paid_work(self):
+        async def check():
+            loop = asyncio.get_running_loop()
+            paid, failed = loop.create_future(), loop.create_future()
+            failed.set_exception(NameError('missing import'))
+            self.assertEqual(dispatcher_errors([paid, failed]), [{'lane': 1, 'error_type': 'NameError'}])
+            self.assertFalse(paid.cancelled())
+            self.assertFalse(paid.done())
+        asyncio.run(check())
+
+    def test_fresh_admission_can_run_without_any_hold(self):
+        with tempfile.TemporaryDirectory() as d:
+            with patch.dict('os.environ', {'APPEND_REWRITE_MIN_FREE_GIB': '0'}, clear=False):
+                self.assertTrue(asyncio.run(wait_new_admission(Path(d))))
+
     def test_paid_adoption_is_observed_even_with_storage_and_stop(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)

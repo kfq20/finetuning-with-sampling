@@ -52,7 +52,7 @@ class ObservedProcess:
         fields = p.read_text().split(') ')[1].split() if p.exists() else None
         if fields and fields[19] == str(self.receipt['start_ticks']) and fields[0] != 'Z':
             return None
-        self.returncode = 0 if self.completion.exists() else 1
+        self.returncode = read(self.completion).get('returncode', 0) if self.completion.exists() else 1
         return self.returncode
 
 
