@@ -82,3 +82,5 @@ were identified. Other healthy-control failures (including pytest plugin/process
 compatibility) remain unpaid holds until repaired and independently recalibrated.
 No failed paid attempts are replayed and no hold is promoted into training data.
 40GiB storage admission applies to both preparation and future dispatch.
+
+Detailed blocker taxonomy, strict calibration controls and source-role bindings: [ENVIRONMENT-REPAIRS.md](ENVIRONMENT-REPAIRS.md).
