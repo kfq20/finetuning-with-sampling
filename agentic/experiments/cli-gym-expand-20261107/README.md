@@ -84,3 +84,24 @@ No failed paid attempts are replayed and no hold is promoted into training data.
 40GiB storage admission applies to both preparation and future dispatch.
 
 Detailed blocker taxonomy, strict calibration controls and source-role bindings: [ENVIRONMENT-REPAIRS.md](ENVIRONMENT-REPAIRS.md).
+
+## Teacher endpoint switch,2026-11-07
+
+The user authorized `deepseek-flash` on `https://mint.macaron.im` after the old
+mintcn credential repeatedly returned `group requests-per-minute limit exceeded`.
+The new route passed a real Anthropic streaming probe with the production
+128000-token limit, adaptive thinking and max effort: model identity matched,
+`end_turn` and `message_stop` were observed, elapsed1.05s. This establishes
+transport compatibility, not sustained throughput or a different underlying model.
+
+The selected external evidence is `support/mint-im-switch-20261107/`:
+`policy.json`, `probe-result.json`, `runtime-binding.json`, `before.json`,
+`handoff.json`, `adopt-workers.json` and `postcheck.json`. The frozen coordinator
+uses base3fbaa08 plus the teacher-only patch43b16ee; the producer retains5f808e2.
+`switch_teacher.py` is the committed one-shot handoff operator. Its execution
+adopted16 existing paid unit processes without restarting them. Those units keep
+their original route; new units use the new private teacher config.16 task slots,
+4 scoring slots, student route, test split and admission criteria remain fixed.
+Existing errors and completed attempts are never replayed.9 transport/production
+regressions passed in the actual ECS SDK environment. Secrets are external0600
+files; request intents record endpoint and credential/policy digests only.
