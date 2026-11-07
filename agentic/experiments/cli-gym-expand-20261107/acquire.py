@@ -212,10 +212,10 @@ def main(root):
             dump(run / 'STOP_PROVIDER', {'reason': 'target_reached_drain', 'new_model_requests': 0})
             phase = 'target_reached_drain'
         elif shutil.disk_usage(root).free < 40 * 1024**3:
-            dump(run / 'STOP_PROVIDER', {'reason': 'storage_admission_hold', 'new_model_requests': 0})
             phase = 'storage_hold'
         extras_done = all(Path(x['complete']).exists() for x in registry['plans'])
-        no_dispatch = health.get('active_workers') == 0 and health.get('queued') == 0
+        no_dispatch = (health.get('active_workers') == 0 and health.get('queued') == 0
+                       and phase not in ('storage_hold', 'provider_hold'))
         all_manufacturing_done = (prep_root / 'complete.json').exists() and extras_done
         if no_dispatch and all_manufacturing_done and not health.get('provider_holds'):
             exhausted_since = exhausted_since or time.time()

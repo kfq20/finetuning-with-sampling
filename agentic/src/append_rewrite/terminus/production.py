@@ -676,10 +676,10 @@ async def batch(args):
                     return
                 await asyncio.sleep(5)
             floor = int(os.environ.get('APPEND_REWRITE_MIN_FREE_GIB', '0'))
-            if floor and shutil.disk_usage(args.output).free < floor * 1024**3:
-                dump(args.output / 'STOP_PROVIDER', {
-                    'reason': 'storage_admission_hold', 'new_model_requests': 0})
-                return
+            while floor and shutil.disk_usage(args.output).free < floor * 1024**3:
+                if (args.output / 'STOP_PROVIDER').exists():
+                    return
+                await asyncio.sleep(5)
             dest = args.output / "units" / item["unit_id"]
             if item.get('_adopt'):
                 # A rolling queue may inherit a worker from an earlier run root.
@@ -780,9 +780,11 @@ async def batch(args):
         finished = not args.discovery_summary
         blocked = await check_gates(args)
         pending = sum(q.qsize() for q in lanes.values())
+        storage_hold = (int(os.environ.get('APPEND_REWRITE_MIN_FREE_GIB', '0')) * 1024**3
+                        > shutil.disk_usage(args.output).free)
         dump(args.output / 'runtime-health.json', {
             'checked_at': time.time(), 'active_workers': len(active), 'queued': pending,
-            'phase': 'provider_hold' if blocked else 'running' if active else 'awaiting_supply',
+            'phase': 'provider_hold' if blocked else 'storage_hold' if storage_hold else 'running' if active else 'awaiting_supply',
             'provider_holds': blocked, 'automatic_benchmark_retry': False,
         })
         if args.discovery_summary and args.discovery_summary.exists():
