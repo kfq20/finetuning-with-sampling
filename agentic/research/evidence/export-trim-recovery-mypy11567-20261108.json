@@ -1,0 +1,50 @@
+{
+  "verified_at": "2026-11-08T05:59:09+08:00",
+  "unit": "swegym-python__mypy-11567",
+  "recovered_sft": 1,
+  "new_model_requests": 0,
+  "original_hashes_unchanged": 9,
+  "original_status_preserved": true,
+  "fresh_rewards": [
+    1,
+    1
+  ],
+  "required_tests": [
+    1,
+    1
+  ],
+  "passed_tests": [
+    1,
+    1
+  ],
+  "missing_tests": [
+    [],
+    []
+  ],
+  "canary_expected_failure": [
+    true,
+    true
+  ],
+  "receipt_sha256": "684c3e1890974ffe920dc26aa79d033cfe101aa3eea5e2ae4254fa015e96c33a",
+  "sft_sha256": "d77888bd667288bb0e80b63ecfb3d0d2880ba5233d06b18597914b10f182439d",
+  "remote_evidence": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/export-trim-repair-20261108/recovery-mypy-11567/complete.json",
+  "live_valid_pairs": {
+    "cli-gym": 604,
+    "swe-gym": 57
+  },
+  "actual_model_workers": 16,
+  "score_capacity": 4,
+  "provider_holds": [],
+  "exported_checkpoint_pairs": {
+    "cli-gym": 604,
+    "swe-gym": 50
+  },
+  "cleanup": {
+    "audit": "/mnt/ecs-tb4/audits/obsolete-editor-cleanup-20261108-055806",
+    "allocated_removed": 2187960320,
+    "selected_extensions_preserved": 6,
+    "experiment_files_deleted": 0,
+    "images_deleted": 0,
+    "processes_signalled": 0
+  }
+}
