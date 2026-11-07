@@ -207,3 +207,27 @@ production scorer was changed; four zero-generation calls used the existing
 four-slot admission pool. This observation does not identify an exclusive server
 or numerical-kernel cause. Evidence:`support/score-range-recheck-20261108/` and
 `agentic/research/evidence/score-range-recheck-20261108.json`.
+
+
+## Verified SWE-Gym fixture repair (2026-11-08)
+
+MyPy generates pytest nodes from `test-data/` files. A gold collection can see a
+new node while grading an archive containing only `mypy/test` collects none.
+New MyPy packages now validate the canonical test patch is confined to those test
+roots, freeze both trees, and explicitly use installed xdist's serial mode.
+The private negative canary also uses serial mode. Test IDs, expectations and
+business source stay unchanged; initial control must demonstrate a real published
+FAIL_TO_PASS failure, followed by all-required gold and fresh success.
+
+Actual10432 calibration passed initial0/gold1/fresh1 and a failing assertion
+canary. Sixteen additional new-contract controls passed. These are environment
+admissions, not sixteen SFT rows. Selected runtime720746d and control/receipt
+hashes are recorded in `research/evidence/mypy-fixture-source-recovery-20261108.json`.
+
+For a busy unpaid source maker, `handoff_swe_maker.main(..., drain=True)` sends
+SIGINT only to the verified Python maker PID. Its existing ThreadPoolExecutor
+finishes all in-flight futures before process exit; no verifier child or paid
+model worker is signalled. The replacement waits for verified exit, keeps the
+original folders, and uses a new output identity. Drain-time unpublished results
+must be accounted for from the saved progress and actual control receipts; do
+not replay a model or infer paid completion from this source lifecycle change.

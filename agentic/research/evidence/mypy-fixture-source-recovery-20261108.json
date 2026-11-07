@@ -1,0 +1,100 @@
+{
+  "at": 1794082968.8142915,
+  "selected_runtime_source": "720746d",
+  "actual_model_workers": 16,
+  "score_capacity": 4,
+  "valid_by_source": {
+    "cli-gym": 604,
+    "swe-gym": 32
+  },
+  "health": {
+    "checked_at": 1794082964.2190385,
+    "active_workers": 16,
+    "queued": 22,
+    "phase": "running",
+    "provider_holds": [],
+    "automatic_benchmark_retry": false
+  },
+  "mypy_preparation": {
+    "phase": "queue_full",
+    "ready": 16,
+    "preparation_workers": 4,
+    "active_tasks": []
+  },
+  "new_mypy_controls_passed": 16,
+  "new_mypy_unit_ids": [
+    "swegym-python__mypy-10432",
+    "swegym-python__mypy-10032",
+    "swegym-python__mypy-10308",
+    "swegym-python__mypy-10382",
+    "swegym-python__mypy-10415",
+    "swegym-python__mypy-10424",
+    "swegym-python__mypy-10478",
+    "swegym-python__mypy-10508",
+    "swegym-python__mypy-10658",
+    "swegym-python__mypy-10689",
+    "swegym-python__mypy-10775",
+    "swegym-python__mypy-11137",
+    "swegym-python__mypy-11140",
+    "swegym-python__mypy-11236",
+    "swegym-python__mypy-11204",
+    "swegym-python__mypy-11273"
+  ],
+  "control_pilot": {
+    "passed": true,
+    "initial_reward": 0.0,
+    "initial_failed_tests": 2,
+    "gold_reward": 1.0,
+    "gold_passed_tests": 1,
+    "gold_test_exit": 0,
+    "negative_canary": true,
+    "fresh_reward": 1.0,
+    "fresh_passed_tests": 1,
+    "restored_source_baseline_clean": true,
+    "model_requests": 0
+  },
+  "source_handoff": {
+    "at": 1794082817.8419523,
+    "old_maker_exited": true,
+    "new_maker": {
+      "pid": 236636,
+      "start_ticks": "645241900",
+      "cmdline_sha256": "70a3f581f7f188114647b18963718d1ed1c99b3520d279be6b0716f3eff41441",
+      "state": "R",
+      "ppid": 223678,
+      "argv": [
+        "/mnt/ecs-tb4/cli-gym-scale-20261104/support/sdk/bin/python",
+        "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/mypy-source-resume-20261108/runtime/agentic/experiments/cli-gym-expand-20261107/prepare_swegym.py",
+        "--root",
+        "/mnt/ecs-tb4/cli-gym-expansion-20261107",
+        "--rows",
+        "/mnt/ecs-tb4/cli-gym-expansion-20261107/new-source-swegym/prospective-and-mypy-fixture-repair-rows.json",
+        "--scope",
+        "/mnt/ecs-tb4/cli-gym-expansion-20261107/new-source-swegym/scope.json",
+        "--output",
+        "/mnt/ecs-tb4/cli-gym-expansion-20261107/new-source-swegym/full-prepared-v4",
+        "--assets",
+        "/mnt/ecs-tb4/cli-gym-scale-20261104/support/runtime-assets/tmux-linux-x86_64-v1",
+        "--episode-timeout-sec",
+        "6000",
+        "--workers",
+        "4",
+        "--repair-pytest-snail"
+      ],
+      "started_at": 1794082817.7922325
+    },
+    "original_package_files": 1266,
+    "original_package_changes": [],
+    "new_episode_timeout_sec": 6000,
+    "preparation_workers": 4,
+    "deferred_unpaid_download": null,
+    "gracefully_drained": true,
+    "model_workers_signalled": 0,
+    "model_replays": 0,
+    "only_future_packages_changed": true
+  },
+  "preserved_receipts": 977,
+  "receipt_hash_changes": 0,
+  "model_replays": 0,
+  "free_GiB": 90.83
+}
