@@ -105,3 +105,48 @@ their original route; new units use the new private teacher config.16 task slots
 Existing errors and completed attempts are never replayed.9 transport/production
 regressions passed in the actual ECS SDK environment. Secrets are external0600
 files; request intents record endpoint and credential/policy digests only.
+
+
+## Incident repair and independent source goals, 2026-11-07 evening
+
+The user clarified two independent goals: **CLI-Gym1000 plus SWE-Gym1000**,
+not a mixed1000 release. `goal.json.targets_by_source` and
+`production/source-targets.json` bind the two quotas. The producer exports
+`campaign-sft/{cli-gym,swe-gym}/{train.jsonl,manifest.json}` separately and stops
+only when both targets are reached. The original531 and all paid attempts remain
+immutable.100 reserved CLI tasks and the SWE-bench Lite300 test IDs stay excluded.
+
+| Finding | Repair and evidence boundary |
+|---|---|
+|37 new-route teacher502 responses | Original upstream-error messages are retained. Shared provider admission pauses new tasks and runs bounded independent health probes; no failed benchmark replay or fallback. A small health probe recovered, not proof that the upstream incident can never recur. |
+|30 student episode timeouts | Each reached the3000-second episode deadline. Generation/transport and queue waits consumed the same budget. HTTP client waits of488–509s versus server work of2.85–15.8s show a transport/front-end delay; they do not identify one exclusive upstream component. |
+|Candidate transport | New tasks use direct native HTTP JSON with async cancellation and owned-request abort.8 proposals, reference-free full-input logprob ranking, tokenizer/template and task scoring are unchanged. Existing paid students retain their original bindings. |
+|Bootstrap failures | Long scripts use stdin, directory copies and checksum verification use Docker API, resource wrappers are idempotent, permission tests use their required UID65534.20/69 selected unpaid repairs passed;49 remain held. No dropped assertions, skip-as-pass or initial-already-successful admissions. |
+|False healthy idle / storage termination | Runtime health reports actual worker counts and supply/storage holds. Storage pauses new dispatch rather than writing a terminal provider stop. Adopted paid workers remain observed during admission holds. Exhausted supply gets an explicit blocked status. |
+
+Selected production source iscc7c7e6, frozen under
+`support/dual-source-adoption-20261107/runtime`, with an explicit rolling handoff
+that retained4 paid workers. The independently frozen source manufacturer uses
+802262d under`support/dual-source-goal-20261107/runtime`; it waits at40GiB free
+and preserves previous holds. Read current selection/receipts rather than PIDs
+or version suffixes.7 production and12 source-contract regressions passed in the
+actual ECS SDK; earlier transport/Docker/scoring suites remain recorded.
+
+The SWE source manifest freezes2438 official train rows, source revision/row hashes
+and eval exclusions. Actual initial0/gold1 controls precede each admission. Git
+patch capture binds the authentic initialized repository, including preinstalled
+dependency edits, and preserves binary/untracked/agent-committed changes. Private
+gold code and test patches never enter the solver environment. Unsupported or
+inapplicable published patches remain unpaid holds.
+
+At23:20 CST, CLI604/SWE1 were admitted, with3 actual workers still running.
+Capacity16 is not the number of busy workers: disk admission was holding new
+supply at~39.5GiB free. Closed journals were losslessly compressed with full
+uncompressed SHA checks; SFT, receipts, decisions, original failures and all images
+were preserved. `.json.gz`/`.jsonl.gz` files and their ledgers are authoritative
+raw evidence, not disposable cache. No image cache deletion was authorized.
+
+Operational evidence: `support/resume-supply-20261107/`,
+`support/resume-source-20261107/`, `support/dual-source-goal-20261107/`,
+`support/dual-source-adoption-20261107/`. `census_cli_supply.py` audits unused CLI
+contracts and teacher-only reuse candidates without any model requests.
