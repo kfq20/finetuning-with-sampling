@@ -220,9 +220,9 @@ business source stay unchanged; initial control must demonstrate a real publishe
 FAIL_TO_PASS failure, followed by all-required gold and fresh success.
 
 Actual10432 calibration passed initial0/gold1/fresh1 and a failing assertion
-canary. Sixteen additional new-contract controls passed. These are environment
+canary. Sixteen new-contract packages have passed controls in total. These are environment
 admissions, not sixteen SFT rows. Selected runtime720746d and control/receipt
-hashes are recorded in `research/evidence/mypy-fixture-source-recovery-20261108.json`.
+hashes are recorded in `agentic/research/evidence/mypy-fixture-source-recovery-20261108.json`.
 
 For a busy unpaid source maker, `handoff_swe_maker.main(..., drain=True)` sends
 SIGINT only to the verified Python maker PID. Its existing ThreadPoolExecutor
