@@ -1,0 +1,119 @@
+{
+  "verified_at_cst": "2026-11-08T00:42:11.894039",
+  "export_cleanup": {
+    "at": 1794066872.29592,
+    "removed_archives": 30,
+    "held_archives": 1,
+    "allocated_bytes_removed": 153188626432,
+    "free_before": 42581532672,
+    "free_after": 195770105856,
+    "experiment_results_deleted": 0,
+    "docker_images_deleted": 0,
+    "containers_stopped": 0,
+    "source_metadata_and_restore_code_preserved": true
+  },
+  "source_cache_cleanup": {
+    "approved_task_suffixes": [
+      "5529",
+      "9023",
+      "9082"
+    ],
+    "removed": [
+      {
+        "task": "swegym-pydantic__pydantic-5529",
+        "image_id": "sha256:f45d8800b3ab843833838be509752581d8ec6e14320c6854dcea931f3b71dec2",
+        "registry_digest": "xingyaoww/sweb.eval.x86_64.pydantic_s_pydantic-5529@sha256:c807cbfbe7cc5353252098257a3e1d00f22ff3faf7390ff528f1aa8767d0a3fa",
+        "removed_at": 1794065690.5289445
+      },
+      {
+        "task": "swegym-pydantic__pydantic-9023",
+        "image_id": "sha256:f62b35450f86acefb44581629a0e7ccfc11c82d1097e6061166f17c290eee79e",
+        "registry_digest": "xingyaoww/sweb.eval.x86_64.pydantic_s_pydantic-9023@sha256:dadd68bfac14cb2fb891cf61d644e66734945b8036241a2b5e3b49df3bc5017a",
+        "removed_at": 1794065693.6014864
+      },
+      {
+        "task": "swegym-pydantic__pydantic-9082",
+        "image_id": "sha256:aef9787e8392a44ee142284ffa409b878837f3766d5caf4f5ca3ee0a0844a890",
+        "registry_digest": "xingyaoww/sweb.eval.x86_64.pydantic_s_pydantic-9082@sha256:3f4308fe07387aa3e8e0c4640caa2940627661f0dc907b3b9e51dbee8d31db31",
+        "removed_at": 1794065696.8164027
+      }
+    ],
+    "old_images_removed": 0,
+    "model_retries": 0,
+    "before_free": 41144696832,
+    "after_free": 44289159168,
+    "at": 1794065696.8164291,
+    "plan_sha256": "81b37458937aff46751002fc4c2414151d6f404d491e76308134527b92edd8b3"
+  },
+  "root_free_gib": 16.516521453857422,
+  "data_free_gib": 139.22461700439453,
+  "health": {
+    "checked_at": 1794069726.9862638,
+    "active_workers": 16,
+    "queued": 15,
+    "phase": "running",
+    "provider_holds": [],
+    "automatic_benchmark_retry": false
+  },
+  "progress": {
+    "checked_at": 1794069718.6650865,
+    "phase": "rolling_acquisition",
+    "active_workers": 16,
+    "queued_units": 15,
+    "provider_holds": [],
+    "valid_pairs": 606,
+    "valid_by_source": {
+      "cli-gym": 604,
+      "swe-gym": 2
+    },
+    "targets_by_source": {
+      "cli-gym": 1000,
+      "swe-gym": 1000
+    },
+    "new_pairs": 75,
+    "target": 2000,
+    "published_tasks": 660,
+    "worker_capacity": 16,
+    "score_capacity": 4,
+    "heldout_tasks": 100,
+    "automatic_paid_retry": false
+  },
+  "baseline531_sha_unchanged": true,
+  "original_terminal_files_verified": 886,
+  "terminal_hash_drift": 0,
+  "maintenance": [
+    {
+      "root": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/storage-maintenance/1794069138450121318",
+      "receipt": {
+        "at": 1794069139.6681807,
+        "before_free": 153574354944,
+        "after_free": 153559121920,
+        "removed_source_cache": [],
+        "held_cache_operations": [],
+        "model_requests": 0,
+        "global_prune": false
+      }
+    },
+    {
+      "root": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/storage-maintenance/1794069442847143450",
+      "receipt": {
+        "at": 1794069444.0718732,
+        "before_free": 152916275200,
+        "after_free": 153093079040,
+        "removed_source_cache": [],
+        "held_cache_operations": [],
+        "model_requests": 0,
+        "global_prune": false
+      }
+    }
+  ],
+  "runtime_selection": {
+    "runtime": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/dispatch-repair-20261108/runtime",
+    "source_commit": "c78cef6c3462f6bab278f57b7e7ef926773ca397",
+    "coordinator_source_commit": "c78cef6c3462f6bab278f57b7e7ef926773ca397",
+    "coordinator_handoff": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/dispatch-repair-20261108/handoff.json",
+    "producer_runtime": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/storage-lifecycle-20261108/runtime",
+    "producer_source_commit": "a835dcac38e3e54326ca16eff88b763ba80fe840",
+    "producer_handoff": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/storage-lifecycle-20261108/handoff.json"
+  }
+}

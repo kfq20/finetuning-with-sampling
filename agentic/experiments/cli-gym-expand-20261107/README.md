@@ -150,3 +150,40 @@ Operational evidence: `support/resume-supply-20261107/`,
 `support/resume-source-20261107/`, `support/dual-source-goal-20261107/`,
 `support/dual-source-adoption-20261107/`. `census_cli_supply.py` audits unused CLI
 contracts and teacher-only reuse candidates without any model requests.
+
+
+## Storage lifecycle and dispatch correction, 2026-11-08
+
+Current coordinator:c78cef6 at`support/dispatch-repair-20261108/runtime`.
+The earlier admission helper incorrectly resolved a function imported only inside
+`batch`, killing fresh lanes while adopted workers remained observed. A real
+fresh-admission regression reproduced it. The correction and lane failure gate
+preserve paid workers, retain unclaimed scopes, and surface dispatcher failures
+instead of reporting healthy idle.14 previously unclaimed tasks received their
+first attempts;886 original terminal evidence files verified unchanged.
+
+Producer:a835dca at`support/storage-lifecycle-20261108/runtime`; all model-library
+Python files are byte-identical to the coordinator library. Producer-only handoff
+kept the coordinator and all model workers. `storage-policy.json` records the
+user's proactive cleanup authorization. `maintain_storage.py` performs finite
+passes inside this existing producer lifecycle, using only the owned CLI Docker
+socket. It losslessly compacts settled closed journals and, below100GiB free,
+checks completed SWE source images for no queued/container/CLI references and
+exact remote registry config before eviction, aiming for120GiB free. It does not
+prune Docker globally, replay model attempts, remove training evidence, or create
+an independent model supervisor/automation. Every pass has a launch/receipt.
+
+The late cleanup deleted30 reproducible old export-cache archives after checking
+their original immutable registry sources and preserving exporter code/metadata;
+142.67GiB physical allocation reclaimed. One unpinned archive stays.3 separately
+approved new source image caches reclaimed2.93GiB. Existing loop filesystems were
+trimmed online without deleting files/snapshots or changing logical capacity;
+physical root recovery was1.55GiB, not the much larger logical discard display.
+`/mnt/ecs-tb4/audits/storage-cleanup-20261107-late` is authoritative. Rebuilding a
+removed compressed export requires a new transport receipt/hash; original receipt
+bytes are historical evidence and must never be silently rewritten as new proof.
+
+00:42 CST: CLI604/SWE2 admitted,16 actual workers/15 queued. Original531 and all
+old errors/costs remain; new source manufacture consumes space as it proceeds.
+For current counts use source manifests/progress plus actual process identities.
+The independent CLI1k and SWE1k goals remain active.
