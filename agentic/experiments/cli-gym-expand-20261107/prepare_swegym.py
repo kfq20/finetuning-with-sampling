@@ -79,6 +79,15 @@ def prepare(row, revision, output, assets, *, episode_timeout_sec=3000, repair_p
         ids = resolve_selectors(required, collected)
         f2p = resolve_selectors(row['FAIL_TO_PASS'], collected)
         paths = test_roots(ids)
+        if row['repo'] == 'python/mypy':
+            # MyPy's pytest nodes are generated from private .test fixtures.
+            # Freeze the canonical fixture tree as well as the Python loader;
+            # never freeze gold-patched business source into the grader.
+            changed = [line[6:] for line in row['test_patch'].splitlines()
+                       if line.startswith('+++ b/')]
+            if not changed or any(not p.startswith(('test-data/', 'mypy/test/')) for p in changed):
+                raise ValueError('Unsupported MyPy private test patch layout')
+            paths = sorted(set(paths + ['test-data']))
         archive = checked('exec', gold.sandbox_id, 'tar', 'czf', '-', '-C', '/testbed', *paths)
         # Validate archive membership before it becomes a frozen grading asset.
         with tarfile.open(fileobj=io.BytesIO(archive)) as t:
@@ -90,10 +99,12 @@ def prepare(row, revision, output, assets, *, episode_timeout_sec=3000, repair_p
     finally:
         gold.kill()
     argv = bound_pytest_resources(['/opt/miniconda3/envs/testbed/bin/python', '-m', 'pytest',
-             '--disable-warnings', '--color=no', '--tb=no', '--verbose', *ids])
+             '--disable-warnings', '--color=no', '--tb=no', '--verbose', *ids],
+             serial_xdist=row['repo'] == 'python/mypy')
     dump(tests / 'contract.json', {'test_ids': ids, 'frozen_test_paths': paths,
          'explicit_pytest_argv': argv, 'timeout_sec': 3000,
          'pytest_canary_requires_cache': bool(snail),
+         'pytest_canary_serial_xdist': row['repo'] == 'python/mypy',
          'original_required_tests': required, 'resolved_fail_to_pass': f2p})
     (tests / 'run-original.sh').write_text('# Private exact-node evaluator; see contract.json\n')
     state = unit / 'state'

@@ -18,8 +18,8 @@ def main(root, support, runtime, old, episode_timeout_sec, *, workers=None,
     helpers = runpy.run_path(str(runtime / 'agentic/experiments/cli-gym-expand-20261107/switch_teacher.py'))
     verify, identity, write = (helpers[k] for k in ['verify', 'identity', 'write'])
     assert not (support / 'handoff.json').exists()
-    prepared = root / 'new-source-swegym/full-prepared-v2'
-    assert str(prepared) in old['argv']
+    prepared = Path(old['argv'][old['argv'].index('--output') + 1])
+    assert prepared.resolve().is_relative_to((root / 'new-source-swegym').resolve())
     initially_held = verify(old)['state'] == 'T'
     end = time.monotonic() + 1200
     stopped, deferred, download = False, None, None

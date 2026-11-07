@@ -44,7 +44,7 @@ def safe_test_paths(paths):
         if p.is_absolute() or not p.parts or any(x in ('.', '..') for x in p.parts):
             raise ValueError('Unsafe frozen test path')
         doctest = 'docs' in p.parts and p.suffix in ('.rst', '.txt')
-        if not doctest and not any(x in ('tests', 'test') or x.startswith('test_') for x in p.parts):
+        if not doctest and str(p) != 'test-data' and not any(x in ('tests', 'test') or x.startswith('test_') for x in p.parts):
             raise ValueError('Expected a test path, not repository source')
         result.append(str(p))
     if not result:

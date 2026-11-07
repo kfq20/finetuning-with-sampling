@@ -220,6 +220,8 @@ class DockerWorld:
         # intentional assertion failure and all installed test hooks intact.
         cache = ('-o cache_dir=/tmp/owned-pytest-canary-cache'
                  if contract.get('pytest_canary_requires_cache') else '-p no:cacheprovider')
+        if contract.get('pytest_canary_serial_xdist'):
+            cache += ' -n 0'
         canary = self.run(
             "/opt/miniconda3/envs/testbed/bin/python -m pytest " + cache + " -q /tests/canary.py",
             cwd="/testbed",

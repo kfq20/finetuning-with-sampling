@@ -127,6 +127,7 @@ class ContractTests(unittest.TestCase):
         self.assertEqual(test_roots(['docs/faq.rst::line:40,column:1']), ['docs/faq.rst'])
 
     def test_restore_cannot_erase_source(self):
+        self.assertEqual(safe_test_paths(['test-data']), ['test-data'])
         for paths in [['../tests'], ['/tests'], ['pandas'], ['.']]:
             with self.assertRaises(ValueError):
                 safe_test_paths(paths)
