@@ -9,6 +9,21 @@ from append_rewrite.terminus.docker_world import DockerWorld, judge_tests
 
 
 class FrozenTests(unittest.TestCase):
+    def test_relaxed_summary_keeps_all_checks_and_exact_negative_control(self):
+        node = 'tests/a.py::TestA::test_x'
+        canary = SimpleNamespace(exit_code=1, stdout=(
+            'FAILED ../tests/canary.py::test_expected_failure - assert False\n'
+            'FAILED ../tests/canary.py::test_expected_failure - assert False\n2 failed'))
+        good = 'PASSED ' + node + '\n'
+        self.assertTrue(judge_tests(good, [node], canary, summary_report=True)[0])
+        for bad in ['', 'SKIPPED ' + node, 'FAILED ' + node + '\n' + good,
+                    good + 'ERROR ' + node]:
+            self.assertFalse(judge_tests(bad, [node], canary, summary_report=True)[0])
+        for bad in [SimpleNamespace(exit_code=0, stdout=canary.stdout),
+                    SimpleNamespace(exit_code=1, stdout='2 failed'),
+                    SimpleNamespace(exit_code=1, stdout='FAILED tests/other.py::test_x')]:
+            self.assertFalse(judge_tests(good, [node], bad, summary_report=True)[0])
+
     def test_commit_display_warning_does_not_poison_snapshot_identity(self):
         world = object.__new__(DockerWorld)
         world.sandbox_id = "owned-container"

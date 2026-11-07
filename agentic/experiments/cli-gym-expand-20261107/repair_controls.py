@@ -8,7 +8,7 @@ import shutil
 from types import SimpleNamespace
 
 from append_rewrite.terminus.cli_contract import bound_pytest_resources, PYTEST_RESOURCES
-from append_rewrite.terminus.docker_world import checked
+from append_rewrite.terminus.docker_world import checked, DockerWorld
 from append_rewrite.terminus.production import controls, dump, tree
 from append_rewrite.terminus.protocol import digest
 
@@ -60,7 +60,7 @@ def resource_image(image, output):
     return after['Id']
 
 
-def repair(root, spec_path, output, assets):
+def repair(root, spec_path, output, assets, *, summary_report=False):
     original = read(spec_path)
     index = original['source']['row_index']
     proof = unpaid_proof(root, index)
@@ -80,6 +80,9 @@ def repair(root, spec_path, output, assets):
         if (Path(x['unit']) / 'controls/receipt.json').exists()]
     xdist = any('xdist-' in log for log in original_logs)
     after['explicit_pytest_argv'] = bound_pytest_resources(argv, serial_xdist=xdist)
+    if summary_report:
+        after['explicit_pytest_argv'].append('-rA')
+        after['pytest_summary_report'] = True
     assert after['test_ids'] == before['test_ids']
     dump(cp, after)
     # Aside from the wrapper, preserve every public instruction/test byte.
@@ -87,7 +90,8 @@ def repair(root, spec_path, output, assets):
     diff = {name for name in set(actual) | set(original['task_manifest'])
             if actual.get(name) != original['task_manifest'].get(name)}
     assert diff == {'tests/contract.json'}, diff
-    spec = {**original, 'unit_id': f'cligym-row-{index:04d}-resources-v1',
+    suffix = 'summary-v1' if summary_report else 'resources-v1'
+    spec = {**original, 'unit_id': f'cligym-row-{index:04d}-{suffix}',
             'task_path': str(task), 'instruction_path': str(task / 'instruction.md'),
             'task_manifest': tree(task)}
     spec['template_id'] = resource_image(original['template_id'], output)
@@ -103,6 +107,17 @@ def repair(root, spec_path, output, assets):
     controls(spec, SimpleNamespace(runtime_assets=assets), output / 'controls')
     receipt = read(output / 'controls/receipt.json')
     assert receipt['passed'] and receipt['initial']['reward'] == 0 and receipt['legal']['reward'] == 1
+    if summary_report:
+        sb = DockerWorld(original['template_id'], 'summary-test-code-bypass')
+        try:
+            q = sb.run('find /testbed/tests -name "test_*.py" -exec sh -c '
+                       "'echo \"def test_fake(): assert True\" > \"$1\"' _ {} \\;")
+            assert q.exit_code == 0
+            mutation = sb.grade(task)
+            assert mutation['reward'] == 0 and mutation['details']['canary_expected_failure']
+            dump(output / 'mutation-test-code-bypass.json', mutation)
+        finally:
+            sb.kill()
     unpaid_proof(root, index)  # Recheck before publishing a first-model admission.
     proof_path = output / 'repair-proof.json'
     return {'unit_id': spec['unit_id'], 'lane': 'shared', 'spec_path': str(output / 'spec.json'),
@@ -116,12 +131,14 @@ if __name__ == '__main__':
     p.add_argument('--specs', type=Path, nargs='+', required=True)
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--runtime-assets', type=Path, required=True)
+    p.add_argument('--summary-report', action='store_true')
     a = p.parse_args()
     a.output.mkdir(parents=True, exist_ok=False)
     ready, held = [], []
     from concurrent.futures import ThreadPoolExecutor, as_completed
     with ThreadPoolExecutor(3) as pool:
-        futures = {pool.submit(repair, a.root, p, a.output / p.stem, a.runtime_assets): p for p in a.specs}
+        futures = {pool.submit(repair, a.root, p, a.output / p.stem, a.runtime_assets,
+                               summary_report=a.summary_report): p for p in a.specs}
         for future in as_completed(futures):
             spec_path = futures[future]
             try:

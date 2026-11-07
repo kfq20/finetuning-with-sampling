@@ -30,7 +30,27 @@ def checked(*args, **kwargs):
     return r.stdout
 
 
-def judge_tests(log, wanted, canary):
+def judge_tests(log, wanted, canary, *, summary_report=False):
+    if summary_report:
+        # pytest-relaxed replaces the per-item display with a tree. -rA still
+        # emits real node IDs. Require every reported occurrence to pass.
+        statuses = {}
+        for line in log.splitlines():
+            match = re.match(r'^(PASSED|FAILED|ERROR|SKIPPED|XFAIL|XPASS) (.+)$', line)
+            if not match:
+                continue
+            status, tail = match.groups()
+            for node in wanted:
+                if tail == node or tail.startswith(node + ' - '):
+                    if statuses.get(node, 'PASSED') == 'PASSED':
+                        statuses[node] = status
+        # Some plugins collect the private canary twice. The exact assertion
+        # must fail; a numeric summary, import error or other failed test is not
+        # sufficient evidence of grader rejection.
+        trustworthy = canary.exit_code == 1 and bool(re.search(
+            r'^FAILED (?:\.\./|/)?tests/canary\.py::test_expected_failure(?:\s|$)',
+            canary.stdout, re.M))
+        return all(statuses.get(n) == 'PASSED' for n in wanted) and trustworthy, statuses, trustworthy
     statuses = dict(
         re.findall(
             r"^(.+?)\s+(PASSED|FAILED|ERROR|SKIPPED|XFAIL|XPASS)(?:\s|$)", log, re.M
@@ -173,7 +193,8 @@ class DockerWorld:
             cwd="/testbed",
             timeout=120,
         )
-        passed, statuses, trustworthy = judge_tests(log, wanted, canary)
+        passed, statuses, trustworthy = judge_tests(
+            log, wanted, canary, summary_report=contract.get('pytest_summary_report', False))
         return {
             "reward": float(passed and trustworthy),
             "details": {
