@@ -115,7 +115,7 @@ def repair(root, spec_path, output, assets):
     dump(output / 'spec.json', spec)
     dump(output / 'repair-proof.json', {'source_spec': str(spec_path), 'unpaid_originals': proof,
          'source_spec_sha256': hashlib.sha256(spec_path.read_bytes()).hexdigest(),
-         'mutable_task_data': sorted(changed), 'all_other_test_asset_bytes_unchanged': True,
+         'mutable_task_data': sorted(changed), 'all_other_noncache_test_asset_bytes_unchanged': True,
          'required_test_ids_unchanged': True, 'new_model_requests': 0})
     controls(spec, SimpleNamespace(runtime_assets=assets), output / 'controls')
     cr = read(output / 'controls/receipt.json')
@@ -125,11 +125,12 @@ def repair(root, spec_path, output, assets):
         sb = DockerWorld(old['gold_template_id'] if name == 'missing_task_data' else old['template_id'], name)
         try:
             if name == 'missing_task_data':
-                sb.run('rm -f -- ' + shlex.quote('/testbed/' + sorted(changed)[0]))
+                change = sb.run('rm -f -- ' + shlex.quote('/testbed/' + sorted(changed)[0]))
             else:
-                sb.run('find /testbed/tests -name "test_*.py" -exec sh -c \'echo "def test_fake(): assert True" > "$1"\' _ {} \\;')
+                change = sb.run('find /testbed/tests -name "test_*.py" -exec sh -c \'echo "def test_fake(): assert True" > "$1"\' _ {} \\;')
+            assert change.exit_code == 0, 'Mutation was not applied'
             mutations[name] = sb.grade(task)
-            assert mutations[name]['reward'] == 0, name
+            assert mutations[name]['reward'] == 0 and mutations[name]['details']['canary_expected_failure'], name
         finally:
             sb.kill()
     dump(output / 'mutation-controls.json', mutations)
