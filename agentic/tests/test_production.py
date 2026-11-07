@@ -6,7 +6,7 @@ from unittest.mock import patch
 from urllib.error import HTTPError
 from http.client import IncompleteRead
 
-from append_rewrite.terminus.production import safe_artifacts, tree, dump, fresh_grade
+from append_rewrite.terminus.production import safe_artifacts, tree, dump, fresh_grade, restore
 from append_rewrite.terminus.suffix_score import (
     NativeFullStreamClient,
     ResilientFullStreamClient,
@@ -14,6 +14,26 @@ from append_rewrite.terminus.suffix_score import (
 
 
 class ProductionSafety(unittest.TestCase):
+    def test_repository_restore_keeps_testbed_out_of_app_reset(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            spec = {'state_path': str(root), 'task_path': str(root),
+                    'state_manifest': {}, 'task_manifest': {},
+                    'environment_backend': 'docker', 'template_id': 'pinned',
+                    'capture_format': 'git-patch', 'restore_reset_paths': ['/app/'],
+                    'artifacts': ['/testbed/']}
+            with (patch('append_rewrite.terminus.docker_world.DockerWorld') as world,
+                  patch('append_rewrite.terminus.source_patch.ensure_image'),
+                  patch('append_rewrite.terminus.source_patch.initialize_repo') as init,
+                  patch('append_rewrite.terminus.production.sandbox.command') as command,
+                  patch('append_rewrite.terminus.production.sandbox.upload')):
+                command.return_value.exit_code = 0
+                sb = restore(spec, object(), 'fixture', install_runtime=False)
+                init.assert_called_once_with(sb, spec)
+                self.assertEqual(command.call_count, 1)
+                self.assertNotIn('/testbed', command.call_args.args[1])
+                world.return_value.kill.assert_not_called()
+
     def test_artifact_scope(self):
         for paths in ([], ["/tests/"], ["/app/../secret"]):
             with self.assertRaises(ValueError):
