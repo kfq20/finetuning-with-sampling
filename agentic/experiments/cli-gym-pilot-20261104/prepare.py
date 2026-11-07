@@ -38,7 +38,8 @@ def test_ids(script):
 
 
 def prepare(row, index, output, *, canonicalize_selectors=False,
-            build_network='none', repair_contract=False, apt_mirror=False, bounded_pytest=False):
+            build_network='none', repair_contract=False, apt_mirror=False, bounded_pytest=False,
+            bash_build=False, pypi_mirror=False):
     unit = output / (f"row-{index:04d}")
     unit.mkdir(mode=0o700)
     dump(unit / "original-row.json", row)
@@ -54,6 +55,12 @@ def prepare(row, index, output, *, canonicalize_selectors=False,
     image = json.loads(checked("image", "inspect", base))[0]
     pinned = image["RepoDigests"][0]
     frozen = re.sub(r"^FROM\s+\S+", "FROM " + pinned, recipe, count=1, flags=re.M)
+    if bash_build:
+        frozen = frozen.replace('FROM ' + pinned,
+            'FROM ' + pinned + '\nSHELL ["/bin/bash", "-c"]\n', 1)
+    if pypi_mirror:
+        frozen = frozen.replace('https://pypi.tuna.tsinghua.edu.cn/simple',
+                                'https://mirrors.aliyun.com/pypi/simple')
     if bounded_pytest:
         from append_rewrite.terminus.cli_contract import PYTEST_RESOURCES
         frozen = frozen.replace('FROM ' + pinned, 'FROM ' + pinned + '\nENV '
@@ -200,6 +207,8 @@ def prepare(row, index, output, *, canonicalize_selectors=False,
             "solver_network": "none",
             "repair_contract": repair_contract,
             "apt_prerequisite_mirror": 'https://repo.huaweicloud.com/ubuntu' if apt_mirror else None,
+            "bash_build": bash_build,
+            "pypi_prerequisite_mirror": 'https://mirrors.aliyun.com/pypi/simple' if pypi_mirror else None,
         },
     )
     return {
@@ -221,6 +230,8 @@ def main():
     p.add_argument('--min-free-gib', type=int, default=20)
     p.add_argument('--apt-mirror', action='store_true')
     p.add_argument('--bounded-pytest', action='store_true')
+    p.add_argument('--bash-build', action='store_true')
+    p.add_argument('--pypi-mirror', action='store_true')
     a = p.parse_args()
     a.output.mkdir(mode=0o700, parents=True, exist_ok=False)
     wanted = a.indices
@@ -251,6 +262,7 @@ def main():
                     canonicalize_selectors=a.canonicalize_selectors,
                     build_network=a.build_network, repair_contract=a.repair_contract, apt_mirror=a.apt_mirror,
                     bounded_pytest=a.bounded_pytest,
+                    bash_build=a.bash_build, pypi_mirror=a.pypi_mirror,
                 )
                 with lock:
                     plan.append(item)

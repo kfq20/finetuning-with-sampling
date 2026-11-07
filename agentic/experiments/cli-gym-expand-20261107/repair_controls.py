@@ -115,11 +115,15 @@ if __name__ == '__main__':
     a = p.parse_args()
     a.output.mkdir(parents=True, exist_ok=False)
     ready, held = [], []
-    for spec_path in a.specs:
-        try:
-            ready.append(repair(a.root, spec_path, a.output / spec_path.stem, a.runtime_assets))
-        except Exception as exc:
-            held.append({'source_spec': str(spec_path), 'error_type': type(exc).__name__, 'message': str(exc)[:400]})
-        dump(a.output / 'plan.json', {'units': ready})
-        dump(a.output / 'progress.json', {'ready': len(ready), 'held': held, 'new_model_requests': 0})
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    with ThreadPoolExecutor(3) as pool:
+        futures = {pool.submit(repair, a.root, p, a.output / p.stem, a.runtime_assets): p for p in a.specs}
+        for future in as_completed(futures):
+            spec_path = futures[future]
+            try:
+                ready.append(future.result())
+            except Exception as exc:
+                held.append({'source_spec': str(spec_path), 'error_type': type(exc).__name__, 'message': str(exc)[:400]})
+            dump(a.output / 'plan.json', {'units': ready})
+            dump(a.output / 'progress.json', {'ready': len(ready), 'held': held, 'new_model_requests': 0})
     dump(a.output / 'complete.json', {'ready': len(ready), 'held': held, 'new_model_requests': 0})
