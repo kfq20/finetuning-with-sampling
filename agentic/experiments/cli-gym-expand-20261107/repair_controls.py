@@ -40,12 +40,16 @@ def resource_image(image, output):
     assert re.fullmatch(r'sha256:[0-9a-f]{64}', image)
     build = output / 'resource-image'
     build.mkdir()
-    dockerfile = ('FROM ' + image + '\nENV '
+    before = json.loads(checked('image', 'inspect', image))[0]
+    # BuildKit interprets FROM sha256:... as docker.io/library/sha256, so bind
+    # an owned local tag to the verified ID before requesting an offline build.
+    base_tag = 'append-rewrite/cligym-local:' + image.removeprefix('sha256:')
+    checked('tag', image, base_tag)
+    dockerfile = ('FROM ' + base_tag + '\nENV '
                   + ' '.join(k + '=' + v for k, v in PYTEST_RESOURCES.items()) + '\n')
     (build / 'Dockerfile').write_text(dockerfile)
     tag = 'append-rewrite/cligym-resource:' + hashlib.sha256(dockerfile.encode()).hexdigest()[:16]
     (build / 'build.log').write_bytes(checked('build', '--network', 'none', '-t', tag, str(build)))
-    before = json.loads(checked('image', 'inspect', image))[0]
     after = json.loads(checked('image', 'inspect', tag))[0]
     assert before['RootFS'] == after['RootFS'], 'Resource adapter must not alter task files'
     for key in ['Cmd', 'Entrypoint', 'User', 'WorkingDir']:
