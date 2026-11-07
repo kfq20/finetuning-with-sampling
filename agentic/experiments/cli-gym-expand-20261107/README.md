@@ -259,11 +259,14 @@ The existing combined611-pair snapshot above remains immutable. A new source map
 is `/mnt/ecs-tb4/cli-gym-expansion-20261107/paired_export_selection.json`:
 
 - CLI604 pairs: `/mnt/ecs-tb4/datasets/cli-gym-paired-20261108/SELECTED_RELEASE.json`, reusing the verified original package without recopying it.
-- SWE34 pairs: `/mnt/ecs-tb4/datasets/swegym-paired-20261108/SELECTED_RELEASE.json`, selecting `checkpoint-v1/swe-gym/package` with matched `method-paired/train.jsonl` and `expert-paired/train.jsonl`.
+- SWE50 pairs: `/mnt/ecs-tb4/datasets/swegym-paired-20261108/SELECTED_RELEASE.json`, selecting `checkpoint-v2/swe-gym/package` with matched `method-paired/train.jsonl` and `expert-paired/train.jsonl`; checkpoint-v1 remains preserved.
 
-All34 SWE pairs passed frozen-tokenizer re-encoding and mask/identity/full-score
+All50 selected SWE pairs passed frozen-tokenizer re-encoding and mask/identity/full-score
 validation. `paired_snapshot.py --sources swe-gym` updates one source only; its
 default remains both sources. These checkpoints are distinct from live counts
 and neither independent1k target is complete. No training or inference starts
 from publishing these data selections. Evidence:
 `agentic/research/evidence/source-separated-paired-checkpoint-20261108.json`.
+
+Checkpoint-v2 and the second zero-inference serialization recovery are bound in
+`agentic/research/evidence/swe-paired-checkpoint-v2-20261108.json`.

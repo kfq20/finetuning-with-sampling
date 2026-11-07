@@ -1,0 +1,70 @@
+{
+  "at": 1794088016.7330065,
+  "checkpoint_selection": {
+    "at": 1794087798.3342047,
+    "selected_pairs": {
+      "cli-gym": 604,
+      "swe-gym": 50
+    },
+    "source_selection_sha256": "e935073269541785f823d2cc6a676ba6226811caaa49cd626207c5f1e4801b6f",
+    "master_selection_sha256": "4a39b6ca15a59b1b18ab390eff39afe2684c97f0d67da10a9854e4ff7a031dd3",
+    "validation": {
+      "passed": true,
+      "datasets": {
+        "method-paired": {
+          "rows": 50,
+          "supervised_tokens": 203393
+        },
+        "expert-paired": {
+          "rows": 50,
+          "supervised_tokens": 355972
+        }
+      },
+      "full_tokenizer_reencoded": true
+    },
+    "over_context": {
+      "method": {
+        "32768": 1,
+        "65536": 0,
+        "131072": 0,
+        "262144": 0
+      },
+      "expert": {
+        "32768": 25,
+        "65536": 1,
+        "131072": 0,
+        "262144": 0
+      }
+    },
+    "prior_selections_preserved": true,
+    "cli_selection_unchanged": true,
+    "model_requests": 0
+  },
+  "extra_offline_recovery": {
+    "unit": "swegym-python__mypy-10478",
+    "recovered_sft": 1,
+    "model_requests": 0,
+    "original_hashes_unchanged": 9,
+    "original_status_preserved": true,
+    "receipt_sha256": "d6e4d2c98e9d468425d4af672d8a7323399008be6dc47526f37bbc966c2bf1c4",
+    "sft_sha256": "0388ae4a566e1df90740cf22c30a06a97c2f6625639e5bf1ae81ec0ff16ca2a5"
+  },
+  "recovery_grades": {
+    "a": 1.0,
+    "b": 1.0
+  },
+  "current_valid_by_source": {
+    "cli-gym": 604,
+    "swe-gym": 52
+  },
+  "health": {
+    "checked_at": 1794088013.7067294,
+    "active_workers": 16,
+    "queued": 16,
+    "phase": "running",
+    "provider_holds": [],
+    "automatic_benchmark_retry": false
+  },
+  "extra_recovery_in_published_manifest": true,
+  "model_requests_by_this_export_and_recovery": 0
+}
