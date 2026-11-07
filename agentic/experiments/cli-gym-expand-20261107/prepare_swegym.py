@@ -116,7 +116,11 @@ def main(a):
     scope = json.loads(a.scope.read_text())
     allowed = scope['tasks']
     rows = [r for r in rows if r['instance_id'] in allowed]
-    rows.sort(key=lambda r: (r['repo'] != 'pydantic/pydantic', r['repo'],
+    # Prefer reusable CPU project layers before GPU-oriented medical images.
+    repos = ['pydantic/pydantic', 'bokeh/bokeh', 'facebookresearch/hydra',
+             'python/mypy', 'conan-io/conan', 'dask/dask', 'getmoto/moto',
+             'iterative/dvc', 'pandas-dev/pandas', 'modin-project/modin', 'Project-MONAI/MONAI']
+    rows.sort(key=lambda r: (repos.index(r['repo']) if r['repo'] in repos else len(repos), r['repo'],
                             len(r['FAIL_TO_PASS']) + len(r['PASS_TO_PASS']), r['instance_id']))
     a.output.mkdir(exist_ok=True)
     plan = json.loads((a.output / 'plan.json').read_text())['units'] if (a.output / 'plan.json').exists() else []
