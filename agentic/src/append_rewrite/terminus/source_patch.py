@@ -38,6 +38,8 @@ def initialize_repo(sb, spec):
     if q.exit_code:
         raise RuntimeError('Source baseline could not be frozen')
     commit = q.stdout.strip()
+    if not re.fullmatch(r'[0-9a-f]{40}', commit):
+        raise ValueError('Invalid frozen baseline identity')
     if spec.get('source_baseline_commit', commit) != commit:
         raise ValueError('Initial source tree identity drift')
     return commit

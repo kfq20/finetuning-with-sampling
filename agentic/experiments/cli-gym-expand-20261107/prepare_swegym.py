@@ -124,6 +124,10 @@ def main(a):
     for row in rows:
         if (a.output / row['instance_id']).exists():
             continue  # A prepared or failed source case is not silently repeated.
+        task_id = 'swegym-' + row['instance_id']
+        already = json.loads((a.root / 'acquisition-plan.json').read_text())['units']
+        if any(z['unit_id'] == task_id for z in already) or (a.root / 'production/units' / task_id).exists():
+            continue
         while True:
             progress = json.loads((a.root / 'acquisition-progress.json').read_text())
             if progress['valid_pairs'] >= 1000:
