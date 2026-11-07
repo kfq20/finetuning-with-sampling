@@ -71,8 +71,11 @@ def main(root, support, runtime, old, episode_timeout_sec):
         write(support / 'before.json', {'old': old, 'old_progress': old_progress,
               'deferred_unpaid_download': deferred, 'download': download})
         if download:
-            verify(download)
-            os.kill(download['pid'], signal.SIGTERM)
+            current = identity(download['pid'])
+            assert current['start_ticks'] == download['start_ticks']
+            if current['state'] != 'Z':
+                verify(download)
+                os.kill(download['pid'], signal.SIGTERM)
         verify(old)
         os.kill(old['pid'], signal.SIGTERM)
         os.kill(old['pid'], signal.SIGCONT)
