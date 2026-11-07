@@ -13,7 +13,7 @@ import subprocess
 import time
 
 
-def main(root, support, runtime, old, episode_timeout_sec):
+def main(root, support, runtime, old, episode_timeout_sec, *, workers=None):
     helpers = runpy.run_path(str(runtime / 'agentic/experiments/cli-gym-expand-20261107/switch_teacher.py'))
     verify, identity, write = (helpers[k] for k in ['verify', 'identity', 'write'])
     assert not (support / 'handoff.json').exists()
@@ -29,7 +29,8 @@ def main(root, support, runtime, old, episode_timeout_sec):
             children = (proc / 'task' / str(old['pid']) / 'children').read_text().split()
             progress = json.loads((prepared / 'progress.json').read_text())
             candidate = None
-            if len(children) == 1:
+            threads = int(next(line.split(':')[1] for line in (proc / 'status').read_text().splitlines() if line.startswith('Threads:')))
+            if len(children) == 1 and threads == 1:
                 child = Path('/proc') / children[0]
                 argv = [x.decode() for x in (child / 'cmdline').read_bytes().split(b'\0') if x]
                 if len(argv) == 3 and Path(argv[0]).name == 'docker' and argv[1] == 'pull':
@@ -98,8 +99,17 @@ def main(root, support, runtime, old, episode_timeout_sec):
             write(prepared / 'progress.json', old_progress)
         argv = old['argv'].copy()
         argv[1] = str(runtime / 'agentic/experiments/cli-gym-expand-20261107/prepare_swegym.py')
-        argv += ['--episode-timeout-sec', str(episode_timeout_sec)]
-        env.update(PYTHONPATH=str(runtime / 'agentic/src'), PYTHONDONTWRITEBYTECODE='1')
+        options = {'--episode-timeout-sec': episode_timeout_sec}
+        if workers is not None:
+            options['--workers'] = workers
+        for option, value in options.items():
+            if option in argv:
+                argv[argv.index(option) + 1] = str(value)
+            else:
+                argv += [option, str(value)]
+        scratch = support / 'tmp'
+        scratch.mkdir(exist_ok=True)
+        env.update(PYTHONPATH=str(runtime / 'agentic/src'), PYTHONDONTWRITEBYTECODE='1', TMPDIR=str(scratch))
         with (support / 'maker.log').open('xb') as log:
             child = subprocess.Popen(argv, env=env, stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True)
         new = {**identity(child.pid), 'argv': argv, 'started_at': time.time()}
@@ -107,7 +117,8 @@ def main(root, support, runtime, old, episode_timeout_sec):
         changes = [p for p, checksum in hashes.items() if hashlib.sha256(Path(p).read_bytes()).hexdigest() != checksum]
         report = {'at': time.time(), 'old_maker_exited': True, 'new_maker': new,
                   'original_package_files': len(hashes), 'original_package_changes': changes,
-                  'new_episode_timeout_sec': episode_timeout_sec, 'deferred_unpaid_download': deferred,
+                  'new_episode_timeout_sec': episode_timeout_sec, 'preparation_workers': workers,
+                  'deferred_unpaid_download': deferred,
                   'model_workers_signalled': 0, 'model_replays': 0, 'only_future_packages_changed': True}
         write(support / 'handoff.json', report)
         assert not changes

@@ -114,11 +114,15 @@ def prepare(row, revision, output, assets, *, episode_timeout_sec=3000):
 
 
 def main(a):
+    from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
+    workers = getattr(a, 'workers', 1)
+    horizon = getattr(a, 'episode_timeout_sec', 3000)
+    if type(workers) is not int or workers < 1 or type(horizon) is not int or horizon < 1:
+        raise ValueError('Positive preparation capacity and episode horizon required')
     rows = json.loads(a.rows.read_text())
     scope = json.loads(a.scope.read_text())
     allowed = scope['tasks']
     rows = [r for r in rows if r['instance_id'] in allowed]
-    # Prefer reusable CPU project layers before GPU-oriented medical images.
     repos = ['pydantic/pydantic', 'bokeh/bokeh', 'facebookresearch/hydra',
              'python/mypy', 'conan-io/conan', 'dask/dask', 'getmoto/moto',
              'iterative/dvc', 'pandas-dev/pandas', 'modin-project/modin', 'Project-MONAI/MONAI']
@@ -127,33 +131,53 @@ def main(a):
     a.output.mkdir(exist_ok=True)
     plan = json.loads((a.output / 'plan.json').read_text())['units'] if (a.output / 'plan.json').exists() else []
     held = json.loads((a.output / 'progress.json').read_text()).get('held', []) if (a.output / 'progress.json').exists() else []
-    for row in rows:
-        if (a.output / row['instance_id']).exists():
-            continue  # A prepared or failed source case is not silently repeated.
-        task_id = 'swegym-' + row['instance_id']
-        already = json.loads((a.root / 'acquisition-plan.json').read_text())['units']
-        if any(z['unit_id'] == task_id for z in already) or (a.root / 'production/units' / task_id).exists():
-            continue
+    seen = {r['task_id'] for r in held}
+    pending, cursor = {}, 0
+
+    def manufacture(row):
+        if row_sha(row) != allowed[row['instance_id']]:
+            raise ValueError('Source row drift')
+        return prepare(row, scope['revision'], a.output, a.assets, episode_timeout_sec=horizon)
+
+    def progress(phase):
+        dump(a.output / 'progress.json', {'phase': phase, 'ready': len(plan), 'held': held,
+             'preparation_workers': workers, 'active_tasks': sorted(pending.values())})
+
+    with ThreadPoolExecutor(workers) as pool:
         while True:
-            progress = json.loads((a.root / 'acquisition-progress.json').read_text())
-            if progress.get('valid_by_source', {}).get('swe-gym', 0) >= progress.get('targets_by_source', {}).get('swe-gym', 1000):
-                dump(a.output / 'complete.json', {'target_reached': True, 'ready': len(plan), 'held': held})
-                return
-            queued = sum(not (a.root / 'production/units' / x['unit_id']).exists() for x in plan)
-            if shutil.disk_usage(a.root).free >= 40 * 1024**3 and queued < 16:
-                break
-            dump(a.output / 'progress.json', {'phase': 'storage_hold' if shutil.disk_usage(a.root).free < 40 * 1024**3 else 'queue_full', 'ready': len(plan), 'held': held})
-            time.sleep(10)
-        try:
-            if row_sha(row) != allowed[row['instance_id']]:
-                raise ValueError('Source row drift')
-            plan.append(prepare(row, scope['revision'], a.output, a.assets,
-                                episode_timeout_sec=a.episode_timeout_sec))
-        except Exception as e:
-            held.append({'task_id': row['instance_id'], 'type': type(e).__name__, 'message': str(e)[:300]})
-        dump(a.output / 'plan.json', {'units': plan})
-        dump(a.output / 'progress.json', {'phase': 'manufacturing', 'ready': len(plan), 'held': held})
-    dump(a.output / 'complete.json', {'ready': len(plan), 'held': held})
+            live = json.loads((a.root / 'acquisition-progress.json').read_text())
+            reached = live.get('valid_by_source', {}).get('swe-gym', 0) >= live.get('targets_by_source', {}).get('swe-gym', 1000)
+            queued = sum(not (a.root / 'production/units' / item['unit_id']).exists() for item in plan)
+            free = shutil.disk_usage(a.root).free
+            already = {z['unit_id'] for z in json.loads((a.root / 'acquisition-plan.json').read_text())['units']}
+            while (not reached and cursor < len(rows) and len(pending) < workers
+                   and queued + len(pending) < 16 and free >= 40 * 1024**3):
+                row = rows[cursor]
+                cursor += 1
+                name = row['instance_id']
+                uid = 'swegym-' + name
+                if (name in seen or (a.output / name).exists() or uid in already
+                        or (a.root / 'production/units' / uid).exists()):
+                    continue
+                seen.add(name)
+                pending[pool.submit(manufacture, row)] = name
+            if not pending:
+                if reached or cursor == len(rows):
+                    dump(a.output / 'complete.json', {'target_reached': reached, 'ready': len(plan), 'held': held})
+                    return
+                progress('storage_hold' if free < 40 * 1024**3 else 'queue_full')
+                time.sleep(10)
+                continue
+            progress('manufacturing')
+            done, _ = wait(pending, timeout=2, return_when=FIRST_COMPLETED)
+            for future in done:
+                name = pending.pop(future)
+                try:
+                    plan.append(future.result())
+                except Exception as error:
+                    held.append({'task_id': name, 'type': type(error).__name__, 'message': str(error)[:300]})
+                dump(a.output / 'plan.json', {'units': plan})
+            progress('manufacturing')
 
 
 if __name__ == '__main__':
@@ -161,4 +185,5 @@ if __name__ == '__main__':
     for key in ['root', 'rows', 'scope', 'output', 'assets']:
         p.add_argument('--' + key, type=Path, required=True)
     p.add_argument('--episode-timeout-sec', type=int, default=3000)
+    p.add_argument('--workers', type=int, default=1)
     main(p.parse_args())
