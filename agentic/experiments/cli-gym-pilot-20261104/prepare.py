@@ -91,7 +91,14 @@ def prepare(row, index, output, *, canonicalize_selectors=False,
         ids = published_selectors(row['run_tests'])
         requested = list(ids)
         gold = DockerWorld(image['Id'], 'cligym-contract-collection')
+        serial_xdist = False
         try:
+            if bounded_pytest:
+                installed = gold.run('/opt/miniconda3/envs/testbed/bin/python -c '
+                    + shlex.quote("import importlib.util; print(int(importlib.util.find_spec('xdist') is not None))"), timeout=60)
+                if installed.exit_code:
+                    raise ValueError('Gold test runtime could not be inspected')
+                serial_xdist = installed.stdout.strip() == '1'
             parents = sorted({x.split('[', 1)[0] for x in ids})
             q = gold.run('source /opt/miniconda3/bin/activate; conda activate testbed; '
                          + shlex.join(['python', '-m', 'pytest', '--collect-only', '-q', *parents]),
@@ -123,7 +130,7 @@ def prepare(row, index, output, *, canonicalize_selectors=False,
             '--color=no', '--tb=no', '--verbose', *ids])
         if bounded_pytest:
             from append_rewrite.terminus.cli_contract import bound_pytest_resources
-            contract['explicit_pytest_argv'] = bound_pytest_resources(contract['explicit_pytest_argv'])
+            contract['explicit_pytest_argv'] = bound_pytest_resources(contract['explicit_pytest_argv'], serial_xdist=serial_xdist)
     dump(
         tests / "contract.json",
         contract,

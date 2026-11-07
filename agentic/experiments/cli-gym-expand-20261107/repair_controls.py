@@ -46,7 +46,11 @@ def repair(root, spec_path, output, assets):
     before = read(cp)
     assert before.get('explicit_pytest_argv'), 'Explicit frozen test list required'
     after = dict(before)
-    after['explicit_pytest_argv'] = bound_pytest_resources(before['explicit_pytest_argv'])
+    original_logs = [read(Path(x['unit']) / 'controls/receipt.json').get('legal', {}).get(
+        'details', {}).get('test_log', '') for x in proof
+        if (Path(x['unit']) / 'controls/receipt.json').exists()]
+    xdist = any('xdist-' in log for log in original_logs)
+    after['explicit_pytest_argv'] = bound_pytest_resources(before['explicit_pytest_argv'], serial_xdist=xdist)
     assert after['test_ids'] == before['test_ids']
     dump(cp, after)
     # Aside from the wrapper, preserve every public instruction/test byte.
@@ -65,12 +69,15 @@ def repair(root, spec_path, output, assets):
          'source_spec_sha256': hashlib.sha256(spec_path.read_bytes()).hexdigest(),
          'unpaid_originals': proof, 'changed_files': sorted(diff),
          'original_test_ids': before['test_ids'], 'repaired_test_ids': after['test_ids'],
-         'new_model_requests': 0, 'instruction_unchanged': True})
+         'new_model_requests': 0, 'instruction_unchanged': True, 'xdist_serialized': xdist})
     controls(spec, SimpleNamespace(runtime_assets=assets), output / 'controls')
     receipt = read(output / 'controls/receipt.json')
     assert receipt['passed'] and receipt['initial']['reward'] == 0 and receipt['legal']['reward'] == 1
     unpaid_proof(root, index)  # Recheck before publishing a first-model admission.
-    return {'unit_id': spec['unit_id'], 'lane': 'shared', 'spec_path': str(output / 'spec.json')}
+    proof_path = output / 'repair-proof.json'
+    return {'unit_id': spec['unit_id'], 'lane': 'shared', 'spec_path': str(output / 'spec.json'),
+            'unpaid_repair_proof': str(proof_path),
+            'unpaid_repair_proof_sha256': hashlib.sha256(proof_path.read_bytes()).hexdigest()}
 
 
 if __name__ == '__main__':
