@@ -83,6 +83,9 @@ def restore(spec, args, owner, *, template_id=None, install_runtime=True):
             template_id=template_id or spec["template_id"],
         )
     try:
+        if spec.get('capture_format') == 'git-patch':
+            from .source_patch import initialize_repo
+            initialize_repo(sb, spec)
         sb.set_timeout(30000)
         resets = spec.get("restore_reset_paths")
         if resets is None:
@@ -151,10 +154,11 @@ def grade(sb, task):
 def fresh_grade(spec, args, archive, owner):
     if spec.get('capture_format') == 'git-patch':
         from .docker_world import DockerWorld
-        from .source_patch import apply_patch, ensure_image
+        from .source_patch import apply_patch, ensure_image, initialize_repo
         ensure_image(spec)
         sb = DockerWorld(spec['template_id'], owner)
         try:
+            initialize_repo(sb, spec)
             apply_patch(sb, archive)
             return grade(sb, Path(spec['task_path']))
         finally:
@@ -247,6 +251,9 @@ def controls(spec, args, out):
 
         sb = DockerWorld(spec["gold_template_id"], "cligym-gold-control")
         try:
+            if spec.get('capture_format') == 'git-patch':
+                from .source_patch import initialize_repo
+                initialize_repo(sb, spec)
             if spec.get('legal_control_script'):
                 script = Path(spec['legal_control_script'])
                 if not script.resolve().is_relative_to(Path(spec['task_path']).resolve()):
@@ -401,7 +408,7 @@ async def episode(spec, args, out, role, teacher=None):
         )
         if spec.get('capture_format') == 'git-patch':
             from .source_patch import capture_patch
-            captured = capture_patch(sb, submission)
+            captured = capture_patch(sb, submission, spec['source_baseline_commit'])
         else:
             captured = capture(sb, spec["artifacts"], submission)
         sb.kill()
@@ -475,7 +482,7 @@ async def episode(spec, args, out, role, teacher=None):
             try:
                 if spec.get('capture_format') == 'git-patch':
                     from .source_patch import capture_patch
-                    dump(out / 'held-state.json', capture_patch(sb, out / 'held-state.patch'))
+                    dump(out / 'held-state.json', capture_patch(sb, out / 'held-state.patch', spec['source_baseline_commit']))
                 else:
                     dump(
                     out / "held-state.json",

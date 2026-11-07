@@ -47,9 +47,11 @@ def prepare(row, revision, output, assets):
     (solution / 'solve.sh').write_text(script)
     gold = DockerWorld(info['Id'], 'swegym-manufacture-gold')
     try:
-        q = gold.run('git rev-parse HEAD; git diff --quiet', cwd='/testbed')
-        if q.exit_code or q.stdout.strip() != row['base_commit']:
-            raise ValueError('Source image base commit or clean-state mismatch')
+        from append_rewrite.terminus.source_patch import initialize_repo
+        initial = gold.run('git status --porcelain', cwd='/testbed')
+        baseline = initialize_repo(gold, {'source_base_commit': row['base_commit']})
+        dump(unit / 'initial-state.json', {'original_base_commit': row['base_commit'],
+             'initial_tracked_and_untracked_status': initial.stdout, 'frozen_baseline_commit': baseline})
         gold.write('/tmp/owned-gold.patch', row['patch'])
         gold.write('/tmp/owned-test.patch', row['test_patch'])
         q = gold.run('git apply /tmp/owned-gold.patch && git apply /tmp/owned-test.patch', cwd='/testbed')
@@ -92,6 +94,7 @@ def prepare(row, revision, output, assets):
     spec = {'unit_id': 'swegym-' + name, 'environment_backend': 'docker',
             'template_id': info['Id'], 'gold_template_id': info['Id'],
             'source_registry_image': info['RepoDigests'][0], 'capture_format': 'git-patch',
+            'source_base_commit': row['base_commit'], 'source_baseline_commit': baseline,
             'task_path': str(task), 'instruction_path': str(task / 'instruction.md'),
             'task_manifest': tree(task), 'state_path': str(state), 'state_manifest': {},
             'cwd': '/testbed', 'artifacts': ['/testbed/'], 'restore_reset_paths': ['/app/'],

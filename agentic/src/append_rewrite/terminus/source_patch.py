@@ -20,10 +20,35 @@ def ensure_image(spec):
             raise ValueError('Restored image identity drift')
 
 
-def capture_patch(sb, destination):
+def initialize_repo(sb, spec):
+    base = spec['source_base_commit']
+    if not re.fullmatch(r'[0-9a-f]{40}', base):
+        raise ValueError('Pinned public base commit required')
+    q = sb.run('git rev-parse HEAD', cwd='/testbed')
+    if q.exit_code or q.stdout.strip() != base:
+        raise ValueError('Source image base commit mismatch')
+    # Official images may contain dependency edits (e.g. pyproject/pdm.lock).
+    # Preserve that authentic initial state as a deterministic diff baseline.
+    q = sb.run("set -e; git add -A; GIT_AUTHOR_DATE='2000-01-01T00:00:00+0000' "
+               "GIT_COMMITTER_DATE='2000-01-01T00:00:00+0000' git "
+               "-c user.name=Environment -c user.email=environment@example.invalid "
+               "-c core.hooksPath=/dev/null -c commit.gpgsign=false "
+               "commit --allow-empty -m 'Frozen environment baseline' >/dev/null; git rev-parse HEAD",
+               cwd='/testbed')
+    if q.exit_code:
+        raise RuntimeError('Source baseline could not be frozen')
+    commit = q.stdout.strip()
+    if spec.get('source_baseline_commit', commit) != commit:
+        raise ValueError('Initial source tree identity drift')
+    return commit
+
+
+def capture_patch(sb, destination, baseline='HEAD'):
+    if baseline != 'HEAD' and not re.fullmatch(r'[0-9a-f]{40}', baseline):
+        raise ValueError('Invalid source diff baseline')
     # Intent-to-add includes newly created source files without copying Git state.
     q = sb.run('set -euo pipefail; git ls-files --others --exclude-standard -z | '
-               'xargs -0 -r git add -N --; git diff --binary HEAD', cwd='/testbed', raw=True)
+               'xargs -0 -r git add -N --; git diff --binary ' + baseline, cwd='/testbed', raw=True)
     if q.exit_code:
         raise RuntimeError('SourcePatchCaptureFailed')
     raw = q.stdout.encode() if isinstance(q.stdout, str) else q.stdout
