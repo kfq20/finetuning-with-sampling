@@ -241,3 +241,13 @@ coordinator2805293 and signalled no model workers;969 prior terminal files remai
 unchanged. Current identities remain subject to live verification. Read explicit
 `producer_runtime` and`coordinator_source_commit` separately, rather than assuming
 that all roles run Git HEAD. No automatic paid replay or shared Docker operation.
+
+First prospective FIFO end-to-end success:pydantic-7825 completed normally with
+original/fresh reward1,8 student turns and64 scored proposals,26.07min full episode.
+Existing admission checks verified SFT bytes/labels/masks; every saved decision
+selected the maximum mean unreferenced full-input candidate LP from all8 proposals.
+No intermediate verifier or environment rollback was used. The largest observed
+score wait was363s, so this success does not establish that queue latency is solved.
+No generation or grading was repeated for this read-only audit. Evidence:
+`support/score-fifo-20261108/first-success-audit.json` and
+`agentic/research/evidence/score-fifo-first-success-20261108.json`.

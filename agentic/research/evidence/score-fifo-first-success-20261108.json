@@ -1,0 +1,20 @@
+{
+  "at": 1794075711.4779322,
+  "unit": "swegym-pydantic__pydantic-7825",
+  "receipt_sha256": "5f122ef664a8203b8b4634a36ac8bbcbc8de14e4445db02bde161bb783bf2afc",
+  "sft_sha256": "ca902bd275e069bae6053360267c35223e8e4a1f064f17f06e7bda2d3747f1b1",
+  "normal_completed": true,
+  "original_reward": 1.0,
+  "fresh_reward": 1.0,
+  "training_admitted": true,
+  "turns": 8,
+  "scored_candidates": 64,
+  "selection_verified": true,
+  "reference_free_full_scoring_verified": true,
+  "labels_and_loss_mask_verified": true,
+  "elapsed_sec": 1564.1842614468187,
+  "score_queue_wait_max_sec": 363.0022116769105,
+  "new_generation_requests": 0,
+  "new_verifier_runs": 0,
+  "original_files_modified": false
+}
