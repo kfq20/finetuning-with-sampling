@@ -4,12 +4,51 @@ from pathlib import Path
 import runpy
 import tempfile
 import threading
+import os
+import signal
+import subprocess
+import sys
+import time
 from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
 
 class SWEPreparationTests(unittest.TestCase):
+    def test_sigint_drains_existing_preparation_futures(self):
+        code = '''from concurrent.futures import ThreadPoolExecutor, wait
+from pathlib import Path
+import time, sys
+root = Path(sys.argv[1])
+def task(index):
+    (root / ('begun-' + str(index))).touch()
+    while not (root / 'release').exists():
+        time.sleep(.01)
+    (root / ('finished-' + str(index))).touch()
+with ThreadPoolExecutor(4) as pool:
+    futures = [pool.submit(task, i) for i in range(4)]
+    wait(futures)
+'''
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            child = subprocess.Popen([sys.executable, '-c', code, d],
+                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            try:
+                end = time.monotonic() + 5
+                while len(list(root.glob('begun-*'))) < 4 and time.monotonic() < end:
+                    time.sleep(.01)
+                self.assertEqual(len(list(root.glob('begun-*'))), 4)
+                os.kill(child.pid, signal.SIGINT)
+                time.sleep(.05)
+                self.assertIsNone(child.poll())
+                (root / 'release').touch()
+                child.wait(timeout=5)
+                self.assertEqual(len(list(root.glob('finished-*'))), 4)
+            finally:
+                if child.poll() is None:
+                    child.kill()
+                    child.wait()
+
     def test_parallel_preparation_and_no_repeat_of_held_or_completed(self):
         module = runpy.run_path(str(Path(__file__).with_name('prepare_swegym.py')))
         main, row_sha = module['main'], module['row_sha']

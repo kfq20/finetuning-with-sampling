@@ -41,7 +41,7 @@ def main(root, output, target_gib=90):
     assert os.environ['DOCKER_HOST'] == 'unix:///mnt/ecs-tb4/cli-gym-pilot-20261104/runtime/docker.sock'
     output.mkdir(parents=True, exist_ok=False)
     sources = [root / 'new-source-swegym' / name
-               for name in ['full-prepared-v2', 'full-prepared-v3']]
+               for name in ['full-prepared-v2', 'full-prepared-v3', 'full-prepared-v4']]
     held = [(source, item) for source in sources if (source / 'progress.json').exists()
             for item in read(source / 'progress.json').get('held', [])]
     scope = read(root / 'new-source-swegym/scope.json')

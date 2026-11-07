@@ -14,17 +14,42 @@ import time
 
 
 def main(root, support, runtime, old, episode_timeout_sec, *, workers=None,
-         repair_pytest_snail=False, output=None, rows=None):
+         repair_pytest_snail=False, output=None, rows=None, drain=False):
     helpers = runpy.run_path(str(runtime / 'agentic/experiments/cli-gym-expand-20261107/switch_teacher.py'))
     verify, identity, write = (helpers[k] for k in ['verify', 'identity', 'write'])
     assert not (support / 'handoff.json').exists()
     prepared = Path(old['argv'][old['argv'].index('--output') + 1])
     assert prepared.resolve().is_relative_to((root / 'new-source-swegym').resolve())
     initially_held = verify(old)['state'] == 'T'
+    proc = Path('/proc') / str(old['pid'])
+    env = dict(x.decode().split('=', 1) for x in (proc / 'environ').read_bytes().split(b'\0') if x)
     end = time.monotonic() + 1200
     stopped, deferred, download = False, None, None
+    drained = False
     try:
-        while time.monotonic() < end:
+        if drain:
+            assert not initially_held, 'Do not resume an existing hold to drain'
+            assert Path(old['argv'][1]).name == 'prepare_swegym.py'
+            write(support / 'drain-request.json', {'old': old, 'at': time.time(),
+                  'progress': json.loads((prepared / 'progress.json').read_text()),
+                  'method': 'SIGINT main thread; ThreadPoolExecutor waits for existing futures',
+                  'model_workers_signalled': 0})
+            verify(old)
+            os.kill(old['pid'], signal.SIGINT)
+            while time.monotonic() < end:
+                try:
+                    actual = identity(old['pid'])
+                except FileNotFoundError:
+                    drained = True
+                    break
+                assert actual['start_ticks'] == old['start_ticks']
+                if actual['state'] == 'Z':
+                    drained = True
+                    break
+                time.sleep(.5)
+            if not drained:
+                raise TimeoutError('Source drain pending; no replacement launched')
+        while not drained and time.monotonic() < end:
             verify(old)
             proc = Path('/proc') / str(old['pid'])
             children = [pid for task in (proc / 'task').iterdir()
@@ -67,9 +92,8 @@ def main(root, support, runtime, old, episode_timeout_sec, *, workers=None,
             write(support / 'progress.json', {'phase': 'waiting_for_safe_maker_boundary', 'old_pid': old['pid'], 'at': time.time(), 'new_model_requests': 0})
             time.sleep(3)
         else:
-            raise TimeoutError('No idle/download boundary; no second maker launched')
-        proc = Path('/proc') / str(old['pid'])
-        env = dict(x.decode().split('=', 1) for x in (proc / 'environ').read_bytes().split(b'\0') if x)
+            if not drained:
+                raise TimeoutError('No idle/download boundary; no second maker launched')
         hashes = {str(p): hashlib.sha256(p.read_bytes()).hexdigest() for folder in prepared.iterdir()
                   if folder.is_dir() for p in folder.rglob('*') if p.is_file()}
         write(support / 'original-package-hashes.json', hashes)
@@ -82,9 +106,10 @@ def main(root, support, runtime, old, episode_timeout_sec, *, workers=None,
             if current['state'] != 'Z':
                 verify(download)
                 os.kill(download['pid'], signal.SIGTERM)
-        verify(old)
-        os.kill(old['pid'], signal.SIGTERM)
-        os.kill(old['pid'], signal.SIGCONT)
+        if not drained:
+            verify(old)
+            os.kill(old['pid'], signal.SIGTERM)
+            os.kill(old['pid'], signal.SIGCONT)
         stopped = False
         for owner in [old, *([download] if download else [])]:
             until = time.monotonic() + 15
@@ -132,6 +157,7 @@ def main(root, support, runtime, old, episode_timeout_sec, *, workers=None,
                   'original_package_files': len(hashes), 'original_package_changes': changes,
                   'new_episode_timeout_sec': episode_timeout_sec, 'preparation_workers': workers,
                   'deferred_unpaid_download': deferred,
+                  'gracefully_drained': drained,
                   'model_workers_signalled': 0, 'model_replays': 0, 'only_future_packages_changed': True}
         write(support / 'handoff.json', report)
         assert not changes
