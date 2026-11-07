@@ -182,6 +182,10 @@ def main(root):
                  'supervised_tokens': sum(x['supervised_tokens'] for x in all_records)})
             last_release = new['train_sha256']
         phase = 'canary_running' if coordinator is None else 'rolling_acquisition'
+        health_path = run / 'runtime-health.json'
+        health = read(health_path) if health_path.exists() else {}
+        if health.get('phase') in ('provider_hold', 'awaiting_supply'):
+            phase = health['phase']
         if len(all_records) >= goal['target_total_valid_pairs']:
             dump(run / 'STOP_PROVIDER', {'reason': 'target_reached_drain', 'new_model_requests': 0})
             phase = 'target_reached_drain'
@@ -196,6 +200,8 @@ def main(root):
             dump(run / 'STOP_PROVIDER', {'reason': 'preparation_exited_without_closure', 'new_model_requests': 0})
             dump(complete, {'plan_sha256': hashlib.sha256(plan.read_bytes()).hexdigest()})
         dump(root / 'acquisition-progress.json', {'checked_at': time.time(), 'phase': phase,
+             'active_workers': health.get('active_workers'), 'queued_units': health.get('queued'),
+             'provider_holds': health.get('provider_holds', []),
              'valid_pairs': len(all_records), 'new_pairs': len(new['records']), 'target': 1000,
              'published_tasks': len(items), 'worker_capacity': 16, 'score_capacity': 4,
              'heldout_tasks': 100, 'automatic_paid_retry': False})

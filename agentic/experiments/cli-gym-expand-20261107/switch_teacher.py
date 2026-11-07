@@ -138,6 +138,10 @@ def main(root, support_dir=None):
         else:
             argv += ['--adopt-workers', str(x / 'adopt-workers.json')]
         env = dict(envs[1], PYTHONPATH=str(runtime / 'agentic/src'), PYTHONDONTWRITEBYTECODE='1')
+        if request.get('provider_gate'):
+            gate = Path(request['provider_gate'])
+            assert gate.resolve().is_relative_to(root.resolve())
+            env['APPEND_REWRITE_PROVIDER_GATE'] = str(gate)
         new = launch(argv, env, 'coordinator.log')
         new['source_root'] = str(runtime)
         new['base_source_commit'], new['teacher_patch_commit'] = '3fbaa08', '43b16ee'
@@ -151,8 +155,13 @@ def main(root, support_dir=None):
         write(root / 'producer-handoff-selection.json', {
             'path': str(x / 'handoff.json'),
             'sha256': hashlib.sha256((x / 'handoff.json').read_bytes()).hexdigest()})
-        new_producer = launch(producer['argv'], envs[0], 'producer.log')
-        new_producer['source_commit'] = producer['source_commit']
+        producer_argv, producer_env = producer['argv'].copy(), envs[0].copy()
+        if request.get('producer_runtime'):
+            pr = Path(request['producer_runtime'])
+            producer_argv[1] = str(pr / 'agentic/experiments/cli-gym-expand-20261107/acquire.py')
+            producer_env['PYTHONPATH'] = str(pr / 'agentic/src')
+        new_producer = launch(producer_argv, producer_env, 'producer.log')
+        new_producer['source_commit'] = request.get('source_commit', producer['source_commit'])
         write(root / 'acquisition-env-repairs-launch.json', new_producer)
         selection = read(root / 'active_runtime_selection.json')
         selection.update(coordinator_source_commit=request.get('source_identity', '3fbaa08+teacher-43b16ee'),
@@ -160,6 +169,8 @@ def main(root, support_dir=None):
         if not request:
             selection.update(teacher_route_policy=str(x / 'policy.json'),
                              teacher_route_handoff=str(x / 'handoff.json'))
+        if request.get('producer_runtime'):
+            selection.update(runtime=request['producer_runtime'], source_commit=request['source_commit'])
         write(root / 'active_runtime_selection.json', selection)
         print(json.dumps({'coordinator_pid': new['pid'], 'producer_pid': new_producer['pid'],
                           'adopted_workers': len(workers), 'worker_capacity': 16}))

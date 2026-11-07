@@ -58,6 +58,15 @@ class AsyncCancellation(unittest.IsolatedAsyncioTestCase):
                 await reader.read()
                 self.closed.set()
                 return
+            if self.mode.startswith('json'):
+                value = {'text': 'done', 'meta_info': {'id': body['rid'],
+                    'prompt_tokens': 3, 'completion_tokens': 2,
+                    'finish_reason': {'type': 'stop'} if self.mode == 'json' else {'type': 'length'}}}
+                payload = json.dumps(value).encode()
+                writer.write(b'HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: '
+                             + str(len(payload)).encode() + b'\r\n\r\n' + payload)
+                await writer.drain()
+                return
             writer.write(b'HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n')
             value = {'text': 'partial', 'meta_info': {'id': body['rid'],
                 'prompt_tokens': 3, 'completion_tokens': 2, 'finish_reason': None}}
@@ -105,6 +114,27 @@ class AsyncCancellation(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(self.requests), 1)
         self.assertEqual(self.requests[0][1]['sampling_params']['top_k'], 20)
         self.assertFalse((self.root / 'turn/cleanup.json').exists())
+
+    async def test_json_transport_preserves_stop_sampling_and_identity(self):
+        self.mode = 'json'
+        self.client.config['native_generation_stream'] = False
+        result = await self.generate()
+        self.assertEqual(result['text'], 'done')
+        self.assertFalse(self.requests[0][1]['stream'])
+        self.assertEqual(len(self.requests), 1)
+
+    async def test_json_length_stop_is_rejected(self):
+        self.mode = 'json-length'
+        self.client.config['native_generation_stream'] = False
+        self.client.config['scoped_abort'] = False
+        with self.assertRaises(ValueError):
+            await self.generate()
+        self.assertFalse((self.root / 'turn/response.json').exists())
+
+    async def test_json_cancellation_closes_socket(self):
+        self.client.config['native_generation_stream'] = False
+        self.mode = 'before-headers'
+        await self.test_cancel_during_sse_closes_socket_and_aborts_only_owned_rid()
 
     async def test_unavailable_abort_is_not_claimed_as_engine_cleanup(self):
         self.client.config['scoped_abort'] = False

@@ -604,6 +604,8 @@ async def batch(args):
     lanes = {}
     workers = []
     scheduled = set()
+    active = set()
+    from .provider_gate import hold_path, check_gates
     capacity = getattr(args, 'workers', None)
     adopted = getattr(args, 'adopt_workers', None)
     adopted = json.loads(adopted.read_text())['workers'] if adopted else []
@@ -630,6 +632,10 @@ async def batch(args):
                 return
             if (args.output / "STOP_PROVIDER").exists():
                 return
+            while any(p and p.exists() for p in (hold_path('teacher'), hold_path('student'))):
+                if (args.output / 'STOP_PROVIDER').exists():
+                    return
+                await asyncio.sleep(5)
             floor = int(os.environ.get('APPEND_REWRITE_MIN_FREE_GIB', '0'))
             if floor and shutil.disk_usage(args.output).free < floor * 1024**3:
                 dump(args.output / 'STOP_PROVIDER', {
@@ -639,8 +645,10 @@ async def batch(args):
             if item.get('_adopt'):
                 # A rolling queue may inherit a worker from an earlier run root.
                 dest = Path(item['_adopt'].get('output', dest))
+                active.add(item['unit_id'])
                 while external_worker_alive(item['_adopt']):
                     await asyncio.sleep(2)
+                active.discard(item['unit_id'])
                 state = json.loads((dest / 'status.json').read_text())
                 if state['phase'] not in ('completed', 'hold', 'teacher_not_successful', 'existing_method_attempt_reused'):
                     dump(dest / 'adoption-exit-error.json', {'previous_status': state, 'model_failure': False})
@@ -648,7 +656,11 @@ async def batch(args):
             elif dest.exists():
                 continue  # exclusive attempts are never restarted
             else:
-                await dispatch(item, dest)
+                active.add(item['unit_id'])
+                try:
+                    await dispatch(item, dest)
+                finally:
+                    active.discard(item['unit_id'])
             status = (
                 json.loads((dest / "status.json").read_text())
                 if (dest / "status.json").exists()
@@ -727,6 +739,13 @@ async def batch(args):
                 workers.append(asyncio.create_task(lane(lanes[name])))
             await lanes[name].put(item)
         finished = not args.discovery_summary
+        blocked = await check_gates(args)
+        pending = sum(q.qsize() for q in lanes.values())
+        dump(args.output / 'runtime-health.json', {
+            'checked_at': time.time(), 'active_workers': len(active), 'queued': pending,
+            'phase': 'provider_hold' if blocked else 'running' if active else 'awaiting_supply',
+            'provider_holds': blocked, 'automatic_benchmark_retry': False,
+        })
         if args.discovery_summary and args.discovery_summary.exists():
             final = json.loads(args.discovery_summary.read_text())
             finished = final["plan_sha256"] == sha(args.plan)

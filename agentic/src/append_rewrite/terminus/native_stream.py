@@ -130,14 +130,18 @@ class NativeStreamClient(NativeClient):
         if maximum <= 0:
             raise ValueError('Generation input exceeds serving context before POST')
         rid = uuid.uuid4().hex
-        body = {'input_ids': ids, 'rid': rid, 'stream': True,
+        streaming = self.config.get('native_generation_stream', True)
+        if type(streaming) is not bool:
+            raise ValueError('Explicit boolean generation transport required')
+        body = {'input_ids': ids, 'rid': rid, 'stream': streaming,
                 'return_logprob': False,
                 'sampling_params': {**sampling_params, 'max_new_tokens': maximum}}
         (journal / 'request.json').write_text(json.dumps(body))
         (journal / 'intent.json').write_text(json.dumps({
             'endpoint': self.endpoint, 'model_id': self.config['model_id'],
             'request_id': rid, 'body_sha256': digest(body), 'automatic_retry': False,
-            'transport': 'async-httpx-sse', 'effective_max_new_tokens': maximum,
+            'transport': 'async-httpx-sse' if streaming else 'async-httpx-json',
+            'effective_max_new_tokens': maximum,
         }))
         parser = _parser(journal, len(ids), delta_capture=True)
         next(parser)
@@ -154,6 +158,21 @@ class NativeStreamClient(NativeClient):
                         'headers_elapsed_sec': time.monotonic() - started,
                     }))
                     response.raise_for_status()
+                    if not streaming:
+                        # A single JSON response avoids forwarding hundreds of
+                        # cumulative SSE frames. Use the identical stop/identity
+                        # validation; sampling and candidate scoring do not change.
+                        value = json.loads(await response.aread())
+                        parser.send('data: ' + json.dumps(value))
+                        try:
+                            parser.send('')
+                        except StopIteration as stop:
+                            result = stop.value
+                            if result['meta_info']['id'] != rid:
+                                raise ValueError('Client/server request identity drift')
+                            (journal / 'response.json').write_text(json.dumps(result, ensure_ascii=False))
+                            return result
+                        raise ValueError('JSON response lacks normal model termination')
                     async for line in response.aiter_lines():
                         # Buffered async iterators can return without yielding.
                         # Keep other trials and deadline cancellation runnable.
@@ -169,6 +188,8 @@ class NativeStreamClient(NativeClient):
                             return result
                     raise ValueError('Native stream EOF without normal stop')
         except BaseException as exc:
+            from .provider_gate import record_outage
+            record_outage('student', exc, journal)
             # Stream context has exited before this handler: no late response
             # writer or inference thread survives the cancelled coroutine.
             cleanup = {'request_id': rid, 'socket_closed': True,

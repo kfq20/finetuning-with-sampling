@@ -39,6 +39,9 @@ def pack(root):
 
 
 def upload(sb, root, destination):
+    if hasattr(sb, 'upload_directory'):
+        sb.upload_directory(Path(root), destination)
+        return
     payload = pack(root)
     prefix = "/tmp/append-rewrite-" + uuid.uuid4().hex
     parts = []

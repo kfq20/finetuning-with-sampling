@@ -203,6 +203,8 @@ class ResilientFullStreamClient(NativeFullStreamClient):
                         + "\n"
                     )
                 if not retryable or attempt == 5:
+                    from .provider_gate import record_outage
+                    record_outage('student', exc, journal)
                     (journal / "error.json").write_text(
                         json.dumps(
                             {

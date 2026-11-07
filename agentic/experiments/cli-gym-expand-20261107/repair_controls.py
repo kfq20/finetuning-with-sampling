@@ -60,7 +60,7 @@ def resource_image(image, output):
     return after['Id']
 
 
-def repair(root, spec_path, output, assets, *, summary_report=False):
+def repair(root, spec_path, output, assets, *, summary_report=False, grader_uid=None):
     original = read(spec_path)
     index = original['source']['row_index']
     proof = unpaid_proof(root, index)
@@ -80,6 +80,11 @@ def repair(root, spec_path, output, assets, *, summary_report=False):
         if (Path(x['unit']) / 'controls/receipt.json').exists()]
     xdist = any('xdist-' in log for log in original_logs)
     after['explicit_pytest_argv'] = bound_pytest_resources(argv, serial_xdist=xdist)
+    if grader_uid is not None:
+        assert grader_uid == 65534
+        after['explicit_pytest_argv'] = ['/usr/bin/setpriv', '--reuid=65534',
+            '--regid=65534', '--clear-groups', *after['explicit_pytest_argv']]
+        after['project_test_uid'] = grader_uid
     if summary_report:
         after['explicit_pytest_argv'].append('-rA')
         after['pytest_summary_report'] = True
@@ -90,7 +95,7 @@ def repair(root, spec_path, output, assets, *, summary_report=False):
     diff = {name for name in set(actual) | set(original['task_manifest'])
             if actual.get(name) != original['task_manifest'].get(name)}
     assert diff == {'tests/contract.json'}, diff
-    suffix = 'summary-v1' if summary_report else 'resources-v1'
+    suffix = 'uid65534-v1' if grader_uid else 'summary-v1' if summary_report else 'upload-v1'
     spec = {**original, 'unit_id': f'cligym-row-{index:04d}-{suffix}',
             'task_path': str(task), 'instruction_path': str(task / 'instruction.md'),
             'task_manifest': tree(task)}
@@ -132,13 +137,14 @@ if __name__ == '__main__':
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--runtime-assets', type=Path, required=True)
     p.add_argument('--summary-report', action='store_true')
+    p.add_argument('--grader-uid', type=int, choices=[65534])
     a = p.parse_args()
     a.output.mkdir(parents=True, exist_ok=False)
     ready, held = [], []
     from concurrent.futures import ThreadPoolExecutor, as_completed
     with ThreadPoolExecutor(3) as pool:
         futures = {pool.submit(repair, a.root, p, a.output / p.stem, a.runtime_assets,
-                               summary_report=a.summary_report): p for p in a.specs}
+                               summary_report=a.summary_report, grader_uid=a.grader_uid): p for p in a.specs}
         for future in as_completed(futures):
             spec_path = futures[future]
             try:

@@ -144,6 +144,8 @@ class DeepSeekTeacher:
             )
             return result
         except Exception as exc:
+            from .provider_gate import record_outage
+            record_outage('teacher', exc, journal)
             failure(exc, journal, started)
             (journal / "error.json").write_text(
                 json.dumps({"error_type": type(exc).__name__, "automatic_retry": False})

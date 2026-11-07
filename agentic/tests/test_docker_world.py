@@ -9,6 +9,17 @@ from append_rewrite.terminus.docker_world import DockerWorld, judge_tests
 
 
 class FrozenTests(unittest.TestCase):
+    def test_long_commands_use_stdin_without_changing_script(self):
+        world = object.__new__(DockerWorld)
+        world.sandbox_id = 'owned'
+        text = 'echo x\n' * 12000
+        result = SimpleNamespace(returncode=0, stdout=b'ok', stderr=b'')
+        with patch('append_rewrite.terminus.docker_world.docker', return_value=result) as execute:
+            self.assertEqual(world.run(text).exit_code, 0)
+            self.assertEqual(execute.call_args.kwargs['data'], text.encode())
+            self.assertNotIn(text, execute.call_args.args)
+            self.assertIn('-i', execute.call_args.args)
+
     def test_relaxed_summary_keeps_all_checks_and_exact_negative_control(self):
         node = 'tests/a.py::TestA::test_x'
         canary = SimpleNamespace(exit_code=1, stdout=(

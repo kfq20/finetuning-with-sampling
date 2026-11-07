@@ -101,7 +101,13 @@ class DockerWorld:
             argv += ["-w", cwd]
         for k, v in (envs or {}).items():
             argv += ["-e", str(k) + "=" + str(v)]
-        r = docker(*argv, self.sandbox_id, "/bin/bash", "-lc", text, timeout=timeout)
+        if len(text.encode()) > 65536:
+            # Linux limits a single exec argument even when total ARG_MAX is
+            # larger. Stdin preserves the script and avoids a new shell layer.
+            r = docker(*argv, '-i', self.sandbox_id, '/bin/bash', '-ls',
+                       data=text.encode(), timeout=timeout)
+        else:
+            r = docker(*argv, self.sandbox_id, "/bin/bash", "-lc", text, timeout=timeout)
         return SimpleNamespace(
             exit_code=r.returncode,
             stdout=r.stdout.decode(errors="replace"),
@@ -121,6 +127,27 @@ class DockerWorld:
             checked("cp", self.sandbox_id + ":" + path, f)
             raw = f.read_bytes()
         return raw if format == "bytes" else raw.decode()
+
+    def upload_directory(self, root, destination):
+        """Docker API copy; task-corrupted tar/base64 must not break the harness."""
+        root = Path(root)
+        target = Path(destination)
+        if not target.is_absolute() or '..' in target.parts or not root.is_dir():
+            raise ValueError('Invalid directory upload')
+        expected = {}
+        for p in root.rglob('*'):
+            if p.is_symlink() or not (p.is_file() or p.is_dir()):
+                raise ValueError('Unsupported upload file type')
+            if p.is_file():
+                expected[str(p.relative_to(root))] = hashlib.sha256(p.read_bytes()).hexdigest()
+        checked('cp', str(root) + '/.', self.sandbox_id + ':' + str(target))
+        # Verify through the API too, independently of damaged target utilities.
+        with tempfile.TemporaryDirectory() as tmp:
+            checked('cp', self.sandbox_id + ':' + str(target) + '/.', tmp)
+            for name, checksum in expected.items():
+                p = Path(tmp) / name
+                if not p.is_file() or p.is_symlink() or hashlib.sha256(p.read_bytes()).hexdigest() != checksum:
+                    raise ValueError('Docker directory upload checksum drift')
 
     def kill(self):
         checked("rm", "-f", self.sandbox_id)

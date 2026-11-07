@@ -94,6 +94,11 @@ class BlockwiseLLM:
                         "new_generation_requests": 0,
                     },
                 )
+            elif self.client.config.get('async_candidates', False):
+                result = await self.client.generate_async(
+                    wire, self.tokenizer, journal=base / f"proposal-{index}",
+                    sampling_params={'temperature': 0.6},
+                )
             else:
                 result = await asyncio.to_thread(
                     self.client.generate,
