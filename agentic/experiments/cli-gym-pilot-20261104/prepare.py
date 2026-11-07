@@ -54,6 +54,10 @@ def prepare(row, index, output, *, canonicalize_selectors=False,
     image = json.loads(checked("image", "inspect", base))[0]
     pinned = image["RepoDigests"][0]
     frozen = re.sub(r"^FROM\s+\S+", "FROM " + pinned, recipe, count=1, flags=re.M)
+    if bounded_pytest:
+        from append_rewrite.terminus.cli_contract import PYTEST_RESOURCES
+        frozen = frozen.replace('FROM ' + pinned, 'FROM ' + pinned + '\nENV '
+            + ' '.join(k + '=' + v for k, v in PYTEST_RESOURCES.items()) + '\n', 1)
     if apt_mirror and 'apt-get' in recipe:
         # Change prerequisite download transport before the original fault recipe.
         # Solver networking and all original RUN fault commands stay unchanged.

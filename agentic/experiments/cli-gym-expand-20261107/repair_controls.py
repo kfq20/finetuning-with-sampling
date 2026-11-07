@@ -3,10 +3,12 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import re
 import shutil
 from types import SimpleNamespace
 
-from append_rewrite.terminus.cli_contract import bound_pytest_resources
+from append_rewrite.terminus.cli_contract import bound_pytest_resources, PYTEST_RESOURCES
+from append_rewrite.terminus.docker_world import checked
 from append_rewrite.terminus.production import controls, dump, tree
 from append_rewrite.terminus.protocol import digest
 
@@ -32,6 +34,26 @@ def unpaid_proof(root, index):
     if not proof:
         raise ValueError('Expected an original pre-model hold')
     return proof
+
+
+def resource_image(image, output):
+    assert re.fullmatch(r'sha256:[0-9a-f]{64}', image)
+    build = output / 'resource-image'
+    build.mkdir()
+    dockerfile = ('FROM ' + image + '\nENV '
+                  + ' '.join(k + '=' + v for k, v in PYTEST_RESOURCES.items()) + '\n')
+    (build / 'Dockerfile').write_text(dockerfile)
+    tag = 'append-rewrite/cligym-resource:' + hashlib.sha256(dockerfile.encode()).hexdigest()[:16]
+    (build / 'build.log').write_bytes(checked('build', '--network', 'none', '-t', tag, str(build)))
+    before = json.loads(checked('image', 'inspect', image))[0]
+    after = json.loads(checked('image', 'inspect', tag))[0]
+    assert before['RootFS'] == after['RootFS'], 'Resource adapter must not alter task files'
+    for key in ['Cmd', 'Entrypoint', 'User', 'WorkingDir']:
+        assert before['Config'].get(key) == after['Config'].get(key)
+    dump(build / 'binding.json', {'original_image': image, 'image': after['Id'],
+         'rootfs_unchanged': True, 'environment_patch': PYTEST_RESOURCES,
+         'new_model_requests': 0})
+    return after['Id']
 
 
 def repair(root, spec_path, output, assets):
@@ -61,6 +83,7 @@ def repair(root, spec_path, output, assets):
     spec = {**original, 'unit_id': f'cligym-row-{index:04d}-resources-v1',
             'task_path': str(task), 'instruction_path': str(task / 'instruction.md'),
             'task_manifest': tree(task)}
+    spec['template_id'] = resource_image(original['template_id'], output)
     spec.pop('identity', None)
     spec.pop('preflight_certificate', None)
     spec['identity'] = digest(spec)
