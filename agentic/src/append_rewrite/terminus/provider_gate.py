@@ -13,8 +13,12 @@ def hold_path(role):
     return Path(root) / (role + '-outage.json') if root else None
 
 
+def status_of(exc):
+    return getattr(exc, 'code', None) or getattr(getattr(exc, 'response', None), 'status_code', None)
+
+
 def record_outage(role, exc, journal):
-    status = getattr(exc, 'code', None) or getattr(getattr(exc, 'response', None), 'status_code', None)
+    status = status_of(exc)
     path = hold_path(role)
     if not path or status not in (429, 500, 502, 503, 504):
         return

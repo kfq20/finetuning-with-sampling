@@ -30,6 +30,7 @@ from .runtime import make_agent
 from .teacher import DeepSeekTeacher
 from .tokenizer import PinnedTokenizer
 from .suffix_score import file_slot
+from .provider_gate import status_of
 
 
 def dump(path, value):
@@ -465,7 +466,7 @@ async def episode(spec, args, out, role, teacher=None):
             out / "error.json",
             {
                 "error_type": type(exc).__name__,
-                "http_status": getattr(exc, "code", None),
+                "http_status": status_of(exc),
                 "model_failure": False,
                 "automatic_generation_retry": False,
             },
@@ -602,7 +603,7 @@ async def unit(args):
             {
                 "phase": "hold",
                 "error_type": type(exc).__name__,
-                "http_status": getattr(exc, "code", None),
+                "http_status": status_of(exc),
                 "automatic_generation_retry": False,
             },
         )

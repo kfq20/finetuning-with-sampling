@@ -15,6 +15,7 @@ from .suffix_score import ResilientFullStreamClient
 from .protocol import action, digest, public_messages
 from .scoring import render_candidate
 from .scoring import analyze_native
+from .provider_gate import status_of
 
 
 def cached_proposal(source, wire, tokenizer):
@@ -165,12 +166,15 @@ class BlockwiseLLM:
                 {
                     "automatic_retry": False,
                     "errors": [
-                        {"index": i + len(first), "error_type": type(r).__name__}
+                        {"index": i + len(first), "error_type": type(r).__name__, 'http_status': status_of(r)}
                         for i, r in enumerate(rest)
                         if isinstance(r, BaseException)
                     ],
                 },
             )
+            for exc in rest:
+                if isinstance(exc, BaseException) and status_of(exc) in (401, 403):
+                    raise exc  # Preserve auth/policy failures for the existing STOP gate.
             raise RuntimeError("Incomplete candidate pool; no action executed")
         candidates = first + rest
         best = select(candidates)
