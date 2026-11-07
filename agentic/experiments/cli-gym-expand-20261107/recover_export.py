@@ -24,6 +24,8 @@ def sha(path):
 
 def main(root, unit_id, output, tokenizer, assets):
     assert re.fullmatch(r'[A-Za-z0-9_.-]+', unit_id)
+    assert unit_id not in {'.', '..'}
+    assert output.resolve().is_relative_to((root / 'support').resolve())
     unit = root / 'production/units' / unit_id
     student = unit / 'student'
     assert not (student / 'receipt.json').exists() and not (student / 'train.jsonl').exists()
