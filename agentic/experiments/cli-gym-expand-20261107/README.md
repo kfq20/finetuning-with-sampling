@@ -201,3 +201,15 @@ record`score_queue_wait_sec`. No sampling, full-input likelihood computation,
 selection, model retry or task admission rule changes. Existing paid workers keep
 their original runtime. This prevents new waiters repeatedly overtaking queued
 scores; it does not increase scoring capacity or guarantee shorter model work.
+
+The FIFO runtime217af79 was selected through an identity-checked rolling handoff
+at2026-11-08 01:32 CST. All16 original paid workers were adopted;943 original
+terminal files and the531 baseline hash remained unchanged. Actual ECS SDK tests:
+4 scoring/queue,9 production and4 handoff checks passed. The same teacher/student
+routes and four score slots remain selected. New workers inherit FIFO; adopted
+workers retain their old libraries and environment. Do not report a measured
+speedup until prospective queue-wait receipts exist. Before the change,246
+candidate pairs from two timed-out episodes had generation-response to first-score
+intent waits of median38.1s/mean78.5s/max424.1s (rendering plus slot admission).
+Authoritative deployment evidence:`support/score-fifo-20261108/`, including the
+runtime binding, probe result, handoff, postcheck and actual worker audit.
