@@ -18,6 +18,20 @@ def read(path):
     return json.loads(path.read_text())
 
 
+class ExistingCoordinator:
+    """Observe the original paid-worker owner; never signal or relaunch it."""
+    def __init__(self, receipt, run):
+        self.receipt, self.run, self.returncode = receipt, run, None
+
+    def poll(self):
+        p = Path('/proc') / str(self.receipt['pid']) / 'stat'
+        fields = p.read_text().split(') ')[1].split() if p.exists() else None
+        if fields and fields[19] == str(self.receipt['start_ticks']) and fields[0] != 'Z':
+            return None
+        self.returncode = 0 if (self.run / 'coordinator-finished.json').exists() else 1
+        return self.returncode
+
+
 def main(root):
     lock = (root / 'acquisition.lock').open('a+')
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -35,7 +49,7 @@ def main(root):
     assert not complete.exists()
     if plan.exists():
         handoff = read(root / 'unpaid-build-handoff.json')
-        assert handoff['old_process_group_exited'] and not (root / 'coordinator-launch.json').exists()
+        assert handoff['old_producer_and_preparer_exited']
     baseline = read(prior / 'campaign-sft/manifest.json')
     original = (prior / 'campaign-sft/train.jsonl').read_bytes()
     assert hashlib.sha256(original).hexdigest() == baseline['train_sha256']
@@ -70,7 +84,8 @@ def main(root):
         '--output', str(prep_root), '--build-network', 'host', '--repair-contract',
         '--storage-root', str(root), '--min-free-gib', '40', '--apt-mirror'])
     dump(plan, {'units': seed})
-    coordinator = None
+    coordinator = (ExistingCoordinator(read(root / 'coordinator-launch.json'), run)
+                   if (root / 'coordinator-launch.json').exists() else None)
     items = {x['unit_id']: x for x in seed}
     last_release = None
     while True:
