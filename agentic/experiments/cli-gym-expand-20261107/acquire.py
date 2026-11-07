@@ -18,6 +18,21 @@ def read(path):
     return json.loads(path.read_text())
 
 
+def selected_model_arguments(root, arguments):
+    """An old canary receipt must not override explicitly selected live routes."""
+    selection = root / 'active_runtime_selection.json'
+    selected = read(selection) if selection.exists() else {}
+    result = list(arguments)
+    for field, option in [('teacher_route_config', '--teacher-config'),
+                          ('student_route_config', '--fleet-config')]:
+        if selected.get(field):
+            path = Path(selected[field])
+            if not path.is_file():
+                raise ValueError('Selected model config is absent; no fallback')
+            result[result.index(option) + 1] = str(path)
+    return result
+
+
 class ObservedProcess:
     """Observe an original owner; never signal or relaunch it."""
     def __init__(self, receipt, completion):
@@ -119,7 +134,7 @@ def main(root):
                 assert receipt['normal_completed']
                 assert receipt['score']['reward'] in (0, 1) and receipt['fresh_score']['reward'] in (0, 1)
                 args = read(root / 'model-canary-launch.json')['argv']
-                tail = args[args.index('--teacher-config'):]
+                tail = selected_model_arguments(root, args[args.index('--teacher-config'):])
                 coordinator = launch('coordinator', [sys.executable, '-m',
                     'append_rewrite.terminus.production', 'batch', '--plan', str(plan),
                     '--discovery-summary', str(complete), '--output', str(run), '--workers', '16', *tail])

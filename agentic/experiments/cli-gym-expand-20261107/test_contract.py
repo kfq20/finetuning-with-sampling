@@ -1,11 +1,30 @@
 """Transport repair must preserve test identity and reject unsafe restore paths."""
 import unittest
+import json
+import runpy
+import tempfile
+from pathlib import Path
 from append_rewrite.terminus.cli_contract import (
     published_selectors, resolve_selectors, safe_test_paths, test_roots,
 )
 
 
 class ContractTests(unittest.TestCase):
+    def test_selected_route_overrides_old_canary_without_fallback(self):
+        resolve = runpy.run_path(str(Path(__file__).with_name('acquire.py')))['selected_model_arguments']
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            args = ['--teacher-config', 'old-teacher', '--fleet-config', 'old-ssh-student']
+            self.assertEqual(resolve(root, args), args)
+            cfg = root / 'direct-private.json'
+            cfg.write_text('{}')
+            (root / 'active_runtime_selection.json').write_text(json.dumps({'student_route_config': str(cfg)}))
+            self.assertEqual(resolve(root, args)[-1], str(cfg))
+            self.assertEqual(args[-1], 'old-ssh-student')
+            cfg.unlink()
+            with self.assertRaises(ValueError):
+                resolve(root, args)
+
     def test_parameter_transport_and_nested_layout(self):
         text = "run_and_log('pytest pandas/tests/test_a.py::test_zone[\\<UTC\\>0]', \"/test.log\")"
         wanted = published_selectors(text)
