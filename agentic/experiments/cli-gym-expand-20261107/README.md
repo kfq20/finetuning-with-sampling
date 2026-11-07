@@ -228,3 +228,16 @@ or start training. Maintained finite wrapper:`paired_snapshot.py`.
 The local evidence summary is`agentic/research/evidence/paired-expansion-20261108.json`.
 Do not confuse this immutable export with the producer's live cumulative counts or
 with reaching the independent1k goals.
+
+The first pressure-triggered cache pass removed12 completed source caches,
+recovering6.55GiB net while production continued. It also exposed stale candidate
+starvation: already-removed IDs consumed the16-item attempt allowance. Patch
+cc63b2e filters candidates through actual resident image IDs before applying the
+limit, preserving all queue/container/CLI protection and registry-digest checks.
+Fourteen actual SDK source/storage tests passed. Frozen producer-only follow-up
+`support/storage-lifecycle-v2-20261108` (base217af79 + patchescc63b2e/f0c1ab8)
+contains byte-identical model libraries. Its identity-checked handoff retained
+coordinator2805293 and signalled no model workers;969 prior terminal files remained
+unchanged. Current identities remain subject to live verification. Read explicit
+`producer_runtime` and`coordinator_source_commit` separately, rather than assuming
+that all roles run Git HEAD. No automatic paid replay or shared Docker operation.
