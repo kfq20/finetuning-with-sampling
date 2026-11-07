@@ -16,6 +16,12 @@ class ContractTests(unittest.TestCase):
     def test_full_suite_has_no_explicit_selectors(self):
         self.assertEqual(published_selectors("run_and_log('pytest -v', '/test.log')"), [])
 
+    def test_malformed_quote_requires_gold_bijection(self):
+        script = '''run_and_log('pytest pandas/tests/test_a.py::test_zone['UTC]', '/test.log')'''
+        wanted = published_selectors(script)
+        self.assertEqual(resolve_selectors(wanted, ['pandas/tests/test_a.py::test_zone[UTC]']),
+                         ['pandas/tests/test_a.py::test_zone[UTC]'])
+
     def test_ambiguous_normalization_rejected(self):
         with self.assertRaises(ValueError):
             resolve_selectors(['tests/test_a.py::test_x[a]'],

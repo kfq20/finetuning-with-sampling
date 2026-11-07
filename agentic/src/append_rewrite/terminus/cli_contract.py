@@ -10,7 +10,17 @@ def published_selectors(script):
     match = re.search(r"run_and_log\(\s*(['\"])(.*?)\1\s*,\s*['\"]/test.log['\"]", script, re.S)
     if not match:
         raise ValueError('Missing published pytest invocation')
-    tokens = shlex.split(match.group(2))
+    command = match.group(2)
+    try:
+        tokens = shlex.split(command)
+    except ValueError:
+        # Preserve malformed literal parameter text, then require a unique
+        # bijection to real gold-collected IDs before anything is executable.
+        starts = list(re.finditer(r'(?<!\S)[\w./-]+\.py::', command))
+        if not starts:
+            raise
+        tokens = [command[m.start():starts[i + 1].start() if i + 1 < len(starts)
+                          else len(command)].strip() for i, m in enumerate(starts)]
     return [x for x in tokens if '::' in x]
 
 
