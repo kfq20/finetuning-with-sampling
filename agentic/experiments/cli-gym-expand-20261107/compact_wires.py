@@ -22,7 +22,7 @@ def main(roots, output):
                     continue
                 digest = hashlib.sha256(status.read_bytes()).hexdigest()
                 contexts[str(status)] = digest
-                for wire in status.parent.glob('*/generation/turn-*/*/wire.jsonl'):
+                for wire in status.parent.glob('*/generation/turn-*/**/wire.jsonl'):
                     if not wire.is_symlink() and str(wire) not in opened and wire.stat().st_size >= 131072:
                         selected.append((wire, root, status, digest))
         (output / 'plan.json').write_text(json.dumps({'files': [str(x[0]) for x in selected],
