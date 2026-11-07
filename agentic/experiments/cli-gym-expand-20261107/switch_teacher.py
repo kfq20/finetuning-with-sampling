@@ -41,6 +41,55 @@ def verify(receipt):
     return actual
 
 
+def producer_only(root, support, runtime, source_commit):
+    """Replace only the unpaid producer; preserve coordinator and every model."""
+    assert not (support / 'handoff.json').exists()
+    owner = read(root / 'acquisition-env-repairs-launch.json')
+    coordinator = read(root / 'coordinator-launch.json')
+    verify(owner)
+    verify(coordinator)
+    for name, checksum in read(support / 'runtime-binding.json')['files'].items():
+        assert hashlib.sha256((runtime / name).read_bytes()).hexdigest() == checksum
+    assert read(support / 'probe-result.json')['passed']
+    raw = (Path('/proc') / str(owner['pid']) / 'environ').read_bytes()
+    env = dict(v.decode().split('=', 1) for v in raw.split(b'\0') if v)
+    argv = owner['argv'].copy()
+    argv[1] = str(runtime / 'agentic/experiments/cli-gym-expand-20261107/acquire.py')
+    env.update(PYTHONPATH=str(runtime / 'agentic/src'), PYTHONDONTWRITEBYTECODE='1')
+    write(support / 'before.json', {'producer': owner, 'coordinator': coordinator})
+    verify(owner)
+    os.kill(owner['pid'], signal.SIGTERM)
+    end = time.monotonic() + 15
+    while time.monotonic() < end:
+        try:
+            if identity(owner['pid'])['state'] == 'Z':
+                break
+        except FileNotFoundError:
+            break
+        time.sleep(.1)
+    else:
+        raise RuntimeError('Old producer remains alive; no replacement launched')
+    verify(coordinator)
+    handoff = {'old_producer_exited': True, 'new_coordinator': coordinator,
+               'retained_preparation_launch': str(root / 'pool-mirror-preparation-launch.json'),
+               'automatic_paid_retry': False, 'model_workers_signalled': 0}
+    write(support / 'handoff.json', handoff)
+    write(root / 'producer-handoff-selection.json', {'path': str(support / 'handoff.json'),
+          'sha256': hashlib.sha256((support / 'handoff.json').read_bytes()).hexdigest()})
+    with (support / 'producer.log').open('xb') as log:
+        child = subprocess.Popen(argv, env=env, stdin=subprocess.DEVNULL,
+                                 stdout=log, stderr=log, start_new_session=True)
+    new = {**identity(child.pid), 'argv': argv, 'started_at': time.time(),
+           'source_commit': source_commit, 'source_root': str(runtime)}
+    write(root / 'acquisition-env-repairs-launch.json', new)
+    selection = read(root / 'active_runtime_selection.json')
+    selection.update(producer_runtime=str(runtime), producer_source_commit=source_commit,
+                     producer_handoff=str(support / 'handoff.json'))
+    write(root / 'active_runtime_selection.json', selection)
+    return {'producer_pid': child.pid, 'coordinator_pid_preserved': coordinator['pid'],
+            'model_workers_signalled': 0}
+
+
 def main(root, support_dir=None):
     x = support_dir or root / 'support/mint-im-switch-20261107'
     assert x.resolve().is_relative_to((root / 'support').resolve())
