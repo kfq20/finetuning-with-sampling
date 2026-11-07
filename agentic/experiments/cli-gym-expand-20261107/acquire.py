@@ -18,17 +18,17 @@ def read(path):
     return json.loads(path.read_text())
 
 
-class ExistingCoordinator:
-    """Observe the original paid-worker owner; never signal or relaunch it."""
-    def __init__(self, receipt, run):
-        self.receipt, self.run, self.returncode = receipt, run, None
+class ObservedProcess:
+    """Observe an original owner; never signal or relaunch it."""
+    def __init__(self, receipt, completion):
+        self.receipt, self.completion, self.returncode = receipt, completion, None
 
     def poll(self):
         p = Path('/proc') / str(self.receipt['pid']) / 'stat'
         fields = p.read_text().split(') ')[1].split() if p.exists() else None
         if fields and fields[19] == str(self.receipt['start_ticks']) and fields[0] != 'Z':
             return None
-        self.returncode = 0 if (self.run / 'coordinator-finished.json').exists() else 1
+        self.returncode = 0 if self.completion.exists() else 1
         return self.returncode
 
 
@@ -47,9 +47,15 @@ def main(root):
     plan = root / 'acquisition-plan.json'
     complete = root / 'acquisition-complete.json'
     assert not complete.exists()
+    handoff = {}
     if plan.exists():
-        handoff = read(root / 'unpaid-build-handoff.json')
-        assert handoff['old_producer_and_preparer_exited']
+        pointer = root / 'producer-handoff-selection.json'
+        ref = read(pointer) if pointer.exists() else {'path': str(root / 'unpaid-build-handoff.json')}
+        receipt = Path(ref['path'])
+        if 'sha256' in ref:
+            assert hashlib.sha256(receipt.read_bytes()).hexdigest() == ref['sha256']
+        handoff = read(receipt)
+        assert handoff.get('old_producer_exited') or handoff.get('old_producer_and_preparer_exited')
     baseline = read(prior / 'campaign-sft/manifest.json')
     original = (prior / 'campaign-sft/train.jsonl').read_bytes()
     assert hashlib.sha256(original).hexdigest() == baseline['train_sha256']
@@ -78,13 +84,16 @@ def main(root):
     prepared_ids = {read(Path(x['spec_path']))['source']['row_index'] for x in seed}
     indices = sorted(eligible - {1517} - prepared_ids)
     prep_root = root / 'repaired-acquisition-mirror'
-    prep = launch('pool-mirror-preparation', [sys.executable,
+    if handoff.get('retained_preparation_launch'):
+        prep = ObservedProcess(read(Path(handoff['retained_preparation_launch'])), prep_root / 'complete.json')
+    else:
+        prep = launch('pool-mirror-preparation', [sys.executable,
         str(source / 'agentic/experiments/cli-gym-pilot-20261104/prepare.py'),
         '--rows', str(root / 'split-v1/acquisition-rows.json'), '--indices', *map(str, indices),
         '--output', str(prep_root), '--build-network', 'host', '--repair-contract',
         '--storage-root', str(root), '--min-free-gib', '40', '--apt-mirror'])
     dump(plan, {'units': seed})
-    coordinator = (ExistingCoordinator(read(root / 'coordinator-launch.json'), run)
+    coordinator = (ObservedProcess(read(root / 'coordinator-launch.json'), run / 'coordinator-finished.json')
                    if (root / 'coordinator-launch.json').exists() else None)
     items = {x['unit_id']: x for x in seed}
     last_release = None
@@ -117,6 +126,13 @@ def main(root):
         candidates = [{'unit_id': 'cligym-row-1517', 'lane': 'shared', 'spec_path': str(canary_spec)}]
         if (prep_root / 'plan.json').exists():
             candidates += read(prep_root / 'plan.json')['units']
+        registry_path = root / 'environment-repair-plans.json'
+        registry = read(registry_path) if registry_path.exists() else {'open': False, 'plans': []}
+        for extra in registry['plans']:
+            path = Path(extra['plan'])
+            assert path.resolve().is_relative_to(root.resolve())
+            if path.exists():
+                candidates += read(path)['units']
         for item in candidates:
             if item['unit_id'] in items:
                 assert items[item['unit_id']] == item
@@ -124,6 +140,13 @@ def main(root):
             spec = read(Path(item['spec_path']))
             i = spec['source']['row_index']
             assert i in eligible and i not in holdout and spec['solver_network'] == 'none'
+            if item.get('unpaid_repair_proof'):
+                proof_path = Path(item['unpaid_repair_proof'])
+                assert hashlib.sha256(proof_path.read_bytes()).hexdigest() == item['unpaid_repair_proof_sha256']
+                checker = runpy.run_path(str(source / 'agentic/experiments/cli-gym-expand-20261107/repair_controls.py'))['unpaid_proof']
+                checker(root, i)
+                grade = read(Path(item['spec_path']).parent / 'controls/receipt.json')
+                assert grade['passed'] and grade['initial']['reward'] == 0 and grade['legal']['reward'] == 1
             items[item['unit_id']] = item
         dump(plan, {'units': list(items.values())})
         new = publish([run], root / 'new-sft')
@@ -146,7 +169,8 @@ def main(root):
         elif shutil.disk_usage(root).free < 40 * 1024**3:
             dump(run / 'STOP_PROVIDER', {'reason': 'storage_admission_hold', 'new_model_requests': 0})
             phase = 'storage_hold'
-        if (prep_root / 'complete.json').exists() or (run / 'STOP_PROVIDER').exists():
+        extras_done = all(Path(x['complete']).exists() for x in registry['plans'])
+        if ((prep_root / 'complete.json').exists() and extras_done and not registry['open']) or (run / 'STOP_PROVIDER').exists():
             dump(complete, {'plan_sha256': hashlib.sha256(plan.read_bytes()).hexdigest()})
         if prep.poll() is not None and not (prep_root / 'complete.json').exists():
             dump(root / 'acquisition-hold.json', {'reason': 'preparation_exited_without_closure'})
