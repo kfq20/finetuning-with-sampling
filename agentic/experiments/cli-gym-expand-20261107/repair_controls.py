@@ -66,13 +66,16 @@ def repair(root, spec_path, output, assets):
     shutil.copytree(original['task_path'], task)
     cp = task / 'tests/contract.json'
     before = read(cp)
-    assert before.get('explicit_pytest_argv'), 'Explicit frozen test list required'
+    assert before['test_ids'], 'Frozen required test IDs are mandatory'
+    argv = before.get('explicit_pytest_argv') or [
+        '/opt/miniconda3/envs/testbed/bin/python', '-m', 'pytest', '--disable-warnings',
+        '--color=no', '--tb=no', '--verbose', *before['test_ids']]
     after = dict(before)
     original_logs = [read(Path(x['unit']) / 'controls/receipt.json').get('legal', {}).get(
         'details', {}).get('test_log', '') for x in proof
         if (Path(x['unit']) / 'controls/receipt.json').exists()]
     xdist = any('xdist-' in log for log in original_logs)
-    after['explicit_pytest_argv'] = bound_pytest_resources(before['explicit_pytest_argv'], serial_xdist=xdist)
+    after['explicit_pytest_argv'] = bound_pytest_resources(argv, serial_xdist=xdist)
     assert after['test_ids'] == before['test_ids']
     dump(cp, after)
     # Aside from the wrapper, preserve every public instruction/test byte.

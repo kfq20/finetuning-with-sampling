@@ -139,7 +139,11 @@ def main(root):
                 continue
             spec = read(Path(item['spec_path']))
             i = spec['source']['row_index']
-            assert i in eligible and i not in holdout and spec['solver_network'] == 'none'
+            extra_scope = i in registry.get('extra_eligible_rows', [])
+            assert (i in eligible or extra_scope) and i not in holdout and spec['solver_network'] == 'none'
+            if extra_scope and i not in eligible:
+                assert item.get('unpaid_repair_proof')
+                assert spec['source']['kind'] == 'cli-gym' and spec['source']['dataset_revision'] == selected['revision']
             if item.get('unpaid_repair_proof'):
                 proof_path = Path(item['unpaid_repair_proof'])
                 assert hashlib.sha256(proof_path.read_bytes()).hexdigest() == item['unpaid_repair_proof_sha256']
