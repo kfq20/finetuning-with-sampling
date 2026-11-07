@@ -5,6 +5,7 @@ import hashlib
 import io
 import json
 from pathlib import Path, PurePosixPath
+import re
 import shlex
 import shutil
 import tarfile
@@ -73,9 +74,12 @@ def repair(root, spec_path, output, assets):
     rows = {x['row_idx']: x['row'] for p in Path('/mnt/ecs-tb4/cli-gym-scale-20261104/catalog').glob('rows-*.json')
             for x in read(p)['rows']}
     recipe = rows[index]['dockerfile']
-    allowed = {'.dbc', '.kcd', '.arxml', '.xml', '.csv', '.json', '.yaml', '.yml', '.txt', '.npy'}
+    allowed = {'.dbc', '.kcd', '.sym', '.arxml', '.xml', '.csv', '.json', '.yaml', '.yml', '.txt', '.npy'}
     for name in changed:
-        if PurePosixPath(name).suffix not in allowed or '/testbed/' + name not in recipe:
+        parent = '/testbed/' + str(PurePosixPath(name).parent)
+        declared = ('/testbed/' + name in recipe
+                    or re.search(re.escape(parent) + r'''(?=[\s'";&]|$)''', recipe))
+        if PurePosixPath(name).suffix not in allowed or not declared:
             raise ValueError('Difference is not an explicitly declared operational data fixture: ' + name)
     output.mkdir(parents=True, exist_ok=False)
     task = output / 'task'
@@ -125,7 +129,7 @@ def repair(root, spec_path, output, assets):
         sb = DockerWorld(old['gold_template_id'] if name == 'missing_task_data' else old['template_id'], name)
         try:
             if name == 'missing_task_data':
-                change = sb.run('rm -f -- ' + shlex.quote('/testbed/' + sorted(changed)[0]))
+                change = sb.run('rm -f -- ' + shlex.join(['/testbed/' + x for x in sorted(changed)]))
             else:
                 change = sb.run('find /testbed/tests -name "test_*.py" -exec sh -c \'echo "def test_fake(): assert True" > "$1"\' _ {} \\;')
             assert change.exit_code == 0, 'Mutation was not applied'
