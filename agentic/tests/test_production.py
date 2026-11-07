@@ -2,11 +2,12 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+import asyncio
 from unittest.mock import patch
 from urllib.error import HTTPError
 from http.client import IncompleteRead
 
-from append_rewrite.terminus.production import safe_artifacts, tree, dump, fresh_grade, restore
+from append_rewrite.terminus.production import safe_artifacts, tree, dump, fresh_grade, restore, wait_new_admission
 from append_rewrite.terminus.suffix_score import (
     NativeFullStreamClient,
     ResilientFullStreamClient,
@@ -14,6 +15,15 @@ from append_rewrite.terminus.suffix_score import (
 
 
 class ProductionSafety(unittest.TestCase):
+    def test_paid_adoption_is_observed_even_with_storage_and_stop(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / 'STOP_PROVIDER').write_text('{}')
+            with patch('append_rewrite.terminus.production.shutil.disk_usage') as disk:
+                self.assertTrue(asyncio.run(wait_new_admission(root, adopted=True)))
+                self.assertFalse(asyncio.run(wait_new_admission(root)))
+                disk.assert_not_called()
+
     def test_repository_restore_keeps_testbed_out_of_app_reset(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)

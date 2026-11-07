@@ -58,6 +58,20 @@ def safe_artifacts(paths):
     return paths
 
 
+async def wait_new_admission(output, *, adopted=False):
+    # Observing already-paid workers must never wait for new-dispatch gates.
+    if adopted:
+        return True
+    while True:
+        if (output / 'STOP_PROVIDER').exists():
+            return False
+        provider = any(p and p.exists() for p in (hold_path('teacher'), hold_path('student')))
+        floor = int(os.environ.get('APPEND_REWRITE_MIN_FREE_GIB', '0'))
+        if not provider and (not floor or shutil.disk_usage(output).free >= floor * 1024**3):
+            return True
+        await asyncio.sleep(5)
+
+
 def restore(spec, args, owner, *, template_id=None, install_runtime=True):
     state = Path(spec["state_path"])
     task = Path(spec["task_path"])
@@ -674,17 +688,8 @@ async def batch(args):
             item = await queue.get()
             if item is None:
                 return
-            if (args.output / "STOP_PROVIDER").exists():
+            if not await wait_new_admission(args.output, adopted=bool(item.get('_adopt'))):
                 return
-            while any(p and p.exists() for p in (hold_path('teacher'), hold_path('student'))):
-                if (args.output / 'STOP_PROVIDER').exists():
-                    return
-                await asyncio.sleep(5)
-            floor = int(os.environ.get('APPEND_REWRITE_MIN_FREE_GIB', '0'))
-            while floor and shutil.disk_usage(args.output).free < floor * 1024**3:
-                if (args.output / 'STOP_PROVIDER').exists():
-                    return
-                await asyncio.sleep(5)
             dest = args.output / "units" / item["unit_id"]
             if item.get('_adopt'):
                 # A rolling queue may inherit a worker from an earlier run root.
