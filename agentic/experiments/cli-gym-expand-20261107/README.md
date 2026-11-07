@@ -213,3 +213,18 @@ candidate pairs from two timed-out episodes had generation-response to first-sco
 intent waits of median38.1s/mean78.5s/max424.1s (rendering plus slot admission).
 Authoritative deployment evidence:`support/score-fifo-20261108/`, including the
 runtime binding, probe result, handoff, postcheck and actual worker audit.
+
+## Paired training export,2026-11-08
+
+ECS dataset selection:`/mnt/ecs-tb4/datasets/paired-expansion-20261108/SELECTED_RELEASE.json`.
+The immutable`snapshot-v1` contains CLI604 pairs and SWE7 pairs, each source with
+`package/method-paired/train.jsonl` and`package/expert-paired/train.jsonl`.
+The established offline exporter and validator verified original/fresh full scores,
+reference removal, matching ordered input identities, labels, assistant loss masks
+and full frozen-tokenizer re-encoding. All611 pairs passed, zero pair holds.
+Source manifest/train bytes were consistently snapshotted before export; live
+production and all original evidence remain untouched. This did not invoke a model
+or start training. Maintained finite wrapper:`paired_snapshot.py`.
+The local evidence summary is`agentic/research/evidence/paired-expansion-20261108.json`.
+Do not confuse this immutable export with the producer's live cumulative counts or
+with reaching the independent1k goals.

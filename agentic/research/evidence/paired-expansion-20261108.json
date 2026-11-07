@@ -1,0 +1,64 @@
+{
+  "selection": {
+    "selected_at": 1794073348.7787018,
+    "snapshot": "/mnt/ecs-tb4/datasets/paired-expansion-20261108/snapshot-v1",
+    "complete_sha256": "9c7c2fbe8fac499149c37ffaaad112a41ea8115a233cadc550f7aedc8f39938c",
+    "paired_by_source": {
+      "cli-gym": 604,
+      "swe-gym": 7
+    },
+    "validation_all_passed": true,
+    "live_production_unchanged": true,
+    "model_requests": 0
+  },
+  "summary": {
+    "created_at": 1794073219.8622253,
+    "new_model_requests": 0,
+    "sources": {
+      "cli-gym": {
+        "manifest_sha256": "25fcf169d3d7a7a55813fcf3fd1e8ec2e31c30b4a11415490010fbac25c6fab0",
+        "train_sha256": "c0535b0aed23ec9b6ef7a8feff0fadb3a7e146508b741a3adbdb26e550fda5d3",
+        "method_count": 604,
+        "paired_count": 604,
+        "pair_holds": 0,
+        "package": "/mnt/ecs-tb4/datasets/paired-expansion-20261108/snapshot-v1/cli-gym/package",
+        "validation": {
+          "passed": true,
+          "datasets": {
+            "method-paired": {
+              "rows": 604,
+              "supervised_tokens": 1682756
+            },
+            "expert-paired": {
+              "rows": 604,
+              "supervised_tokens": 2490010
+            }
+          },
+          "full_tokenizer_reencoded": true
+        }
+      },
+      "swe-gym": {
+        "manifest_sha256": "03f5652dfa73d3f7ec1c2b22d610d652a6aedd5b2937c52233318db2ade58e9f",
+        "train_sha256": "6876b0515c0a202d40da5b93df7c059553a777b6aca066ff7b5aeadc7d2dff26",
+        "method_count": 7,
+        "paired_count": 7,
+        "pair_holds": 0,
+        "package": "/mnt/ecs-tb4/datasets/paired-expansion-20261108/snapshot-v1/swe-gym/package",
+        "validation": {
+          "passed": true,
+          "datasets": {
+            "method-paired": {
+              "rows": 7,
+              "supervised_tokens": 25700
+            },
+            "expert-paired": {
+              "rows": 7,
+              "supervised_tokens": 35394
+            }
+          },
+          "full_tokenizer_reencoded": true
+        }
+      }
+    }
+  }
+}
