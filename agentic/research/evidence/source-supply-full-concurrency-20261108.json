@@ -1,0 +1,142 @@
+{
+  "at": 1794082235.2560086,
+  "actual_model_workers": 16,
+  "workers": [
+    {
+      "pid": 3900817,
+      "start_ticks": "645121758",
+      "unit": "swegym-facebookresearch__hydra-2189",
+      "phase": "native_teacher"
+    },
+    {
+      "pid": 3916036,
+      "start_ticks": "645134120",
+      "unit": "swegym-facebookresearch__hydra-772",
+      "phase": "native_teacher"
+    },
+    {
+      "pid": 3924907,
+      "start_ticks": "645137124",
+      "unit": "swegym-facebookresearch__hydra-2062",
+      "phase": "native_teacher"
+    },
+    {
+      "pid": 3934026,
+      "start_ticks": "645140188",
+      "unit": "swegym-facebookresearch__hydra-1488",
+      "phase": "native_teacher"
+    },
+    {
+      "pid": 3950470,
+      "start_ticks": "645143210",
+      "unit": "swegym-facebookresearch__hydra-677",
+      "phase": "native_teacher"
+    },
+    {
+      "pid": 3950471,
+      "start_ticks": "645143210",
+      "unit": "swegym-facebookresearch__hydra-1006",
+      "phase": "native_teacher"
+    },
+    {
+      "pid": 3950472,
+      "start_ticks": "645143210",
+      "unit": "swegym-facebookresearch__hydra-893",
+      "phase": "native_teacher"
+    },
+    {
+      "pid": 3967432,
+      "start_ticks": "645146863",
+      "unit": "swegym-facebookresearch__hydra-729",
+      "phase": "native_teacher"
+    },
+    {
+      "pid": 3967434,
+      "start_ticks": "645146863",
+      "unit": "swegym-facebookresearch__hydra-1733",
+      "phase": "native_teacher"
+    },
+    {
+      "pid": 4010990,
+      "start_ticks": "645155011",
+      "unit": "swegym-facebookresearch__hydra-989",
+      "phase": "native_teacher"
+    },
+    {
+      "pid": 4026508,
+      "start_ticks": "645158140",
+      "unit": "swegym-facebookresearch__hydra-952",
+      "phase": "native_teacher"
+    },
+    {
+      "pid": 4038029,
+      "start_ticks": "645160215",
+      "unit": "swegym-facebookresearch__hydra-625",
+      "phase": "student_8_candidates"
+    },
+    {
+      "pid": 4038030,
+      "start_ticks": "645160215",
+      "unit": "swegym-facebookresearch__hydra-1551",
+      "phase": "student_8_candidates"
+    },
+    {
+      "pid": 4047152,
+      "start_ticks": "645161738",
+      "unit": "swegym-facebookresearch__hydra-1671",
+      "phase": "native_teacher"
+    },
+    {
+      "pid": 4059167,
+      "start_ticks": "645163772",
+      "unit": "swegym-facebookresearch__hydra-1731",
+      "phase": "native_teacher"
+    },
+    {
+      "pid": 4115475,
+      "start_ticks": "645177072",
+      "unit": "swegym-facebookresearch__hydra-1735",
+      "phase": "native_teacher"
+    }
+  ],
+  "capacity": 16,
+  "score_capacity": 4,
+  "health": {
+    "checked_at": 1794082231.3736238,
+    "active_workers": 16,
+    "queued": 7,
+    "phase": "running",
+    "provider_holds": [],
+    "automatic_benchmark_retry": false
+  },
+  "valid_by_source": {
+    "cli-gym": 604,
+    "swe-gym": 30
+  },
+  "source_ready": 27,
+  "source_held": 33,
+  "source_preparation_workers": 4,
+  "terminal_files_reverified": 938,
+  "terminal_hash_drift": 0,
+  "model_replays": 0,
+  "free_GiB": 84.18,
+  "first_repaired_student": {
+    "at": 1794082175.043296,
+    "unit": "swegym-facebookresearch__hydra-2543",
+    "receipt_sha256": "77a4a699a52617e5ce9db1d941aaf8d53ac25847267e8546b3e8ee2d9ca2f0fb",
+    "sft_sha256": "b9e62e6fd5c7fa972059f55799bd27d71dde544c76c1898d7a7028340da23f93",
+    "original_reward": 1.0,
+    "fresh_reward": 1.0,
+    "training_admitted": true,
+    "turns": 4,
+    "proposals": 32,
+    "scored_candidates": 32,
+    "selected_max_logprob_verified": true,
+    "reference_free_full_scoring_verified": true,
+    "referenced_generation_template_verified": true,
+    "assistant_labels_mask_verified": true,
+    "elapsed_sec": 59.05847209878266,
+    "score_queue_max_sec": 2.1809225622564554,
+    "new_generation_requests_by_audit": 0
+  }
+}
