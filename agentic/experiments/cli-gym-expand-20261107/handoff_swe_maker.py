@@ -13,7 +13,8 @@ import subprocess
 import time
 
 
-def main(root, support, runtime, old, episode_timeout_sec, *, workers=None, repair_pytest_snail=False):
+def main(root, support, runtime, old, episode_timeout_sec, *, workers=None,
+         repair_pytest_snail=False, output=None, rows=None):
     helpers = runpy.run_path(str(runtime / 'agentic/experiments/cli-gym-expand-20261107/switch_teacher.py'))
     verify, identity, write = (helpers[k] for k in ['verify', 'identity', 'write'])
     assert not (support / 'handoff.json').exists()
@@ -106,6 +107,12 @@ def main(root, support, runtime, old, episode_timeout_sec, *, workers=None, repa
         options = {'--episode-timeout-sec': episode_timeout_sec}
         if workers is not None:
             options['--workers'] = workers
+        if output is not None:
+            assert output.resolve().is_relative_to((root / 'new-source-swegym').resolve())
+            options['--output'] = output
+        if rows is not None:
+            assert rows.resolve().is_relative_to((root / 'new-source-swegym').resolve())
+            options['--rows'] = rows
         for option, value in options.items():
             if option in argv:
                 argv[argv.index(option) + 1] = str(value)
