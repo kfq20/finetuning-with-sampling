@@ -32,7 +32,10 @@ def main(root):
     canary = run / 'units/cligym-row-1517'
     plan = root / 'acquisition-plan.json'
     complete = root / 'acquisition-complete.json'
-    assert not plan.exists() and not complete.exists()
+    assert not complete.exists()
+    if plan.exists():
+        handoff = read(root / 'unpaid-build-handoff.json')
+        assert handoff['old_process_group_exited'] and not (root / 'coordinator-launch.json').exists()
     baseline = read(prior / 'campaign-sft/manifest.json')
     original = (prior / 'campaign-sft/train.jsonl').read_bytes()
     assert hashlib.sha256(original).hexdigest() == baseline['train_sha256']
@@ -57,16 +60,18 @@ def main(root):
         return child
 
     # Preparation is unpaid. The canary source row is never rebuilt/replayed.
-    indices = sorted(eligible - {1517})
-    prep_root = root / 'repaired-acquisition'
-    prep = launch('pool-preparation', [sys.executable,
+    seed = read(plan)['units'] if plan.exists() else []
+    prepared_ids = {read(Path(x['spec_path']))['source']['row_index'] for x in seed}
+    indices = sorted(eligible - {1517} - prepared_ids)
+    prep_root = root / 'repaired-acquisition-mirror'
+    prep = launch('pool-mirror-preparation', [sys.executable,
         str(source / 'agentic/experiments/cli-gym-pilot-20261104/prepare.py'),
         '--rows', str(root / 'split-v1/acquisition-rows.json'), '--indices', *map(str, indices),
         '--output', str(prep_root), '--build-network', 'host', '--repair-contract',
-        '--storage-root', str(root), '--min-free-gib', '40'])
-    dump(plan, {'units': []})
+        '--storage-root', str(root), '--min-free-gib', '40', '--apt-mirror'])
+    dump(plan, {'units': seed})
     coordinator = None
-    items = {}
+    items = {x['unit_id']: x for x in seed}
     last_release = None
     while True:
         retire_failed_workers(run, [], root / 'failed-worker-retirements')
