@@ -102,7 +102,12 @@ def restore(spec, args, owner, *, template_id=None, install_runtime=True):
         if q.exit_code:
             raise RuntimeError("WorldResetFailed")
         sandbox.upload(sb, state, "/app")
+        if spec.get('capture_format') == 'git-patch':
+            if spec['artifacts'] != ['/testbed/'] or spec['state_manifest']:
+                raise ValueError('Repository patch capture requires the frozen /testbed baseline')
         for path in spec["artifacts"]:
+            if spec.get('capture_format') == 'git-patch':
+                continue  # initialize_repo already verified the authentic repository.
             rel = Path(path).relative_to("/app").as_posix().rstrip("/")
             present = any(
                 k == rel or k.startswith(rel + "/") for k in spec["state_manifest"]
