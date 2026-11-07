@@ -111,15 +111,26 @@ def prepare(row, index, output, *, canonicalize_selectors=False,
                     raise ValueError('Gold test runtime could not be inspected')
                 serial_xdist = installed.stdout.strip() == '1'
             parents = sorted({x.split('[', 1)[0] for x in ids})
+            # Verbose pytest/unittest projects print a tree, not node IDs.
+            # Read pytest's actual selected items rather than scraping display.
+            collector = ('import os, sys, json\nfrom pathlib import Path\n'
+                         'sys.path.insert(0, os.getcwd())\nimport pytest\n'
+                         'class Capture:\n'
+                         '    def pytest_collection_finish(self, session):\n'
+                         '        Path("/tmp/cligym-collected.json").write_text(json.dumps([x.nodeid for x in session.items]))\n'
+                         'raise SystemExit(pytest.main(sys.argv[1:], plugins=[Capture()]))\n')
+            gold.write('/tmp/cligym-collect.py', collector)
             q = gold.run('source /opt/miniconda3/bin/activate; conda activate testbed; '
-                         + shlex.join(['python', '-m', 'pytest', '--collect-only', '-q', *parents]),
+                         + shlex.join(['python', '/tmp/cligym-collect.py', '--collect-only', '-q', '--color=no', *parents]),
                          cwd='/testbed', timeout=600,
                          envs=PYTEST_RESOURCES if bounded_pytest else None)
             (unit / 'gold-collection.log').write_text(q.stdout + q.stderr)
             if q.exit_code:
                 raise ValueError('Gold tests could not be collected')
-            collected = [x.strip() for x in q.stdout.splitlines()
-                         if '::' in x and not x.startswith((' ', '<', '='))]
+            collected = json.loads(gold.read('/tmp/cligym-collected.json'))
+            if not collected or not all(isinstance(x, str) for x in collected):
+                raise ValueError('Gold collection contains no actual test IDs')
+            dump(unit / 'gold-collected-test-ids.json', collected)
             # An empty published selector list means full-suite pytest, not no tests.
             ids = resolve_selectors(ids, collected) if ids else collected
             dump(unit / 'selector-resolution.json', {'requested': requested,
