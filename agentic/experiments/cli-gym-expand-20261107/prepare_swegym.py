@@ -124,7 +124,7 @@ def main(a):
                             len(r['FAIL_TO_PASS']) + len(r['PASS_TO_PASS']), r['instance_id']))
     a.output.mkdir(exist_ok=True)
     plan = json.loads((a.output / 'plan.json').read_text())['units'] if (a.output / 'plan.json').exists() else []
-    held = []
+    held = json.loads((a.output / 'progress.json').read_text()).get('held', []) if (a.output / 'progress.json').exists() else []
     for row in rows:
         if (a.output / row['instance_id']).exists():
             continue  # A prepared or failed source case is not silently repeated.
