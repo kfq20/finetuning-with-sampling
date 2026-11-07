@@ -12,6 +12,22 @@ from append_rewrite.terminus.cli_contract import (
 
 
 class ContractTests(unittest.TestCase):
+    def test_failed_cache_sweep_protects_unpublished_repairs(self):
+        refs = runpy.run_path(str(Path(__file__).with_name('reclaim_failed_swe_cache.py')))['pending_source_references']
+        with tempfile.TemporaryDirectory() as d:
+            source = Path(d)
+            for name in ['failed', 'being-prepared', 'ready']:
+                (source / name).mkdir()
+                (source / name / 'source-row.json').write_text('{}')
+            (source / 'progress.json').write_text(json.dumps({'held': [{'task_id': 'failed'}]}))
+            spec = source / 'ready/spec.json'
+            spec.write_text(json.dumps({'template_id': 'shared-image'}))
+            (source / 'plan.json').write_text(json.dumps({'units': [
+                {'unit_id': 'swegym-ready', 'spec_path': str(spec)}]}))
+            units, images = refs([source, source / 'not-created'])
+            self.assertEqual(units, {'swegym-being-prepared', 'swegym-ready'})
+            self.assertIn('shared-image', images)
+
     def test_already_evicted_images_cannot_starve_cache_reclamation(self):
         module = runpy.run_path(str(Path(__file__).with_name('maintain_storage.py')))
         candidates = module['cache_candidates']

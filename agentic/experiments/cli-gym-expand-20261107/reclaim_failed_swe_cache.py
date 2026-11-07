@@ -19,6 +19,24 @@ def read(path):
     return json.loads(path.read_text())
 
 
+def pending_source_references(sources):
+    """Protect repaired packages even before the producer publishes them."""
+    units, images = set(), set()
+    for source in sources:
+        progress = read(source / 'progress.json') if (source / 'progress.json').exists() else {}
+        failed = {x['task_id'] for x in progress.get('held', [])}
+        # A row folder is created before Docker pull or progress publication.
+        for folder in source.iterdir() if source.exists() else []:
+            if folder.is_dir() and (folder / 'source-row.json').exists() and folder.name not in failed:
+                units.add('swegym-' + folder.name)
+        if (source / 'plan.json').exists():
+            for item in read(source / 'plan.json')['units']:
+                spec = read(Path(item['spec_path']))
+                units.add(item['unit_id'])
+                images.update(spec.get(k) for k in ['template_id', 'gold_template_id', 'verifier_template_id'])
+    return units, images
+
+
 def main(root, output, target_gib=90):
     assert os.environ['DOCKER_HOST'] == 'unix:///mnt/ecs-tb4/cli-gym-pilot-20261104/runtime/docker.sock'
     output.mkdir(parents=True, exist_ok=False)
@@ -38,7 +56,8 @@ def main(root, output, target_gib=90):
         fcntl.flock(lock, fcntl.LOCK_EX)
         for source, item in held:
             name = item['task_id']
-            if name == 'facebookresearch__hydra-2189' or 'swegym-' + name in task_ids:
+            pending_units, pending_images = pending_source_references(sources)
+            if name == 'facebookresearch__hydra-2189' or 'swegym-' + name in task_ids | pending_units:
                 continue
             folder = source / name
             row_file, pull_file = folder/'source-row.json', folder/'pull.log'
@@ -55,7 +74,7 @@ def main(root, output, target_gib=90):
             try:
                 info = json.loads(checked('image','inspect',tag))[0]
                 image = info['Id']
-                if image in protected or info.get('RepoTags') != [tag+':latest']:
+                if image in protected | pending_images or info.get('RepoTags') != [tag+':latest']:
                     continue
                 ids = checked('ps','-aq').decode().split()
                 if ids and image in {v['Image'] for v in json.loads(checked('inspect',*ids))}:
