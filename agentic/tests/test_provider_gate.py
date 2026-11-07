@@ -20,4 +20,3 @@ class AdmissionGate(unittest.TestCase):
             record_outage('teacher', HTTPError('https://example', 429, '', {}, None), 'second')
             self.assertEqual(path.read_bytes(), original)
             self.assertFalse(json.loads(original)['benchmark_retry'])
-

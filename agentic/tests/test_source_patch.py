@@ -45,4 +45,3 @@ class SourceCapture(unittest.TestCase):
                    return_value=SimpleNamespace(returncode=1)):
             with self.assertRaises(ValueError):
                 ensure_image({'template_id': 'sha256:' + 'a'*64, 'source_registry_image': 'repo:latest'})
-
