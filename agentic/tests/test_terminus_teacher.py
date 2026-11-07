@@ -9,6 +9,30 @@ from append_rewrite.terminus.teacher import DeepSeekTeacher
 
 
 class TeacherTransport(unittest.TestCase):
+    def test_user_route_is_bound_to_policy_and_credential(self):
+        config = {
+            "base_url": "https://mint.macaron.im",
+            "model_id": "deepseek-flash", "api_key": "fixture",
+            "credential_sha256": "66c75200769a56ae92942b85c1f005293686eef6e6069d7413720e3a125055bd",
+            "policy_sha256": "cd3e3f4a35b3de4e1019cbb16f2f7a983b65b42d36f49eef9de35390ba333ad5",
+        }
+        with tempfile.TemporaryDirectory() as d:
+            p = Path(d) / "private.json"
+            p.touch(mode=0o600)
+            def load(c, name):
+                p.write_text(json.dumps(c))
+                return DeepSeekTeacher(p, Path(d) / name)
+            with patch("append_rewrite.terminus.teacher.hashlib.sha256") as h:
+                h.return_value.hexdigest.return_value = config["credential_sha256"]
+                self.assertEqual(load(config, "accepted").model_name, "deepseek-flash")
+                for key, value in (("policy_sha256", "wrong"), ("model_id", "other"),
+                                   ("base_url", "https://other.invalid")):
+                    with self.assertRaises(ValueError):
+                        load(dict(config, **{key: value}), key)
+                h.return_value.hexdigest.return_value = "wrong"
+                with self.assertRaises(ValueError):
+                    load(config, "bad-credential")
+
     def backend(self, root):
         b = DeepSeekTeacher.__new__(DeepSeekTeacher)
         b.config = {"base_url": "https://mintcn.macaron.xin", "api_key": "fixture"}

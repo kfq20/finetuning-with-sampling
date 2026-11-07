@@ -21,18 +21,21 @@ class DeepSeekTeacher:
             raise PermissionError("Private teacher config required")
         self.config = json.loads(p.read_text())
         c = self.config
-        if (
-            c["base_url"] != "https://mintcn.macaron.xin"
-            or c["model_id"] != "deepseek-flash"
-        ):
-            raise ValueError("Teacher route not approved")
         if hashlib.sha256(c["api_key"].encode()).hexdigest() != c["credential_sha256"]:
             raise ValueError("Teacher credential drift")
-        if (
-            c["policy_sha256"]
-            != "3ad60475c169516733eb736d97098a0577858b503b26e65673b56af035d87f4e"
-        ):
-            raise ValueError("Teacher policy drift")
+        legacy = (
+            c["base_url"] == "https://mintcn.macaron.xin"
+            and c["model_id"] == "deepseek-flash"
+            and c["policy_sha256"] == "3ad60475c169516733eb736d97098a0577858b503b26e65673b56af035d87f4e"
+        )
+        user_route = (
+            c["base_url"] == "https://mint.macaron.im"
+            and c["model_id"] == "deepseek-flash"
+            and c["credential_sha256"] == "66c75200769a56ae92942b85c1f005293686eef6e6069d7413720e3a125055bd"
+            and c["policy_sha256"] == "cd3e3f4a35b3de4e1019cbb16f2f7a983b65b42d36f49eef9de35390ba333ad5"
+        )
+        if not (legacy or user_route):
+            raise ValueError("Teacher route/policy not approved")
         self.root = Path(journals)
         self.root.mkdir(parents=True, mode=0o700, exist_ok=False)
         self.model_name, self.n = c["model_id"], 0
@@ -60,6 +63,9 @@ class DeepSeekTeacher:
                         json.dumps(body).encode()
                     ).hexdigest(),
                     "model": self.model_name,
+                    "base_url": self.config["base_url"],
+                    "credential_sha256": self.config.get("credential_sha256"),
+                    "policy_sha256": self.config.get("policy_sha256"),
                     "automatic_retry": False,
                 }
             )
