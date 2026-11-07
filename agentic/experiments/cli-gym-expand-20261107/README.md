@@ -18,7 +18,7 @@ training tasks and863 historical dispatched task IDs remain excluded from new
 acquisition. After contract deduplication and test reservation,680 undispatched
 candidates remain,48 not previously preparation-scanned and632 scanned earlier.
 They are candidates, not680 executable environments or admitted SFT examples.
-Target:531 additional successful method/expert pairs,1062 total; source yield
+Current user priority:469 additional successful method/expert pairs,1000 total; source yield
 may make this unattainable without additional data. Never relabel duplicates
 or replay failed paid attempts to meet the target.
 
@@ -49,3 +49,36 @@ Next stages:
 Status and evidence live in `split-v1/summary.json`, `selection.json`, preparation
 launch/progress/finished receipts and per-task preparation logs. No automatic
 paid retry, second legacy coordinator or change to ongoing SWE evaluation.
+
+## Selected acquisition,2026-11-07
+
+The1000-pair objective supersedes the earlier1062 target only. New-source and
+multi-expert ablations are deferred. New root `goal.json` is authoritative.
+One new-task canary (row1517) passed initial0/healthy1, DeepSeek original1/fresh1,
+and Qwen8-candidate original1/fresh1 with SFT admission:532 total at first closure.
+The existing production coordinator owns16 slots; candidate scores use4 slots.
+Task processes include pre-model controls: slots are not16 simultaneous students.
+
+Network-none manufacturing blocked genuine dependency downloads. Repair builds
+may use host networking; solver containers remain network-none without host
+mounts or credentials. Reachability checks found Ubuntu origin unavailable and
+Huaweicloud/Aliyun mirrors reachable. An explicit prerequisite-only apt mirror
+prelude is recorded in the new Dockerfile; final image IDs and task manifests
+are frozen. Source recipes, instructions and test assertions remain available.
+Nested test paths are frozen from the healthy image; malformed selector quoting
+is resolved only through a unique mapping to real collected IDs. Exact repeated
+selectors are deduplicated, while ambiguous mapping stays held. Full-suite
+published tasks use all gold-collected IDs, not an invented small subset.
+
+Selected producer/preparer:source5c61542, `acquisition-mirror-launch.json`.
+Original live coordinator remains source3fbaa08, `coordinator-launch.json`.
+The canary remains sourcebb8409b. Explicit `active_runtime_selection.json` binds
+these roles; version suffixes are not selection rules. Only the unpaid producer
+and preparer were replaced; the coordinator and paid workers were preserved,
+with evidence in `unpaid-build-handoff.json`. Old partial builds and holds stay.
+
+Initial-already-passing tasks stay excluded;91 such historical zero-model holds
+were identified. Other healthy-control failures (including pytest plugin/process
+compatibility) remain unpaid holds until repaired and independently recalibrated.
+No failed paid attempts are replayed and no hold is promoted into training data.
+40GiB storage admission applies to both preparation and future dispatch.
