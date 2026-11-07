@@ -195,3 +195,15 @@ ECS evidence: `support/cli-control-fs-20261108/tmux-diagnostic.json`,
 The SWE manufacturer was live with56 prepared environments,5 held, and a full
 16-task unpaid queue; the model controller and producer identities were unchanged.
 CLI604/SWE5 is the observed admitted count, not target completion.
+
+A repeated direct-HTTP zero-generation check on the same4669-token saved input
+found full-a/full-b candidate mean LP identical(-0.12875317445692488). Suffix-a
+and suffix-b differed by0.0016132591; full-a versus suffix-a differed by0.0022862867.
+Both transports passed the existing candidate token-ID alignment checks, but this
+does not establish numerical equivalence. The suffix response was~4.3KB versus
+~172KB full; that byte reduction is insufficient evidence to change scoring.
+The shortcut remains unselected. No original decision, generation, action or
+production scorer was changed; four zero-generation calls used the existing
+four-slot admission pool. This observation does not identify an exclusive server
+or numerical-kernel cause. Evidence:`support/score-range-recheck-20261108/` and
+`agentic/research/evidence/score-range-recheck-20261108.json`.

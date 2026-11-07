@@ -1,0 +1,46 @@
+{
+  "at": 1794074814.857433,
+  "source_turn": "/mnt/ecs-tb4/cli-gym-expansion-20261107/production/units/cligym-row-1586/student/generation/turn-0005",
+  "source_decision_sha256": "49978b19de184f7223b40eef546dca408fdb1c7279263e7ce56f39d114a2bbc8",
+  "input_tokens": 4669,
+  "results": [
+    {
+      "mode": "full-a",
+      "mean_logprob": -0.12875317445692488,
+      "elapsed_sec": 2.9794603241607547,
+      "token_count": 101,
+      "response_bytes": 171786,
+      "returned_logprob_start": 0
+    },
+    {
+      "mode": "suffix-a",
+      "mean_logprob": -0.1264668877544326,
+      "elapsed_sec": 1.9141703872010112,
+      "token_count": 101,
+      "response_bytes": 4283,
+      "returned_logprob_start": 4567
+    },
+    {
+      "mode": "full-b",
+      "mean_logprob": -0.12875317445692488,
+      "elapsed_sec": 2.1237079510465264,
+      "token_count": 101,
+      "response_bytes": 171787,
+      "returned_logprob_start": 0
+    },
+    {
+      "mode": "suffix-b",
+      "mean_logprob": -0.12808014688814912,
+      "elapsed_sec": 6.196625802665949,
+      "token_count": 101,
+      "response_bytes": 4275,
+      "returned_logprob_start": 4567
+    }
+  ],
+  "full_repeat_difference": 0.0,
+  "suffix_repeat_difference": 0.0016132591337165159,
+  "full_suffix_difference": 0.002286286702492285,
+  "new_generation_requests": 0,
+  "original_files_changed": false,
+  "production_change": false
+}
