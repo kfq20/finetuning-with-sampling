@@ -94,7 +94,9 @@ def repair(root, spec_path, output, assets, *, summary_report=False, grader_uid=
     actual = tree(task)
     diff = {name for name in set(actual) | set(original['task_manifest'])
             if actual.get(name) != original['task_manifest'].get(name)}
-    assert diff == {'tests/contract.json'}, diff
+    # A controller transport repair may leave the task bytes exactly unchanged.
+    # Only the private execution contract may differ; every test stays frozen.
+    assert diff <= {'tests/contract.json'}, diff
     suffix = 'uid65534-v1' if grader_uid else 'summary-v1' if summary_report else 'upload-v1'
     spec = {**original, 'unit_id': f'cligym-row-{index:04d}-{suffix}',
             'task_path': str(task), 'instruction_path': str(task / 'instruction.md'),
