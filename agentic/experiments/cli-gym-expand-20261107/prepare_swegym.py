@@ -24,7 +24,9 @@ def row_sha(row):
     return hashlib.sha256(json.dumps(row, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
 
 
-def prepare(row, revision, output, assets):
+def prepare(row, revision, output, assets, *, episode_timeout_sec=3000):
+    if type(episode_timeout_sec) is not int or episode_timeout_sec <= 0:
+        raise ValueError("Positive prospective episode timeout required")
     name = row['instance_id']
     unit = output / name
     unit.mkdir()
@@ -99,7 +101,7 @@ def prepare(row, revision, output, assets):
             'task_manifest': tree(task), 'state_path': str(state), 'state_manifest': {},
             'cwd': '/testbed', 'artifacts': ['/testbed/'], 'restore_reset_paths': ['/app/'],
             'solver_network': 'none', 'healthcheck': 'test -d /testbed/.git',
-            'legal_control_script': str(solution / 'solve.sh'), 'episode_timeout_sec': 3000,
+            'legal_control_script': str(solution / 'solve.sh'), 'episode_timeout_sec': episode_timeout_sec,
             'source': {'kind': 'swe-gym', 'split': 'train', 'dataset_revision': revision,
                        'task_id': name, 'row_sha256': row_sha(row)}}
     spec['identity'] = digest(spec)
@@ -145,7 +147,8 @@ def main(a):
         try:
             if row_sha(row) != allowed[row['instance_id']]:
                 raise ValueError('Source row drift')
-            plan.append(prepare(row, scope['revision'], a.output, a.assets))
+            plan.append(prepare(row, scope['revision'], a.output, a.assets,
+                                episode_timeout_sec=a.episode_timeout_sec))
         except Exception as e:
             held.append({'task_id': row['instance_id'], 'type': type(e).__name__, 'message': str(e)[:300]})
         dump(a.output / 'plan.json', {'units': plan})
@@ -157,4 +160,5 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser(__doc__)
     for key in ['root', 'rows', 'scope', 'output', 'assets']:
         p.add_argument('--' + key, type=Path, required=True)
+    p.add_argument('--episode-timeout-sec', type=int, default=3000)
     main(p.parse_args())
