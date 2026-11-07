@@ -24,7 +24,7 @@ def row_sha(row):
     return hashlib.sha256(json.dumps(row, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
 
 
-def prepare(row, revision, output, assets, *, episode_timeout_sec=3000):
+def prepare(row, revision, output, assets, *, episode_timeout_sec=3000, repair_pytest_snail=False):
     if type(episode_timeout_sec) is not int or episode_timeout_sec <= 0:
         raise ValueError("Positive prospective episode timeout required")
     name = row['instance_id']
@@ -49,6 +49,10 @@ def prepare(row, revision, output, assets, *, episode_timeout_sec=3000):
     (solution / 'solve.sh').write_text(script)
     gold = DockerWorld(info['Id'], 'swegym-manufacture-gold')
     try:
+        snail = None
+        if repair_pytest_snail:
+            from append_rewrite.terminus.pytest_snail_compat import discover_and_apply
+            snail = discover_and_apply(gold)
         from append_rewrite.terminus.source_patch import initialize_repo
         initial = gold.run('git status --porcelain', cwd='/testbed')
         baseline = initialize_repo(gold, {'source_base_commit': row['base_commit']})
@@ -104,6 +108,8 @@ def prepare(row, revision, output, assets, *, episode_timeout_sec=3000):
             'legal_control_script': str(solution / 'solve.sh'), 'episode_timeout_sec': episode_timeout_sec,
             'source': {'kind': 'swe-gym', 'split': 'train', 'dataset_revision': revision,
                        'task_id': name, 'row_sha256': row_sha(row)}}
+    if snail:
+        spec['pytest_snail_compat'] = snail
     spec['identity'] = digest(spec)
     dump(unit / 'spec.json', spec)
     controls(spec, SimpleNamespace(runtime_assets=assets), unit / 'controls')
@@ -137,7 +143,8 @@ def main(a):
     def manufacture(row):
         if row_sha(row) != allowed[row['instance_id']]:
             raise ValueError('Source row drift')
-        return prepare(row, scope['revision'], a.output, a.assets, episode_timeout_sec=horizon)
+        return prepare(row, scope['revision'], a.output, a.assets, episode_timeout_sec=horizon,
+                       repair_pytest_snail=getattr(a, 'repair_pytest_snail', False))
 
     def progress(phase):
         dump(a.output / 'progress.json', {'phase': phase, 'ready': len(plan), 'held': held,
@@ -186,4 +193,5 @@ if __name__ == '__main__':
         p.add_argument('--' + key, type=Path, required=True)
     p.add_argument('--episode-timeout-sec', type=int, default=3000)
     p.add_argument('--workers', type=int, default=1)
+    p.add_argument('--repair-pytest-snail', action='store_true')
     main(p.parse_args())

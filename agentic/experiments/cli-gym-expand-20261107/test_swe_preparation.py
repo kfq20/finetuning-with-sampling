@@ -27,7 +27,7 @@ class SWEPreparationTests(unittest.TestCase):
                 output=output, assets=root/'assets', workers=2, episode_timeout_sec=6000)
             barrier, lock = threading.Barrier(2), threading.Lock()
             state = {'active': 0, 'maximum': 0, 'calls': []}
-            def prepare(row, revision, destination, assets, *, episode_timeout_sec):
+            def prepare(row, revision, destination, assets, *, episode_timeout_sec, repair_pytest_snail=False):
                 self.assertEqual(episode_timeout_sec, 6000)
                 (destination / row['instance_id']).mkdir()
                 with lock:

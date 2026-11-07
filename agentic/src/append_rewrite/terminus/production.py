@@ -106,6 +106,11 @@ def restore(spec, args, owner, *, template_id=None, install_runtime=True):
             template_id=template_id or spec["template_id"],
         )
     try:
+        if spec.get('pytest_snail_compat'):
+            if spec.get('environment_backend') != 'docker':
+                raise ValueError('Vendor compatibility requires the Docker backend')
+            from .pytest_snail_compat import apply
+            apply(sb, spec['pytest_snail_compat'])
         if spec.get('capture_format') == 'git-patch':
             from .source_patch import initialize_repo
             initialize_repo(sb, spec)
@@ -279,6 +284,9 @@ def controls(spec, args, out):
 
         sb = DockerWorld(spec["gold_template_id"], "cligym-gold-control")
         try:
+            if spec.get('pytest_snail_compat'):
+                from .pytest_snail_compat import apply
+                apply(sb, spec['pytest_snail_compat'])
             if spec.get('capture_format') == 'git-patch':
                 from .source_patch import initialize_repo
                 initialize_repo(sb, spec)
