@@ -29,12 +29,12 @@ def prepare(row, revision, output, assets):
     unit = output / name
     unit.mkdir()
     dump(unit / 'source-row.json', row)
-    image = 'xingyaoww/sweb.eval.x86_64.' + name.replace('__', '_s_').lower()
-    (unit / 'pull.log').write_bytes(checked('pull', image, timeout=900))
-    info = json.loads(checked('image', 'inspect', image))[0]
     required = list(dict.fromkeys(row['FAIL_TO_PASS'] + row['PASS_TO_PASS']))
     if not required or not row['FAIL_TO_PASS'] or any('::' not in n for n in required):
         raise ValueError('No supported exact pytest requirements')
+    image = 'xingyaoww/sweb.eval.x86_64.' + name.replace('__', '_s_').lower()
+    (unit / 'pull.log').write_bytes(checked('pull', image, timeout=900))
+    info = json.loads(checked('image', 'inspect', image))[0]
     task = unit / 'task'
     tests = task / 'tests'
     tests.mkdir(parents=True)
@@ -116,7 +116,7 @@ def main(a):
     scope = json.loads(a.scope.read_text())
     allowed = scope['tasks']
     rows = [r for r in rows if r['instance_id'] in allowed]
-    rows.sort(key=lambda r: (r['instance_id'] != 'pydantic__pydantic-8500',
+    rows.sort(key=lambda r: (r['repo'] != 'pydantic/pydantic', r['repo'],
                             len(r['FAIL_TO_PASS']) + len(r['PASS_TO_PASS']), r['instance_id']))
     a.output.mkdir(exist_ok=True)
     plan = json.loads((a.output / 'plan.json').read_text())['units'] if (a.output / 'plan.json').exists() else []

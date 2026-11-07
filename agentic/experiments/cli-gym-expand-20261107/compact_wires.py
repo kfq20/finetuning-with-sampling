@@ -23,7 +23,7 @@ def main(roots, output):
                 digest = hashlib.sha256(status.read_bytes()).hexdigest()
                 contexts[str(status)] = digest
                 for wire in status.parent.glob('*/generation/turn-*/**/*'):
-                    if wire.name not in ('wire.jsonl', 'response.json'):
+                    if wire.name not in ('wire.jsonl', 'response.json', 'request.json'):
                         continue
                     if not wire.is_symlink() and str(wire) not in opened and wire.stat().st_size >= 131072:
                         selected.append((wire, root, status, digest))
