@@ -138,8 +138,11 @@ class DockerWorld:
             "/tests/original-tests.tgz",
             (task / "tests/original-tests.tgz").read_bytes(),
         )
+        from .cli_contract import safe_test_paths
+        frozen_paths = safe_test_paths(contract.get('frozen_test_paths', ['tests']))
         reset = self.run(
-            "rm -rf /testbed/tests; tar xzf /tests/original-tests.tgz -C /testbed; rm -f /test.log"
+            "rm -rf -- " + shlex.join(['/testbed/' + x for x in frozen_paths])
+            + "; tar xzf /tests/original-tests.tgz -C /testbed; rm -f /test.log"
         )
         if reset.exit_code:
             raise RuntimeError("FrozenTestsRestoreFailed")

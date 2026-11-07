@@ -37,7 +37,8 @@ def test_ids(script):
     raise ValueError("No explicit pytest test IDs")
 
 
-def prepare(row, index, output, *, canonicalize_selectors=False):
+def prepare(row, index, output, *, canonicalize_selectors=False,
+            build_network='none', repair_contract=False):
     unit = output / (f"row-{index:04d}")
     unit.mkdir(mode=0o700)
     dump(unit / "original-row.json", row)
@@ -57,7 +58,7 @@ def prepare(row, index, output, *, canonicalize_selectors=False):
     tag = "append-rewrite/cligym:" + hashlib.sha256(frozen.encode()).hexdigest()[:16]
     with (unit / "build.log").open("wb") as log:
         subprocess.run(
-            ["docker", "build", "--network", "none", "-t", tag, str(unit)],
+            ["docker", "build", "--network", build_network, "-t", tag, str(unit)],
             check=True,
             stdout=log,
             stderr=log,
@@ -75,23 +76,46 @@ def prepare(row, index, output, *, canonicalize_selectors=False):
     (task / "instruction.md").write_text(textwrap.dedent(text).strip() + "\n")
     (task / "original-task.yaml").write_text(row["task_yaml"])
     (tests / "run-original.sh").write_text(row["run_tests"])
-    ids = test_ids(row["run_tests"])
+    ids = test_ids(row["run_tests"]) if not repair_contract else []
+    frozen_paths = ['tests']
+    if repair_contract:
+        from append_rewrite.terminus.cli_contract import published_selectors, test_roots, resolve_selectors
+        ids = published_selectors(row['run_tests'])
+        gold = DockerWorld(image['Id'], 'cligym-contract-collection')
+        try:
+            parents = sorted({x.split('[', 1)[0] for x in ids})
+            q = gold.run('source /opt/miniconda3/bin/activate; conda activate testbed; '
+                         + shlex.join(['python', '-m', 'pytest', '--collect-only', '-q', *parents]),
+                         cwd='/testbed', timeout=600)
+            (unit / 'gold-collection.log').write_text(q.stdout + q.stderr)
+            if q.exit_code:
+                raise ValueError('Gold tests could not be collected')
+            collected = [x.strip() for x in q.stdout.splitlines()
+                         if '::' in x and not x.startswith((' ', '<', '='))]
+            # An empty published selector list means full-suite pytest, not no tests.
+            ids = resolve_selectors(ids, collected) if ids else collected
+            frozen_paths = test_roots(ids)
+        finally:
+            gold.kill()
     if not ids:
         raise ValueError("No scoring targets")
-    dump(
-        tests / "contract.json",
-        {
+    contract = {
             "test_ids": ids,
             "timeout_sec": 3000,
-            "original_run_tests_sha256": hashlib.sha256(
-                row["run_tests"].encode()
-            ).hexdigest(),
-        },
+            "original_run_tests_sha256": hashlib.sha256(row["run_tests"].encode()).hexdigest(),
+        }
+    if repair_contract:
+        contract.update(frozen_test_paths=frozen_paths, explicit_pytest_argv=[
+            '/opt/miniconda3/envs/testbed/bin/python', '-m', 'pytest', '--disable-warnings',
+            '--color=no', '--tb=no', '--verbose', *ids])
+    dump(
+        tests / "contract.json",
+        contract,
     )
-    sb = DockerWorld(bad_id, "cligym-freeze-public-tests")
+    sb = DockerWorld(image['Id'] if repair_contract else bad_id, "cligym-freeze-public-tests")
     try:
         (tests / "original-tests.tgz").write_bytes(
-            checked("exec", sb.sandbox_id, "tar", "czf", "-", "-C", "/testbed", "tests")
+            checked("exec", sb.sandbox_id, "tar", "czf", "-", "-C", "/testbed", *frozen_paths)
         )
     finally:
         sb.kill()
@@ -124,7 +148,7 @@ def prepare(row, index, output, *, canonicalize_selectors=False):
     spec["identity"] = digest(spec)
     dump(unit / "spec.json", spec)
     spec_path = unit / "spec.json"
-    if canonicalize_selectors and any(re.search(r"[\\\"']", x) for x in ids):
+    if not repair_contract and canonicalize_selectors and any(re.search(r"[\\\"']", x) for x in ids):
         # Repair transport escaping before any paid attempt; assertions unchanged.
         import sys
 
@@ -145,6 +169,9 @@ def prepare(row, index, output, *, canonicalize_selectors=False):
             "broken_image": bad_id,
             "test_count": len(ids),
             "new_model_requests": 0,
+            "build_network": build_network,
+            "solver_network": "none",
+            "repair_contract": repair_contract,
         },
     )
     return {
@@ -161,6 +188,8 @@ def main():
     p.add_argument("--indices", type=int, nargs="+", default=[1, 15, 16, 87, 29, 46])
     p.add_argument("--canonicalize-selectors", action="store_true")
     p.add_argument("--storage-root", type=Path)
+    p.add_argument('--build-network', choices=('none', 'host'), default='none')
+    p.add_argument('--repair-contract', action='store_true')
     a = p.parse_args()
     a.output.mkdir(mode=0o700, parents=True, exist_ok=False)
     wanted = a.indices
@@ -189,6 +218,7 @@ def main():
                 item = prepare(
                     rows[i], i, a.output,
                     canonicalize_selectors=a.canonicalize_selectors,
+                    build_network=a.build_network, repair_contract=a.repair_contract,
                 )
                 with lock:
                     plan.append(item)
