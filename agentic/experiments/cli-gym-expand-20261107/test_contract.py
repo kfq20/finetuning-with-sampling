@@ -4,6 +4,7 @@ import json
 import runpy
 import tempfile
 import os
+from unittest.mock import patch
 from pathlib import Path
 from append_rewrite.terminus.cli_contract import (
     published_selectors, resolve_selectors, safe_test_paths, test_roots,
@@ -11,6 +12,15 @@ from append_rewrite.terminus.cli_contract import (
 
 
 class ContractTests(unittest.TestCase):
+    def test_already_evicted_images_cannot_starve_cache_reclamation(self):
+        module = runpy.run_path(str(Path(__file__).with_name('maintain_storage.py')))
+        candidates = module['cache_candidates']
+        scope = candidates.__globals__
+        all_images = {str(i): 'registry-' + str(i) for i in range(20)}
+        with patch.dict(scope, source_images=lambda root: all_images,
+                        checked=lambda *args: b'18\n19\n'):
+            self.assertEqual(candidates(Path('/owned')), {'18': 'registry-18', '19': 'registry-19'})
+
     def test_source_cache_preserves_shared_pending_and_cli_images(self):
         collect = runpy.run_path(str(Path(__file__).with_name('maintain_storage.py')))['source_images']
         with tempfile.TemporaryDirectory() as d:

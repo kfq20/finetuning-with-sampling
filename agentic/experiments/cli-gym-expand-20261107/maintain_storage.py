@@ -48,6 +48,13 @@ def checked(*args, timeout=45):
     return result.stdout
 
 
+def cache_candidates(root, limit=16):
+    # Already-evicted images must not consume the bounded work allowance.
+    present = set(checked('image', 'ls', '--quiet', '--no-trunc').decode().split())
+    return dict(list((image, ref) for image, ref in source_images(root).items()
+                     if image in present)[:limit])
+
+
 def main(root, output):
     assert os.environ.get('DOCKER_HOST') == SOCKET, 'Only the study-owned Docker endpoint is allowed'
     output.mkdir(parents=True, exist_ok=True)
@@ -62,7 +69,7 @@ def main(root, output):
         compact([root / 'production'], output / 'journals')
         removed, held = [], []
         if shutil.disk_usage(root).free < 100 * 1024**3:
-            for image, ref in list(source_images(root).items())[:16]:
+            for image, ref in cache_candidates(root).items():
                 if shutil.disk_usage(root).free >= 120 * 1024**3:
                     break
                 try:
