@@ -190,6 +190,7 @@ def main():
     p.add_argument("--storage-root", type=Path)
     p.add_argument('--build-network', choices=('none', 'host'), default='none')
     p.add_argument('--repair-contract', action='store_true')
+    p.add_argument('--min-free-gib', type=int, default=20)
     a = p.parse_args()
     a.output.mkdir(mode=0o700, parents=True, exist_ok=False)
     wanted = a.indices
@@ -213,8 +214,8 @@ def main():
     def group(indices):
         for i in indices:
             try:
-                if a.storage_root and shutil.disk_usage(a.storage_root).free < 20 * 1024**3:
-                    raise RuntimeError("StorageAdmissionHold: fewer than20GiB free; no deletion or model retry")
+                if a.storage_root and shutil.disk_usage(a.storage_root).free < a.min_free_gib * 1024**3:
+                    raise RuntimeError("StorageAdmissionHold: no deletion or model retry")
                 item = prepare(
                     rows[i], i, a.output,
                     canonicalize_selectors=a.canonicalize_selectors,
