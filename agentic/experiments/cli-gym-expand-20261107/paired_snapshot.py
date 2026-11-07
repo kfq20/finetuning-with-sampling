@@ -31,7 +31,9 @@ def snapshot(source, destination):
     raise RuntimeError('Live export was changing; no inconsistent snapshot accepted')
 
 
-def main(root, output, tokenizer, support):
+def main(root, output, tokenizer, support, *, sources=('cli-gym', 'swe-gym')):
+    if not sources or len(set(sources)) != len(sources) or set(sources) - {'cli-gym', 'swe-gym'}:
+        raise ValueError('Select distinct supported sources')
     output.mkdir(parents=True, exist_ok=False)
     scripts = Path(__file__).parent.parent / 'storage-and-paired-sft-20261105'
     export = runpy.run_path(str(scripts / 'export_pairs.py'))['main']
@@ -39,7 +41,7 @@ def main(root, output, tokenizer, support):
     from append_rewrite.terminus.tokenizer import PinnedTokenizer
     pinned = PinnedTokenizer(tokenizer)
     result = {'created_at': time.time(), 'new_model_requests': 0, 'sources': {}}
-    for kind in ['cli-gym', 'swe-gym']:
+    for kind in sources:
         work = output / kind
         binding = snapshot(root / 'campaign-sft' / kind, work / 'input/campaign-sft')
         package = work / 'package'
@@ -64,5 +66,6 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser(__doc__)
     for name in ['root', 'output', 'tokenizer', 'history-support']:
         p.add_argument('--' + name, type=Path, required=True)
+    p.add_argument('--sources', nargs='+', choices=['cli-gym', 'swe-gym'], default=['cli-gym', 'swe-gym'])
     a = p.parse_args()
-    main(a.root, a.output, a.tokenizer, a.history_support)
+    main(a.root, a.output, a.tokenizer, a.history_support, sources=a.sources)
