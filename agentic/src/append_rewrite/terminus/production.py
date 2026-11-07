@@ -630,6 +630,11 @@ async def batch(args):
                 return
             if (args.output / "STOP_PROVIDER").exists():
                 return
+            floor = int(os.environ.get('APPEND_REWRITE_MIN_FREE_GIB', '0'))
+            if floor and shutil.disk_usage(args.output).free < floor * 1024**3:
+                dump(args.output / 'STOP_PROVIDER', {
+                    'reason': 'storage_admission_hold', 'new_model_requests': 0})
+                return
             dest = args.output / "units" / item["unit_id"]
             if item.get('_adopt'):
                 # A rolling queue may inherit a worker from an earlier run root.

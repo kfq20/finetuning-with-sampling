@@ -1,0 +1,138 @@
+"""One owned rolling acquisition controller, reusing the established production loop."""
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import runpy
+import shutil
+import subprocess
+import sys
+import time
+
+from append_rewrite.terminus.production import dump
+from append_rewrite.terminus.lifecycle import retire_failed_workers
+
+
+def read(path):
+    return json.loads(path.read_text())
+
+
+def main(root):
+    lock = (root / 'acquisition.lock').open('a+')
+    fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    source = Path(__file__).resolve().parents[3]
+    prior = Path('/mnt/ecs-tb4/cli-gym-scale-20261104')
+    goal = read(root / 'goal.json')
+    selected = read(root / 'split-v1/selection.json')
+    holdout = {x['row_index'] for x in selected['holdout']}
+    eligible = {x['row_index'] for x in selected['acquisition_candidates']}
+    canary_spec = root / 'repair-canary-v1/row-1517/spec.json'
+    run = root / 'production'
+    canary = run / 'units/cligym-row-1517'
+    plan = root / 'acquisition-plan.json'
+    complete = root / 'acquisition-complete.json'
+    assert not plan.exists() and not complete.exists()
+    baseline = read(prior / 'campaign-sft/manifest.json')
+    original = (prior / 'campaign-sft/train.jsonl').read_bytes()
+    assert hashlib.sha256(original).hexdigest() == baseline['train_sha256']
+    assert len(baseline['records']) == goal['prior_valid_pairs'] == 531
+    publish = runpy.run_path(str(source / 'agentic/experiments/cli-gym-scale-20261104/collect.py'))['publish']
+    env = {**os.environ, 'PYTHONPATH': str(source / 'agentic/src'),
+           'PYTHONDONTWRITEBYTECODE': '1',
+           'DOCKER_HOST': 'unix:///mnt/ecs-tb4/cli-gym-pilot-20261104/runtime/docker.sock',
+           'DOCKER_API_VERSION': '1.44', 'DOCKER_CONFIG': str(prior / 'docker-config'),
+           'APPEND_REWRITE_STUDENT_POOL': str(root / 'student-pool'),
+           'APPEND_REWRITE_SCORE_POOL': str(root / 'score-pool'),
+           'APPEND_REWRITE_STUDENT_CAPACITY': '16', 'APPEND_REWRITE_SCORE_CAPACITY': '4',
+           'APPEND_REWRITE_MIN_FREE_GIB': '40'}
+
+    def launch(name, argv):
+        with (root / (name + '.log')).open('xb') as log:
+            child = subprocess.Popen(argv, env=env, stdin=subprocess.DEVNULL,
+                                     stdout=log, stderr=subprocess.STDOUT)
+        fields = (Path('/proc') / str(child.pid) / 'stat').read_text().split(') ')[1].split()
+        dump(root / (name + '-launch.json'), {'pid': child.pid, 'start_ticks': fields[19],
+             'argv': argv, 'source_root': str(source), 'started_at': time.time()})
+        return child
+
+    # Preparation is unpaid. The canary source row is never rebuilt/replayed.
+    indices = sorted(eligible - {1517})
+    prep_root = root / 'repaired-acquisition'
+    prep = launch('pool-preparation', [sys.executable,
+        str(source / 'agentic/experiments/cli-gym-pilot-20261104/prepare.py'),
+        '--rows', str(root / 'split-v1/acquisition-rows.json'), '--indices', *map(str, indices),
+        '--output', str(prep_root), '--build-network', 'host', '--repair-contract',
+        '--storage-root', str(root), '--min-free-gib', '40'])
+    dump(plan, {'units': []})
+    coordinator = None
+    items = {}
+    last_release = None
+    while True:
+        retire_failed_workers(run, [], root / 'failed-worker-retirements')
+        status = read(canary / 'status.json')
+        if coordinator is None:
+            if status['phase'] == 'hold':
+                dump(root / 'acquisition-hold.json', {'reason': 'canary_execution_hold', 'status': status})
+                return
+            if status['phase'] == 'teacher_not_successful':
+                dump(root / 'acquisition-hold.json', {'reason': 'canary_teacher_model_zero_not_retried'})
+                return
+            if status['phase'] == 'completed':
+                receipt = read(canary / 'student/receipt.json')
+                assert receipt['normal_completed']
+                assert receipt['score']['reward'] in (0, 1) and receipt['fresh_score']['reward'] in (0, 1)
+                args = read(root / 'model-canary-launch.json')['argv']
+                tail = args[args.index('--teacher-config'):]
+                coordinator = launch('coordinator', [sys.executable, '-m',
+                    'append_rewrite.terminus.production', 'batch', '--plan', str(plan),
+                    '--discovery-summary', str(complete), '--output', str(run), '--workers', '16', *tail])
+        candidates = [{'unit_id': 'cligym-row-1517', 'lane': 'shared', 'spec_path': str(canary_spec)}]
+        if (prep_root / 'plan.json').exists():
+            candidates += read(prep_root / 'plan.json')['units']
+        for item in candidates:
+            if item['unit_id'] in items:
+                assert items[item['unit_id']] == item
+                continue
+            spec = read(Path(item['spec_path']))
+            i = spec['source']['row_index']
+            assert i in eligible and i not in holdout and spec['solver_network'] == 'none'
+            items[item['unit_id']] = item
+        dump(plan, {'units': list(items.values())})
+        new = publish([run], root / 'new-sft')
+        all_records = baseline['records'] + new['records']
+        assert len({x['input_identity'] for x in all_records}) == len(all_records)
+        if new['train_sha256'] != last_release:
+            release = root / 'campaign-sft'
+            release.mkdir(exist_ok=True)
+            raw = original + (root / 'new-sft/train.jsonl').read_bytes()
+            (release / 'train.jsonl.tmp').write_bytes(raw)
+            (release / 'train.jsonl.tmp').replace(release / 'train.jsonl')
+            dump(release / 'manifest.json', {**new, 'records': all_records,
+                 'valid_trajectories': len(all_records), 'train_sha256': hashlib.sha256(raw).hexdigest(),
+                 'supervised_tokens': sum(x['supervised_tokens'] for x in all_records)})
+            last_release = new['train_sha256']
+        phase = 'canary_running' if coordinator is None else 'rolling_acquisition'
+        if len(all_records) >= goal['target_total_valid_pairs']:
+            dump(run / 'STOP_PROVIDER', {'reason': 'target_reached_drain', 'new_model_requests': 0})
+            phase = 'target_reached_drain'
+        elif shutil.disk_usage(root).free < 40 * 1024**3:
+            dump(run / 'STOP_PROVIDER', {'reason': 'storage_admission_hold', 'new_model_requests': 0})
+            phase = 'storage_hold'
+        if (prep_root / 'complete.json').exists() or (run / 'STOP_PROVIDER').exists():
+            dump(complete, {'plan_sha256': hashlib.sha256(plan.read_bytes()).hexdigest()})
+        if prep.poll() is not None and not (prep_root / 'complete.json').exists():
+            dump(root / 'acquisition-hold.json', {'reason': 'preparation_exited_without_closure'})
+        dump(root / 'acquisition-progress.json', {'checked_at': time.time(), 'phase': phase,
+             'valid_pairs': len(all_records), 'new_pairs': len(new['records']), 'target': 1000,
+             'published_tasks': len(items), 'worker_capacity': 16, 'score_capacity': 4,
+             'heldout_tasks': 100, 'automatic_paid_retry': False})
+        if coordinator is not None and coordinator.poll() is not None:
+            dump(root / 'acquisition-finished.json', {'returncode': coordinator.returncode,
+                 'valid_pairs': len(all_records), 'target_reached': len(all_records) >= 1000})
+            return
+        time.sleep(15)
+
+
+if __name__ == '__main__':
+    main(Path(sys.argv[1]))

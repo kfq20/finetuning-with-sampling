@@ -50,7 +50,7 @@ def test_roots(selectors):
 def resolve_selectors(wanted, collected):
     clean = lambda x: x.translate(str.maketrans('', '', '\\\"\''))
     result = []
-    for node in wanted:
+    for node in dict.fromkeys(wanted):
         matches = [x for x in collected if clean(x) == clean(node)]
         if len(matches) != 1:
             raise ValueError('Selector mapping is missing or ambiguous')

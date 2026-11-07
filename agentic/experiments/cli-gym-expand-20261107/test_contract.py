@@ -27,6 +27,10 @@ class ContractTests(unittest.TestCase):
             resolve_selectors(['tests/test_a.py::test_x[a]'],
                               ['tests/test_a.py::test_x[a]', "tests/test_a.py::test_x['a']"])
 
+    def test_exact_repeated_selector_is_same_test(self):
+        node = 'tests/test_a.py::test_x'
+        self.assertEqual(resolve_selectors([node, node], [node]), [node])
+
     def test_restore_cannot_erase_source(self):
         for paths in [['../tests'], ['/tests'], ['pandas'], ['.']]:
             with self.assertRaises(ValueError):
