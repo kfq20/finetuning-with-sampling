@@ -59,12 +59,12 @@ def main(root, output, target_gib=90):
                 if ids and image in {v['Image'] for v in json.loads(checked('inspect',*ids))}:
                     continue
                 refs = [r for r in info.get('RepoDigests',[]) if r.startswith(tag+'@sha256:')]
-                if len(refs)!=1 or json.loads(checked('manifest','inspect',refs[0]))['config']['digest']!=image:
+                if len(refs)!=1 or json.loads(checked('manifest','inspect',refs[0],timeout=45))['config']['digest']!=image:
                     continue
                 entry={'task':name,'image_id':image,'registry_digest':refs[0],'source_row_sha256':row_sha,'new_download_log_sha256':hashlib.sha256(pull_file.read_bytes()).hexdigest(),'at':time.time()}
                 index=len(removed)
                 dump(output/f'{index}-intent.json',entry)
-                checked('image','rm','--no-prune',image)
+                checked('image','rm','--no-prune',image,timeout=45)
                 removed.append(entry)
                 dump(output/f'{index}-removed.json',entry)
             except Exception as error:
