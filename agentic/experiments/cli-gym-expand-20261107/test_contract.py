@@ -10,6 +10,16 @@ from append_rewrite.terminus.cli_contract import (
 
 
 class ContractTests(unittest.TestCase):
+    def test_source_targets_cannot_be_filled_by_another_dataset(self):
+        partition = runpy.run_path(str(Path(__file__).with_name('acquire.py')))['partition_records']
+        prior = {'unit': '/old/units/cli-original'}
+        cli = {'unit': '/new/units/cli-new'}
+        swe = {'unit': '/new/units/swe-new'}
+        result = partition([prior, cli, swe], {'cli-new': 'cli-gym', 'swe-new': 'swe-gym'}, {prior['unit']})
+        self.assertEqual(result, {'cli-gym': [prior, cli], 'swe-gym': [swe]})
+        with self.assertRaises(KeyError):
+            partition([swe], {}, set())
+
     def test_resource_wrapper_is_idempotent_but_unknown_env_rejected(self):
         from append_rewrite.terminus.cli_contract import bound_pytest_resources
         argv = ['python', '-m', 'pytest', 'tests/a.py::test_x']

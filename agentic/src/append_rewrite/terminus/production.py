@@ -700,6 +700,12 @@ async def batch(args):
             elif dest.exists():
                 continue  # exclusive attempts are never restarted
             else:
+                quotas = args.output / 'source-targets.json'
+                if quotas.exists():
+                    quota = json.loads(quotas.read_text())
+                    kind = json.loads(Path(item['spec_path']).read_text())['source']['kind']
+                    if kind in quota['targets'] and quota['counts'].get(kind, 0) >= quota['targets'][kind]:
+                        continue  # New attempts only; paid claims remain immutable.
                 active.add(item['unit_id'])
                 try:
                     await dispatch(item, dest)

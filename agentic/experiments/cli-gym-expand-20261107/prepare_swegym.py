@@ -134,7 +134,7 @@ def main(a):
             continue
         while True:
             progress = json.loads((a.root / 'acquisition-progress.json').read_text())
-            if progress['valid_pairs'] >= 1000:
+            if progress.get('valid_by_source', {}).get('swe-gym', 0) >= progress.get('targets_by_source', {}).get('swe-gym', 1000):
                 dump(a.output / 'complete.json', {'target_reached': True, 'ready': len(plan), 'held': held})
                 return
             queued = sum(not (a.root / 'production/units' / x['unit_id']).exists() for x in plan)

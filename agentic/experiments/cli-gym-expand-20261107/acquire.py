@@ -18,6 +18,15 @@ def read(path):
     return json.loads(path.read_text())
 
 
+def partition_records(records, sources, prior_units):
+    groups = {'cli-gym': [], 'swe-gym': []}
+    for record in records:
+        name = Path(record['unit']).name
+        kind = 'cli-gym' if record['unit'] in prior_units else sources[name]
+        groups[kind].append(record)
+    return groups
+
+
 def selected_model_arguments(root, arguments):
     """An old canary receipt must not override explicitly selected live routes."""
     selection = root / 'active_runtime_selection.json'
@@ -72,6 +81,9 @@ def main(root):
         handoff = read(receipt)
         assert handoff.get('old_producer_exited') or handoff.get('old_producer_and_preparer_exited')
     baseline = read(prior / 'campaign-sft/manifest.json')
+    prior_units = {x['unit'] for x in baseline['records']}
+    targets = goal.get('targets_by_source', {'cli-gym': goal['target_total_valid_pairs']})
+    assert set(targets) <= {'cli-gym', 'swe-gym'} and all(v > 0 for v in targets.values())
     original = (prior / 'campaign-sft/train.jsonl').read_bytes()
     assert hashlib.sha256(original).hexdigest() == baseline['train_sha256']
     assert len(baseline['records']) == goal['prior_valid_pairs'] == 531
@@ -193,6 +205,11 @@ def main(root):
         new = publish([run], root / 'new-sft')
         all_records = baseline['records'] + new['records']
         assert len({x['input_identity'] for x in all_records}) == len(all_records)
+        groups = partition_records(all_records,
+            {name: read(Path(item['spec_path']))['source']['kind'] for name, item in items.items()}, prior_units)
+        counts = {kind: len(records) for kind, records in groups.items()}
+        reached = all(counts[kind] >= target for kind, target in targets.items())
+        dump(run / 'source-targets.json', {'targets': targets, 'counts': counts})
         if new['train_sha256'] != last_release:
             release = root / 'campaign-sft'
             release.mkdir(exist_ok=True)
@@ -201,14 +218,24 @@ def main(root):
             (release / 'train.jsonl.tmp').replace(release / 'train.jsonl')
             dump(release / 'manifest.json', {**new, 'records': all_records,
                  'valid_trajectories': len(all_records), 'train_sha256': hashlib.sha256(raw).hexdigest(),
-                 'supervised_tokens': sum(x['supervised_tokens'] for x in all_records)})
+                 'supervised_tokens': sum(x['supervised_tokens'] for x in all_records),
+                 'valid_by_source': counts, 'targets_by_source': targets})
+            for kind, records in groups.items():
+                dest = release / kind
+                dest.mkdir(exist_ok=True)
+                raw_group = b''.join((Path(x['unit']) / 'student/train.jsonl').read_bytes().rstrip() + b'\n' for x in records)
+                (dest / 'train.jsonl.tmp').write_bytes(raw_group)
+                (dest / 'train.jsonl.tmp').replace(dest / 'train.jsonl')
+                dump(dest / 'manifest.json', {'source': kind, 'records': records,
+                    'valid_trajectories': len(records), 'target': targets.get(kind),
+                    'train_sha256': hashlib.sha256(raw_group).hexdigest()})
             last_release = new['train_sha256']
         phase = 'canary_running' if coordinator is None else 'rolling_acquisition'
         health_path = run / 'runtime-health.json'
         health = read(health_path) if health_path.exists() else {}
         if health.get('phase') in ('provider_hold', 'awaiting_supply'):
             phase = health['phase']
-        if len(all_records) >= goal['target_total_valid_pairs']:
+        if reached:
             dump(run / 'STOP_PROVIDER', {'reason': 'target_reached_drain', 'new_model_requests': 0})
             phase = 'target_reached_drain'
         elif shutil.disk_usage(root).free < 40 * 1024**3:
@@ -238,12 +265,13 @@ def main(root):
         dump(root / 'acquisition-progress.json', {'checked_at': time.time(), 'phase': phase,
              'active_workers': health.get('active_workers'), 'queued_units': health.get('queued'),
              'provider_holds': health.get('provider_holds', []),
-             'valid_pairs': len(all_records), 'new_pairs': len(new['records']), 'target': 1000,
+             'valid_pairs': len(all_records), 'valid_by_source': counts, 'targets_by_source': targets,
+             'new_pairs': len(new['records']), 'target': sum(targets.values()),
              'published_tasks': len(items), 'worker_capacity': 16, 'score_capacity': 4,
              'heldout_tasks': 100, 'automatic_paid_retry': False})
         if coordinator is not None and coordinator.poll() is not None:
             dump(root / 'acquisition-finished.json', {'returncode': coordinator.returncode,
-                 'valid_pairs': len(all_records), 'target_reached': len(all_records) >= 1000})
+                 'valid_pairs': len(all_records), 'target_reached': reached})
             return
         time.sleep(15)
 
