@@ -24,12 +24,23 @@ class ContractTests(unittest.TestCase):
 
     def test_ambiguous_normalization_rejected(self):
         with self.assertRaises(ValueError):
-            resolve_selectors(['tests/test_a.py::test_x[a]'],
+            resolve_selectors(['tests/test_a.py::test_x[\\"a\\"]'],
                               ['tests/test_a.py::test_x[a]', "tests/test_a.py::test_x['a']"])
 
     def test_exact_repeated_selector_is_same_test(self):
         node = 'tests/test_a.py::test_x'
         self.assertEqual(resolve_selectors([node, node], [node]), [node])
+
+    def test_class_expands_every_child(self):
+        nodes = ['tests/test_a.py::TestA::test_x', 'tests/test_a.py::TestA::test_y[0]']
+        self.assertEqual(resolve_selectors(['tests/test_a.py::TestA'], nodes), nodes)
+
+    def test_aliases_keep_real_assertion(self):
+        node = "tests/test_a.py::test_x['UTC']"
+        self.assertEqual(resolve_selectors([node, 'tests/test_a.py::test_x[UTC]'], [node]), [node])
+
+    def test_public_doctest_leaf(self):
+        self.assertEqual(test_roots(['docs/faq.rst::line:40,column:1']), ['docs/faq.rst'])
 
     def test_restore_cannot_erase_source(self):
         for paths in [['../tests'], ['/tests'], ['pandas'], ['.']]:

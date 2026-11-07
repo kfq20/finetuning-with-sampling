@@ -38,7 +38,7 @@ def test_ids(script):
 
 
 def prepare(row, index, output, *, canonicalize_selectors=False,
-            build_network='none', repair_contract=False, apt_mirror=False):
+            build_network='none', repair_contract=False, apt_mirror=False, bounded_pytest=False):
     unit = output / (f"row-{index:04d}")
     unit.mkdir(mode=0o700)
     dump(unit / "original-row.json", row)
@@ -87,14 +87,16 @@ def prepare(row, index, output, *, canonicalize_selectors=False,
     ids = test_ids(row["run_tests"]) if not repair_contract else []
     frozen_paths = ['tests']
     if repair_contract:
-        from append_rewrite.terminus.cli_contract import published_selectors, test_roots, resolve_selectors
+        from append_rewrite.terminus.cli_contract import published_selectors, test_roots, resolve_selectors, PYTEST_RESOURCES
         ids = published_selectors(row['run_tests'])
+        requested = list(ids)
         gold = DockerWorld(image['Id'], 'cligym-contract-collection')
         try:
             parents = sorted({x.split('[', 1)[0] for x in ids})
             q = gold.run('source /opt/miniconda3/bin/activate; conda activate testbed; '
                          + shlex.join(['python', '-m', 'pytest', '--collect-only', '-q', *parents]),
-                         cwd='/testbed', timeout=600)
+                         cwd='/testbed', timeout=600,
+                         envs=PYTEST_RESOURCES if bounded_pytest else None)
             (unit / 'gold-collection.log').write_text(q.stdout + q.stderr)
             if q.exit_code:
                 raise ValueError('Gold tests could not be collected')
@@ -102,6 +104,9 @@ def prepare(row, index, output, *, canonicalize_selectors=False,
                          if '::' in x and not x.startswith((' ', '<', '='))]
             # An empty published selector list means full-suite pytest, not no tests.
             ids = resolve_selectors(ids, collected) if ids else collected
+            dump(unit / 'selector-resolution.json', {'requested': requested,
+                 'resolved_test_ids': ids, 'new_model_requests': 0,
+                 'rule': 'All children of class/function selectors; unique gold-ID aliases; no missing test dropped'})
             frozen_paths = test_roots(ids)
         finally:
             gold.kill()
@@ -116,6 +121,9 @@ def prepare(row, index, output, *, canonicalize_selectors=False,
         contract.update(frozen_test_paths=frozen_paths, explicit_pytest_argv=[
             '/opt/miniconda3/envs/testbed/bin/python', '-m', 'pytest', '--disable-warnings',
             '--color=no', '--tb=no', '--verbose', *ids])
+        if bounded_pytest:
+            from append_rewrite.terminus.cli_contract import bound_pytest_resources
+            contract['explicit_pytest_argv'] = bound_pytest_resources(contract['explicit_pytest_argv'])
     dump(
         tests / "contract.json",
         contract,
@@ -201,6 +209,7 @@ def main():
     p.add_argument('--repair-contract', action='store_true')
     p.add_argument('--min-free-gib', type=int, default=20)
     p.add_argument('--apt-mirror', action='store_true')
+    p.add_argument('--bounded-pytest', action='store_true')
     a = p.parse_args()
     a.output.mkdir(mode=0o700, parents=True, exist_ok=False)
     wanted = a.indices
@@ -230,6 +239,7 @@ def main():
                     rows[i], i, a.output,
                     canonicalize_selectors=a.canonicalize_selectors,
                     build_network=a.build_network, repair_contract=a.repair_contract, apt_mirror=a.apt_mirror,
+                    bounded_pytest=a.bounded_pytest,
                 )
                 with lock:
                     plan.append(item)
