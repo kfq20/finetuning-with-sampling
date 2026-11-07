@@ -13,6 +13,7 @@ def export_row(history, tokenizer, *, provenance, target_start_message=0):
     encoded = tokenizer.raw.encode(rendered, add_special_tokens=False)
     loss = [False] * len(encoded.ids)
     spans = []
+    trimmed = []
     for i, message in enumerate(history):
         if message["role"] != "assistant" or i < target_start_message:
             continue
@@ -20,7 +21,13 @@ def export_row(history, tokenizer, *, provenance, target_start_message=0):
         prefix = tokenizer.apply_chat_template(
             history[:i], tokenize=False, add_generation_prompt=True
         )
-        target = prefix + message["content"] + "<|im_end|>"
+        # The pinned Qwen template applies |trim to each content string. Keep
+        # observed messages unchanged, but locate labels in that exact rendered
+        # serialization rather than rejecting a harmless outer newline.
+        content = message["content"].strip()
+        if content != message["content"]:
+            trimmed.append(i)
+        target = prefix + content + "<|im_end|>"
         if not rendered.startswith(target):
             raise ValueError("SFT full/incremental template mismatch")
         lo, hi = len(prefix), len(target)
@@ -33,7 +40,7 @@ def export_row(history, tokenizer, *, provenance, target_start_message=0):
                 loss[j] = True
     if not any(loss):
         raise ValueError("No assistant tokens selected")
-    return {
+    row = {
         "messages": history,
         "input_ids": encoded.ids,
         "labels": [t if mask else -100 for t, mask in zip(encoded.ids, loss)],
@@ -45,3 +52,6 @@ def export_row(history, tokenizer, *, provenance, target_start_message=0):
         "total_tokens": len(loss),
         "assistant_character_spans": spans,
     }
+    if trimmed:
+        row["assistant_template_edge_trimmed_messages"] = trimmed
+    return row
