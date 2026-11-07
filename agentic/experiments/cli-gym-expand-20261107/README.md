@@ -193,3 +193,11 @@ repairing every environment. Read `ENVIRONMENT-REPAIRS.md` for the unselected
 private-filesystem pilot and read-only expert reuse inventory. The latter is
 preparation only; it does not dispatch additional samples or override no-replay
 policy. CLI and SWE quotas and quality gates remain independent.
+
+Prospective scoring can opt into`APPEND_REWRITE_SCORE_FIFO=1`. Locked tickets
+provide FIFO admission over the same four legacy-compatible score slots; crashed
+waiters are reaped by lock ownership, not elapsed time. Successful score receipts
+record`score_queue_wait_sec`. No sampling, full-input likelihood computation,
+selection, model retry or task admission rule changes. Existing paid workers keep
+their original runtime. This prevents new waiters repeatedly overtaking queued
+scores; it does not increase scoring capacity or guarantee shorter model work.

@@ -138,6 +138,8 @@ def main(root, support_dir=None):
         else:
             argv += ['--adopt-workers', str(x / 'adopt-workers.json')]
         env = dict(envs[1], PYTHONPATH=str(runtime / 'agentic/src'), PYTHONDONTWRITEBYTECODE='1')
+        if request.get('score_fifo') is True:
+            env['APPEND_REWRITE_SCORE_FIFO'] = '1'
         if request.get('provider_gate'):
             gate = Path(request['provider_gate'])
             assert gate.resolve().is_relative_to(root.resolve())
@@ -156,6 +158,8 @@ def main(root, support_dir=None):
             'path': str(x / 'handoff.json'),
             'sha256': hashlib.sha256((x / 'handoff.json').read_bytes()).hexdigest()})
         producer_argv, producer_env = producer['argv'].copy(), envs[0].copy()
+        if request.get('score_fifo') is True:
+            producer_env['APPEND_REWRITE_SCORE_FIFO'] = '1'
         if request.get('producer_runtime'):
             pr = Path(request['producer_runtime'])
             producer_argv[1] = str(pr / 'agentic/experiments/cli-gym-expand-20261107/acquire.py')

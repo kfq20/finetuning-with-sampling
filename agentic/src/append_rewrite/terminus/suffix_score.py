@@ -63,7 +63,11 @@ def score_slot():
     capacity = int(os.environ.get("APPEND_REWRITE_SCORE_CAPACITY", "2"))
     if capacity < 1:
         raise ValueError("Positive score-prefill capacity required")
-    return file_slot(os.environ.get("APPEND_REWRITE_SCORE_POOL"), capacity)
+    root = os.environ.get("APPEND_REWRITE_SCORE_POOL")
+    if os.environ.get("APPEND_REWRITE_SCORE_FIFO") == "1":
+        from .score_queue import fifo_slot
+        return fifo_slot(root, capacity, file_slot)
+    return file_slot(root, capacity)
 
 
 class NativeSuffixStreamClient(NativeStreamClient):
@@ -174,8 +178,10 @@ class ResilientFullStreamClient(NativeFullStreamClient):
         for attempt in range(1, 6):
             dest = journal / f"attempt-{attempt}"
             try:
-                with score_slot():
+                with score_slot() as queue_wait:
                     result = super().score(rendered, journal=dest, timeout=timeout)
+                if queue_wait is not None:
+                    result["score_queue_wait_sec"] = queue_wait
             except (
                 HTTPError,
                 URLError,
