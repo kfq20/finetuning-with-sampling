@@ -10,6 +10,14 @@ from append_rewrite.terminus.cli_contract import (
 
 
 class ContractTests(unittest.TestCase):
+    def test_resource_wrapper_is_idempotent_but_unknown_env_rejected(self):
+        from append_rewrite.terminus.cli_contract import bound_pytest_resources
+        argv = ['python', '-m', 'pytest', 'tests/a.py::test_x']
+        wrapped = bound_pytest_resources(argv)
+        self.assertEqual(bound_pytest_resources(wrapped), wrapped)
+        with self.assertRaises(ValueError):
+            bound_pytest_resources(['/usr/bin/env', 'UNKNOWN=1', *argv])
+
     def test_selected_route_overrides_old_canary_without_fallback(self):
         resolve = runpy.run_path(str(Path(__file__).with_name('acquire.py')))['selected_model_arguments']
         with tempfile.TemporaryDirectory() as d:

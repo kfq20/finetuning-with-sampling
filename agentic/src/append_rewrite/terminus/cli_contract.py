@@ -9,10 +9,12 @@ PYTEST_RESOURCES = {'PYTEST_XDIST_AUTO_NUM_WORKERS': '1',
 
 def bound_pytest_resources(argv, *, serial_xdist=False):
     """Preserve every test/flag, changing only process/thread allocation."""
+    prefix = ['/usr/bin/env', *(k + '=' + v for k, v in PYTEST_RESOURCES.items())]
     if argv and argv[0] == '/usr/bin/env':
-        raise ValueError('Already wrapped command requires explicit review')
-    return ['/usr/bin/env', *(k + '=' + v for k, v in PYTEST_RESOURCES.items()),
-            *argv, *(['-n', '0'] if serial_xdist else [])]
+        if argv[:len(prefix)] != prefix:
+            raise ValueError('Unknown wrapped command requires explicit review')
+        argv = argv[len(prefix):]
+    return [*prefix, *argv, *(['-n', '0'] if serial_xdist else [])]
 
 
 def published_selectors(script):
