@@ -23,10 +23,10 @@ def ensure_image(spec):
 def capture_patch(sb, destination):
     # Intent-to-add includes newly created source files without copying Git state.
     q = sb.run('set -euo pipefail; git ls-files --others --exclude-standard -z | '
-               'xargs -0 -r git add -N --; git diff --binary HEAD', cwd='/testbed')
+               'xargs -0 -r git add -N --; git diff --binary HEAD', cwd='/testbed', raw=True)
     if q.exit_code:
         raise RuntimeError('SourcePatchCaptureFailed')
-    raw = q.stdout.encode()
+    raw = q.stdout.encode() if isinstance(q.stdout, str) else q.stdout
     Path(destination).write_bytes(raw)
     return {'storage_format': 'git-source-diff.v1',
             'archive_sha256': hashlib.sha256(raw).hexdigest(), 'bytes': len(raw)}

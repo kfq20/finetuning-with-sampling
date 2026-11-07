@@ -95,7 +95,7 @@ class DockerWorld:
         # Lifetime is owned by the controller's existing episode deadline/finally.
         self.requested_timeout = value
 
-    def run(self, text, *, user="root", cwd=None, timeout=300, envs=None, **kwargs):
+    def run(self, text, *, user="root", cwd=None, timeout=300, envs=None, raw=False, **kwargs):
         argv = ["exec", "-u", user]
         if cwd:
             argv += ["-w", cwd]
@@ -110,8 +110,8 @@ class DockerWorld:
             r = docker(*argv, self.sandbox_id, "/bin/bash", "-lc", text, timeout=timeout)
         return SimpleNamespace(
             exit_code=r.returncode,
-            stdout=r.stdout.decode(errors="replace"),
-            stderr=r.stderr.decode(errors="replace"),
+            stdout=r.stdout if raw else r.stdout.decode(errors="replace"),
+            stderr=r.stderr if raw else r.stderr.decode(errors="replace"),
         )
 
     def write(self, path, content, **kwargs):
