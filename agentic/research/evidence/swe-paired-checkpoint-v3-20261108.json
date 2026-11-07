@@ -1,0 +1,39 @@
+{
+  "verified_at": "2026-11-08T07:55:26+08:00",
+  "root": "/mnt/ecs-tb4/cli-gym-expansion-20261107",
+  "selected_pairs": {
+    "cli-gym": 604,
+    "swe-gym": 75
+  },
+  "snapshot": "/mnt/ecs-tb4/datasets/swegym-paired-20261108/checkpoint-v3",
+  "model_requests": 0,
+  "training_started": false,
+  "pair_holds": 0,
+  "full_tokenizer_reencoded": true,
+  "method_rows": 75,
+  "expert_rows": 75,
+  "method_supervised_tokens": 315427,
+  "expert_supervised_tokens": 590343,
+  "source_selection_sha256": "5bf922dbe7b7a364e89dbc3314158f087157bf3da61f68a837aa3822530c3fe4",
+  "master_selection_sha256": "e58a1ae4d1e18f8908d4ce7043a87e68eac59f2239418e19c1f35dac4e9f04dd",
+  "runtime_binding_sha256": "a39020e5c9098d427e55b72a6320d18e76d4c73f5793e46ba77de11b067b382e",
+  "verified_runtime_files": 270,
+  "cli_selection_unchanged": true,
+  "old_checkpoints_preserved": true,
+  "live_model_capacity": 16,
+  "score_capacity": 4,
+  "provider_holds": [],
+  "teacher_http500_incident": {
+    "units": [
+      "swegym-python__mypy-14093",
+      "swegym-python__mypy-14163",
+      "swegym-python__mypy-14885"
+    ],
+    "message": "Failed to validate API key",
+    "code": "INTERNAL_ERROR",
+    "invalid_credential_not_proven": true,
+    "existing_health_probe_passed": true,
+    "failed_model_attempts_replayed": 0,
+    "remote_evidence": "support/export-trim-repair-20261108/teacher-auth-validation500-incident.json"
+  }
+}
