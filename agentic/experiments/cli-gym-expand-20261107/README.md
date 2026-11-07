@@ -187,3 +187,9 @@ bytes are historical evidence and must never be silently rewritten as new proof.
 old errors/costs remain; new source manufacture consumes space as it proceeds.
 For current counts use source manifests/progress plus actual process identities.
 The independent CLI1k and SWE1k goals remain active.
+
+The quantity-first follow-up skips costly source-runtime faults rather than
+repairing every environment. Read `ENVIRONMENT-REPAIRS.md` for the unselected
+private-filesystem pilot and read-only expert reuse inventory. The latter is
+preparation only; it does not dispatch additional samples or override no-replay
+policy. CLI and SWE quotas and quality gates remain independent.

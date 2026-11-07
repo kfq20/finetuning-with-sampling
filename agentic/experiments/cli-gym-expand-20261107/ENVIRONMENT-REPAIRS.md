@@ -169,3 +169,29 @@ Each repair directory contains source binding, immutable input identity, control
 receipts and rejection evidence. Failed and superseded directories are retained.
 `campaign-sft/manifest.json` is the current cumulative data pack; the original
 531 release remains at its original path and hash.
+
+## Quantity-first follow-up,2026-11-08
+
+The user explicitly prioritizes qualified data volume over resolving every source
+fault. Unrecoverable or expensive environments should be skipped while the
+existing source queue continues. The private filesystem prototype remains in a
+separate unselected branch; it is not part of production or the skill.
+Actual row861/1492 diagnostics reached the tmux smoke after private reset, but the
+source's corrupted libc search path also prevents ordinary shell/runtime startup.
+Those cases remain held. No solver request or task-tool replacement was made.
+
+`inventory_expert_reuse.py` is a read-only audit for a possible additional student
+sampling wave. It checks native expert admission, both full scores, input identity,
+source spec and public-history bytes. It does not admit environments, dispatch
+students or authorize repeated samples. The actual inventory found596 exact native
+experts with source/history bindings;8 entries need separate provenance review.
+Additional student sampling is pending explicit user selection. Any future sample
+must get a distinct identity and preserve the original attempts, grouped task
+split and all current scoring/quality criteria.
+
+ECS evidence: `support/cli-control-fs-20261108/tmux-diagnostic.json`,
+`controlfs-pilots-v2/complete.json`,
+`support/expert-reuse-inventory-20261108/inventory.json`.
+The SWE manufacturer was live with56 prepared environments,5 held, and a full
+16-task unpaid queue; the model controller and producer identities were unchanged.
+CLI604/SWE5 is the observed admitted count, not target completion.
