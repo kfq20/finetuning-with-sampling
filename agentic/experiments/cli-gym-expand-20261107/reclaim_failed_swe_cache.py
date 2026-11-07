@@ -1,4 +1,4 @@
-"""Reclaim only this campaign's failed Hydra preparation caches, not evidence.
+"""Reclaim only this campaign's failed SWE preparation caches, not evidence.
 
 Require a recorded new download, canonical row hash, immutable registry config,
 no published task/image reference and no container reference. Keep a pilot image.
@@ -36,17 +36,17 @@ def main(root, output, target_gib=90):
         fcntl.flock(lock, fcntl.LOCK_EX)
         for item in held:
             name = item['task_id']
-            if not name.startswith('facebookresearch__hydra-') or name == 'facebookresearch__hydra-2189' or 'swegym-' + name in task_ids:
+            if name == 'facebookresearch__hydra-2189' or 'swegym-' + name in task_ids:
                 continue
             folder = source / name
-            row_file, pull_file, log = folder/'source-row.json', folder/'pull.log', folder/'collection.log'
-            if not all(p.is_file() for p in [row_file, pull_file, log]) or time.time()-max(p.stat().st_mtime for p in [row_file,pull_file,log]) < 60:
+            row_file, pull_file = folder/'source-row.json', folder/'pull.log'
+            if not all(p.is_file() for p in [row_file, pull_file]) or time.time()-max(p.stat().st_mtime for p in [row_file,pull_file]) < 60:
                 continue
             row = read(row_file)
             row_sha = hashlib.sha256(json.dumps(row, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
             assert row['instance_id'] == name and scope['tasks'][name] == row_sha
             tag = 'xingyaoww/sweb.eval.x86_64.' + name.replace('__','_s_').lower()
-            if 'pytest_snail' not in log.read_text() or 'Status: Downloaded newer image for ' + tag not in pull_file.read_text():
+            if 'Status: Downloaded newer image for ' + tag not in pull_file.read_text():
                 continue
             if shutil.disk_usage(root).free >= target_gib * 1024**3:
                 break
