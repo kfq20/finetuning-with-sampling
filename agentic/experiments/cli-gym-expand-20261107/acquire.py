@@ -113,6 +113,7 @@ def main(root):
                    if (root / 'coordinator-launch.json').exists() else None)
     items = {x['unit_id']: x for x in seed}
     last_release = None
+    exhausted_since = None
     while True:
         retire_failed_workers(run, [], root / 'failed-worker-retirements')
         status = read(canary / 'status.json')
@@ -214,6 +215,20 @@ def main(root):
             dump(run / 'STOP_PROVIDER', {'reason': 'storage_admission_hold', 'new_model_requests': 0})
             phase = 'storage_hold'
         extras_done = all(Path(x['complete']).exists() for x in registry['plans'])
+        no_dispatch = health.get('active_workers') == 0 and health.get('queued') == 0
+        all_manufacturing_done = (prep_root / 'complete.json').exists() and extras_done
+        if no_dispatch and all_manufacturing_done and not health.get('provider_holds'):
+            exhausted_since = exhausted_since or time.time()
+            phase = 'awaiting_supply'
+            if time.time() - exhausted_since >= 300:
+                phase = 'blocked_supply'
+                dump(root / 'acquisition-hold.json', {'reason': 'supply_exhausted',
+                     'valid_pairs': len(all_records), 'since': exhausted_since,
+                     'benchmark_retry': False})
+                dump(complete, {'plan_sha256': hashlib.sha256(plan.read_bytes()).hexdigest(),
+                     'reason': 'supply_exhausted_not_target_complete'})
+        else:
+            exhausted_since = None
         if ((prep_root / 'complete.json').exists() and extras_done and not registry['open']) or (run / 'STOP_PROVIDER').exists():
             dump(complete, {'plan_sha256': hashlib.sha256(plan.read_bytes()).hexdigest()})
         if prep.poll() is not None and not (prep_root / 'complete.json').exists():
