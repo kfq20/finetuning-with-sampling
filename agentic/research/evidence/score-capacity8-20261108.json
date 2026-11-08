@@ -1,0 +1,30 @@
+{
+  "checked_at": "2026-11-08T13:38:50+08:00",
+  "authorization": "评分提高到8，任务保持16",
+  "source_commit": "8cfaa3b",
+  "frozen_runtime_files": 248,
+  "actual_ecs_regression_tests_passed": 15,
+  "coordinator": {"pid": 237371, "start_ticks": "648583280"},
+  "producer": {"pid": 237372, "start_ticks": "648583280"},
+  "worker_capacity": 16,
+  "score_capacity": 8,
+  "actual_workers": 16,
+  "adopted_paid_workers": 16,
+  "model_workers_signalled": 0,
+  "original_evidence_hashes_unchanged": 1680,
+  "new_solver_retries": 0,
+  "first_new_worker": {
+    "unit": "swegym-python__mypy-17182",
+    "pid": 237435,
+    "start_ticks": "648583491",
+    "actual_score_capacity": 8,
+    "frozen_runtime_path_verified": true
+  },
+  "old_workers_retain_score_capacity": 4,
+  "score_fifo_preserved": true,
+  "eight_proposals_and_scoring_objective_unchanged": true,
+  "candidate_logprob_slice_enabled": false,
+  "actual_eight_simultaneous_production_scores_verified": false,
+  "production_speedup_verified": false,
+  "paired_by_source": {"cli-gym": 604, "swe-gym": 97}
+}
