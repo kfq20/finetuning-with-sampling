@@ -153,11 +153,14 @@ class NativeSuffixStreamClient(NativeStreamClient):
 
 
 class NativeFullStreamClient(NativeSuffixStreamClient):
-    """Same full-input score request/analysis as legacy, only streamed transport."""
+    """Legacy full return by default; opt-in slice retains full conditioning."""
 
     def score(self, rendered, *, journal, timeout=120):
+        sliced = self.config.get("candidate_logprob_slice", False)
+        if type(sliced) is not bool:
+            raise ValueError("candidate_logprob_slice must be a boolean")
         return super().score(
-            rendered, journal=journal, timeout=timeout, full_input=True
+            rendered, journal=journal, timeout=timeout, full_input=not sliced
         )
 
 

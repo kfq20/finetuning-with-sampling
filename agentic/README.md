@@ -27,6 +27,13 @@ are scored independently. Reuse receipts bind the original score, and reused
 requests contribute zero additional scoring tokens. Disabled by default; enable
 only in an explicitly frozen prospective runtime, never by editing active runs.
 
+Optional `candidate_logprob_slice: true` sends the complete rendered token IDs
+but requests logprobs starting one token before the candidate. The same strict
+token alignment, finite target probabilities and candidate mean apply. Default
+is the legacy full-input return. Calibrate full candidate pools against preserved
+scores on the selected endpoint before enabling; never fall back on validation
+failure. This changes returned positions, not the history given to the model.
+
 ## Data
 
 `append_rewrite.collect` indexes existing DeepSeek continuation receipts, checks
