@@ -1,0 +1,40 @@
+{
+  "checked_at": 1794145255.5057127,
+  "health": {
+    "at": 1794145254.22414,
+    "active": 1,
+    "scheduled": 1,
+    "prepared": 67,
+    "concurrency": 2
+  },
+  "processes": {
+    "prepare": {
+      "alive": true,
+      "state": "S"
+    },
+    "run": {
+      "alive": true,
+      "state": "S"
+    }
+  },
+  "canary": {
+    "row_index": 1500,
+    "spec_path": "/mnt/ecs-tb4/evaluations/qwen38-cli100-base-http-20261108-a1/prepared/spec-1500.json",
+    "spec_sha256": "28632b5fe46007d8f212564d9a700de7226778706143c254c2c6f5e8047c22cf"
+  },
+  "canary_requests": 17,
+  "canary_http200": 17,
+  "plan_sha256": "cbb644e8ad7fdd71856345a7c9660978bcee0ba9c2c256d309554e915343fdd0",
+  "runtime_binding_sha256": "d2092fffd659477ecdd6974ff8e48aa9a09fb72dcbd037ce2a700b673fdb9369",
+  "patch_commit": "1ec4426",
+  "production": {
+    "checked_at": 1794145253.1777518,
+    "active_workers": 16,
+    "queued": 23,
+    "phase": "running",
+    "provider_holds": [],
+    "automatic_benchmark_retry": false
+  },
+  "new_training": false,
+  "automatic_paid_retry": false
+}
