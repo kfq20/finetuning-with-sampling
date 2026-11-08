@@ -57,14 +57,31 @@ def prepare(root):
          'selected': 100, 'replacement_tasks': 0, 'new_model_requests': 0})
 
 
+def effective_result(root, row):
+    original = root / 'trials' / f'row-{row:04d}' / 'result.json'
+    selected = root / 'recovery-selection.json'
+    entry = read(selected).get(str(row)) if selected.exists() else None
+    if entry:
+        assert hashlib.sha256(original.read_bytes()).hexdigest() == entry['original_result_sha256']
+        recovered = Path(entry['path'])
+        assert recovered.resolve().is_relative_to(root.resolve())
+        assert hashlib.sha256(recovered.read_bytes()).hexdigest() == entry['sha256']
+        result = read(recovered)
+        assert result['row_index'] == row and result['normal_native_completion']
+        return result
+    return read(original) if original.exists() else None
+
+
 def summary(root):
-    results = [read(p) for p in (root / 'trials').glob('*/result.json')]
+    originals = [read(p) for p in (root / 'trials').glob('*/result.json')]
+    results = [effective_result(root, r['row_index']) for r in originals]
     valid = [x for x in results if x['valid']]
     dump(root / 'summary.json', {'at': time.time(), 'selected_tasks': 100,
          'attempted': len(results), 'valid_completed': len(valid),
          'full_success': sum(x['binary_score'] == 1 for x in valid),
          'valid_zero': sum(x['binary_score'] == 0 for x in valid),
          'execution_or_scoring_errors': len(results) - len(valid),
+         'original_error_records_retained': sum(not r['valid'] for r in originals),
          'automatic_paid_retry': False, 'training_export': False})
 
 
@@ -85,6 +102,8 @@ async def trial(root, item, plan):
                                 runtime_assets=Path(plan['runtime_assets'])),
                                 out, 'evaluation', backend=backend)
         a, b = receipt['score']['reward'], receipt['fresh_score']['reward']
+        if receipt.get('private_path_hits'):
+            raise ValueError('Private grader path audit hold')
         if a not in (0, 1) or b not in (0, 1) or a != b:
             raise ValueError('Invalid or inconsistent fresh verifier scores')
         result = {'valid': True, 'binary_score': int(a == 1),
@@ -106,7 +125,8 @@ async def run(root):
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     plan = read(root / 'plan.json')
     (root / 'trials').mkdir(exist_ok=True)
-    scheduled, active = set(), {}
+    scheduled = {int(p.name.removeprefix('row-')) for p in (root / 'trials').glob('row-*')}
+    active = {}
     canary = None
     while True:
         for name, task in list(active.items()):
@@ -119,11 +139,11 @@ async def run(root):
         if canary is None and units:
             canary = units[0]['row_index']
             dump(root / 'canary-selection.json', units[0])
-        result = root / 'trials' / f'row-{canary:04d}' / 'result.json' if canary is not None else None
-        canary_done = result is not None and result.exists()
-        if canary_done and not read(result)['valid']:
+        result = effective_result(root, canary) if canary is not None else None
+        canary_done = result is not None
+        if canary_done and not result['valid']:
             dump(root / 'HOLD.json', {'reason': 'First real trial did not close normally; no bulk dispatch',
-                                    'result_path': str(result), 'automatic_paid_retry': False})
+                                    'row_index': canary, 'automatic_paid_retry': False})
             return
         for item in units:
             i = item['row_index']
@@ -140,7 +160,8 @@ async def run(root):
             dump(root / f'launch-{i:04d}.json', {'pid': active[i].pid, 'row': i,
                  'at': time.time(), 'automatic_paid_retry': False})
         dump(root / 'health.json', {'at': time.time(), 'active': len(active),
-             'scheduled': len(scheduled), 'prepared': len(units), 'concurrency': plan['concurrency']})
+             'scheduled': len(scheduled), 'prepared': len(units), 'concurrency': plan['concurrency'],
+             'phase': 'running' if not (root / 'STOP').exists() else 'draining'})
         if not active and ((root / 'STOP').exists() or
                 ((root / 'preparation-complete.json').exists() and len(scheduled) == len(units))):
             summary(root)

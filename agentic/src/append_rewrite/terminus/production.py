@@ -369,6 +369,29 @@ def reference_attributions(history):
     return hits
 
 
+def private_path_audit(history, *, native_parser=None):
+    """Audit evaluated actions with the same parser that executed the episode.
+
+    Plain benchmarks permit malformed turns followed by native error feedback.
+    SFT production retains strict action validation; raw history is never edited.
+    """
+    hits, format_errors = [], []
+    for i, message in enumerate(history):
+        if message['role'] != 'assistant':
+            continue
+        if native_parser is None:
+            commands = [c['keystrokes'] for c in action(message['content'])['commands']]
+        else:
+            parsed = native_parser.parse_response(message['content'])
+            commands = [c.keystrokes for c in parsed.commands]
+            if parsed.error:
+                format_errors.append(i // 2 + 1)
+        if any(re.search(r'(?<![\w/])' + re.escape(path), command)
+               for command in commands for path in ('/tests/', '/solution/', '.secrets')):
+            hits.append(i // 2 + 1)
+    return hits, format_errors
+
+
 async def episode(spec, args, out, role, teacher=None, *, backend=None):
     from harbor.models.agent.context import AgentContext
 
@@ -460,16 +483,8 @@ async def episode(spec, args, out, role, teacher=None, *, backend=None):
         first = fresh_grade(spec, args, submission, "production-grade-a")
         second = fresh_grade(spec, args, submission, "production-grade-b")
         hits = reference_attributions(history) if role == "student" else []
-        private_hits = [
-            i // 2 + 1
-            for i, m in enumerate(history)
-            if m["role"] == "assistant"
-            and any(
-                re.search(r"(?<![\w/])" + re.escape(path), c["keystrokes"])
-                for c in action(m["content"])["commands"]
-                for path in ("/tests/", "/solution/", ".secrets")
-            )
-        ]
+        private_hits, format_errors = private_path_audit(
+            history, native_parser=agent._parser if role == 'evaluation' else None)
         success = first["reward"] == second["reward"] == 1 and not private_hits
         record = {
             "role": role,
@@ -479,6 +494,7 @@ async def episode(spec, args, out, role, teacher=None, *, backend=None):
             "fresh_score": second,
             "capture": captured,
             "private_path_hits": private_hits,
+            "format_error_interactions": format_errors,
             "reference_attribution_blocks": hits,
             "expert_admitted": success if role == "teacher" else False,
             "training_admitted": False,

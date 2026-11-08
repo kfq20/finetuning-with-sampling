@@ -12,6 +12,48 @@ from append_rewrite.terminus.cli_contract import (
 
 
 class ContractTests(unittest.TestCase):
+    def test_request_cache_mode_preserves_response_and_wire_evidence(self):
+        main = runpy.run_path(str(Path(__file__).with_name('compact_wires.py')))['main']
+        archived = []
+        fake = {'opened_paths': lambda: set(),
+                'archive': lambda path, *args: archived.append(path.name) or 0}
+        with tempfile.TemporaryDirectory() as name:
+            root = Path(name)
+            (root / 'storage-policy.json').write_text('{"preserve_transport_evidence":true}')
+            unit = root / 'production/units/example'
+            folder = unit / 'student/generation/turn-0001'
+            folder.mkdir(parents=True)
+            (unit / 'status.json').write_text('{"phase":"completed"}')
+            os.utime(unit / 'status.json', (1, 1))
+            for filename in ['request.json', 'response.json', 'wire.jsonl']:
+                path = folder / filename
+                path.write_text(json.dumps({'sampling_params': {}, 'input_ids': [1] * 2000}))
+                os.utime(path, (1, 1))
+            with patch.object(main.__globals__['runpy'], 'run_path', return_value=fake):
+                main([root / 'production'], root / 'output')
+            self.assertEqual(archived, ['request.json'])
+            self.assertTrue((folder / 'response.json').exists())
+            self.assertTrue((folder / 'wire.jsonl').exists())
+
+    def test_preserve_images_policy_disables_all_image_reclamation(self):
+        from types import SimpleNamespace
+        main = runpy.run_path(str(Path(__file__).with_name('maintain_storage.py')))['main']
+        compact = unittest.mock.Mock()
+        forbidden = unittest.mock.Mock(side_effect=AssertionError('Image cleanup is forbidden'))
+        with tempfile.TemporaryDirectory() as name:
+            root = Path(name)
+            (root / 'support').mkdir()
+            (root / 'storage-policy.json').write_text('{"preserve_experiment_images":true}')
+            with patch.dict(os.environ, DOCKER_HOST='unix:///mnt/ecs-tb4/cli-gym-pilot-20261104/runtime/docker.sock'), \
+                 patch.dict(main.__globals__, cache_candidates=forbidden, checked=forbidden), \
+                 patch.object(main.__globals__['runpy'], 'run_path', return_value={'main': compact}) as loader, \
+                 patch.object(main.__globals__['shutil'], 'disk_usage', return_value=SimpleNamespace(free=0)):
+                main(root, root / 'output')
+            forbidden.assert_not_called()
+            self.assertEqual(loader.call_count, 1)
+            compact.assert_called_once()
+            self.assertTrue(json.loads((root / 'output/complete.json').read_text())['preserve_experiment_images'])
+
     def test_failed_cache_sweep_protects_unpublished_repairs(self):
         refs = runpy.run_path(str(Path(__file__).with_name('reclaim_failed_swe_cache.py')))['pending_source_references']
         with tempfile.TemporaryDirectory() as d:

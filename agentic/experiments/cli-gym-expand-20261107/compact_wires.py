@@ -26,7 +26,15 @@ def main(roots, output):
         selected = []
         contexts = {}
         for root in roots:
-            for status in root.rglob('units/*/status.json'):
+            policy_path = root.parent / 'storage-policy.json'
+            policy = json.loads(policy_path.read_text()) if policy_path.exists() else {}
+            request_only = policy.get('preserve_transport_evidence', False)
+            # The run layout is flat. rglob also walks every candidate journal
+            # directory again after yielding units, delaying the entire plan.
+            for index, status in enumerate((root / 'units').glob('*/status.json')):
+                if index % 25 == 0:
+                    (output / 'scan-progress.json').write_text(json.dumps({
+                        'units_scanned': index, 'selected_caches': len(selected), 'at': time.time()}))
                 if status.parent in live or time.time() - status.stat().st_mtime < 600:
                     continue
                 if json.loads(status.read_text()).get('phase') not in ('hold', 'completed', 'teacher_not_successful'):
@@ -36,8 +44,15 @@ def main(roots, output):
                 for wire in status.parent.glob('*/generation/turn-*/**/*'):
                     if wire.name not in ('wire.jsonl', 'response.json', 'request.json'):
                         continue
+                    if request_only and wire.name != 'request.json':
+                        continue
+                    minimum = 4096 if request_only else 131072
                     if (not wire.is_symlink() and str(wire) not in opened
-                        and wire.stat().st_size >= 131072 and time.time() - wire.stat().st_mtime >= 600):
+                        and wire.stat().st_size >= minimum and time.time() - wire.stat().st_mtime >= 600):
+                        if request_only:
+                            body = json.loads(wire.read_text())
+                            if 'sampling_params' not in body or not ('input_ids' in body or 'text' in body):
+                                continue  # Only reconstructible request-body caches.
                         selected.append((wire, root, status, digest))
         (output / 'plan.json').write_text(json.dumps({'files': [str(x[0]) for x in selected],
             'logical_bytes': sum(x[0].stat().st_size for x in selected)}, indent=2))

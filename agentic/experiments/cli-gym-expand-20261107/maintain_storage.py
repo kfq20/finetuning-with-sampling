@@ -1,8 +1,9 @@
 """One bounded housekeeping pass owned by the acquisition producer, not a daemon.
 
-Compact settled journals losslessly. Under pressure, evict only completed SWE
-source caches whose exact immutable registry image can be restored. Never prune
-Docker globally, remove task evidence, or touch running/queued images.
+Compact settled request caches losslessly. An explicit preserve_experiment_images
+policy disables all image eviction, including failed preparation caches. Legacy
+image eviction is allowed only when that policy permits it and the exact immutable
+registry image can be restored. Never prune Docker globally or remove task evidence.
 """
 import fcntl
 import json
@@ -58,6 +59,8 @@ def cache_candidates(root, limit=16):
 def main(root, output):
     assert os.environ.get('DOCKER_HOST') == SOCKET, 'Only the study-owned Docker endpoint is allowed'
     output.mkdir(parents=True, exist_ok=True)
+    policy = read(root / 'storage-policy.json') if (root / 'storage-policy.json').exists() else {}
+    preserve_images = policy.get('preserve_experiment_images', False)
     with (root / 'support/storage-maintenance.lock').open('a') as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -68,7 +71,7 @@ def main(root, output):
         compact = runpy.run_path(str(Path(__file__).with_name('compact_wires.py')))['main']
         compact([root / 'production'], output / 'journals')
         removed, held = [], []
-        if shutil.disk_usage(root).free < 100 * 1024**3:
+        if not preserve_images and shutil.disk_usage(root).free < 100 * 1024**3:
             for image, ref in cache_candidates(root).items():
                 if shutil.disk_usage(root).free >= 120 * 1024**3:
                     break
@@ -95,10 +98,11 @@ def main(root, output):
                     held.append({'image_id': image, 'error_type': type(error).__name__})
         dump(output / 'complete.json', {'at': time.time(), 'before_free': before,
             'after_free': shutil.disk_usage(root).free, 'removed_source_cache': removed,
-            'held_cache_operations': held, 'model_requests': 0, 'global_prune': False})
+            'held_cache_operations': held, 'model_requests': 0, 'global_prune': False,
+            'preserve_experiment_images': preserve_images})
     # This helper takes the same storage lock. Run after releasing our pass's
     # lock so failed source downloads cannot refill the disk or deadlock us.
-    if shutil.disk_usage(root).free < 100 * 1024**3:
+    if not preserve_images and shutil.disk_usage(root).free < 100 * 1024**3:
         reclaim = runpy.run_path(str(Path(__file__).with_name('reclaim_failed_swe_cache.py')))['main']
         reclaim(root, output / 'failed-source-caches')
 

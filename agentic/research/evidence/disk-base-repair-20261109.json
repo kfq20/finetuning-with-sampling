@@ -1,0 +1,225 @@
+{
+  "at": 1794160894.0689154,
+  "free_gib": 32.966983795166016,
+  "acquisition": {
+    "checked_at": 1794160882.8580382,
+    "phase": "storage_hold",
+    "active_workers": 9,
+    "queued_units": 10,
+    "provider_holds": [],
+    "valid_pairs": 796,
+    "valid_by_source": {
+      "cli-gym": 616,
+      "swe-gym": 180
+    },
+    "targets_by_source": {
+      "cli-gym": 1000,
+      "swe-gym": 1000
+    },
+    "new_pairs": 265,
+    "target": 2000,
+    "published_tasks": 1117,
+    "worker_capacity": 16,
+    "score_capacity": 32,
+    "heldout_tasks": 100,
+    "automatic_paid_retry": false
+  },
+  "base_summary": {
+    "at": 1794160764.8534927,
+    "selected_tasks": 100,
+    "attempted": 3,
+    "valid_completed": 3,
+    "full_success": 1,
+    "valid_zero": 2,
+    "execution_or_scoring_errors": 0,
+    "original_error_records_retained": 1,
+    "automatic_paid_retry": false,
+    "training_export": false
+  },
+  "base_health": {
+    "at": 1794160891.8017159,
+    "active": 0,
+    "scheduled": 3,
+    "prepared": 70,
+    "concurrency": 2,
+    "phase": "running"
+  },
+  "processes": [
+    {
+      "pid": 1195643,
+      "kind": "production_unit",
+      "start_ticks": "652897336"
+    },
+    {
+      "pid": 1195644,
+      "kind": "production_unit",
+      "start_ticks": "652897336"
+    },
+    {
+      "pid": 1218263,
+      "kind": "production_unit",
+      "start_ticks": "652901864"
+    },
+    {
+      "pid": 1218433,
+      "kind": "production_unit",
+      "start_ticks": "652901899"
+    },
+    {
+      "pid": 1219434,
+      "kind": "production_unit",
+      "start_ticks": "652902013"
+    },
+    {
+      "pid": 1236383,
+      "kind": "production_unit",
+      "start_ticks": "652904881"
+    },
+    {
+      "pid": 1261747,
+      "kind": "base_controller",
+      "start_ticks": "652911595"
+    },
+    {
+      "pid": 1341475,
+      "kind": "production_unit",
+      "start_ticks": "652951708"
+    },
+    {
+      "pid": 1342015,
+      "kind": "production_unit",
+      "start_ticks": "652951924"
+    },
+    {
+      "pid": 1342759,
+      "kind": "production_unit",
+      "start_ticks": "652951961"
+    }
+  ],
+  "receipts": [
+    {
+      "path": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/disk-and-base-repair-20261109/build-cache-prune-result.json",
+      "sha256": "5f8a3bde8e35b748aabe3e75ce08004416ea923d4b3333595dd9860ce7cb02da",
+      "value": {
+        "returncode": 0,
+        "image_ids_removed": [],
+        "image_ids_before": 2971,
+        "image_ids_after": 2971,
+        "free_before": 40270360576,
+        "free_after": 41505361920,
+        "global_prune": false,
+        "owned_build_cache_only": true,
+        "at": 1794158962.4970715
+      }
+    },
+    {
+      "path": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/disk-and-base-repair-20261109/expanded-cache-reclamation/complete.json",
+      "sha256": "1d0ac9fd0ac75243fd4815b7594e0e9a0d5af7fe82d6a2cfa1bd5cb5e9d4263b",
+      "value": {
+        "removed": [
+          {
+            "directory": "/mnt/ecs-tb4/archives/root-cold-20261102-v1/raw/tb4_scale315_quality_20261017_v1/p2-mp-T3-v2/payload/private-fixture",
+            "receipt": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/disk-and-base-repair-20261109/expanded-cache-reclamation/cache-000.json",
+            "allocated_bytes": 186822656
+          },
+          {
+            "directory": "/mnt/ecs-tb4/archives/root-cold-20261102-v1/raw/tb4_scale315_quality_20261017_v1/p2-mp-T3-v2/payload/public-app",
+            "receipt": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/disk-and-base-repair-20261109/expanded-cache-reclamation/cache-001.json",
+            "allocated_bytes": 273072128
+          },
+          {
+            "directory": "/mnt/ecs-tb4/archives/root-cold-20261102-v1/raw/tb4_scale315_quality_20261017_v1/p2-mp-T5-v1/payload/private-fixture",
+            "receipt": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/disk-and-base-repair-20261109/expanded-cache-reclamation/cache-002.json",
+            "allocated_bytes": 186822656
+          },
+          {
+            "directory": "/mnt/ecs-tb4/archives/root-cold-20261102-v1/raw/tb4_scale315_quality_20261017_v1/p2-mp-T5-v1/payload/public-app",
+            "receipt": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/disk-and-base-repair-20261109/expanded-cache-reclamation/cache-003.json",
+            "allocated_bytes": 273035264
+          },
+          {
+            "directory": "/mnt/ecs-tb4/archives/root-cold-20261102-v1/raw/tb4_scale315_quality_20261017_v1/p2-mp-T2-v1/payload/private-fixture",
+            "receipt": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/disk-and-base-repair-20261109/expanded-cache-reclamation/cache-004.json",
+            "allocated_bytes": 186822656
+          },
+          {
+            "directory": "/mnt/ecs-tb4/archives/root-cold-20261102-v1/raw/tb4_scale315_quality_20261017_v1/p2-mp-T2-v1/payload/public-app",
+            "receipt": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/disk-and-base-repair-20261109/expanded-cache-reclamation/cache-005.json",
+            "allocated_bytes": 273068032
+          },
+          {
+            "directory": "/mnt/ecs-tb4/archives/root-cold-20261102-v1/raw/tb4_scale315_quality_20261017_v1/p2-mp-T3-v1/payload/private-fixture",
+            "receipt": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/disk-and-base-repair-20261109/expanded-cache-reclamation/cache-006.json",
+            "allocated_bytes": 186822656
+          },
+          {
+            "directory": "/mnt/ecs-tb4/archives/root-cold-20261102-v1/raw/tb4_scale315_quality_20261017_v1/p2-mp-T3-v1/payload/public-app",
+            "receipt": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/disk-and-base-repair-20261109/expanded-cache-reclamation/cache-007.json",
+            "allocated_bytes": 273072128
+          },
+          {
+            "directory": "/mnt/ecs-tb4/archives/root-cold-20261102-v1/raw/tb4_scale315_quality_20261017_v1/p2-mp-T4-v1/payload/private-fixture",
+            "receipt": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/disk-and-base-repair-20261109/expanded-cache-reclamation/cache-008.json",
+            "allocated_bytes": 186818560
+          },
+          {
+            "directory": "/mnt/ecs-tb4/archives/root-cold-20261102-v1/raw/tb4_scale315_quality_20261017_v1/p2-mp-T4-v1/payload/public-app",
+            "receipt": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/disk-and-base-repair-20261109/expanded-cache-reclamation/cache-009.json",
+            "allocated_bytes": 272953344
+          },
+          {
+            "directory": "/mnt/ecs-tb4/archives/root-cold-20261102-v1/raw/tb4_scale315_quality_20261017_v1/p2-mp-T1-v1/payload/private-fixture",
+            "receipt": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/disk-and-base-repair-20261109/expanded-cache-reclamation/cache-010.json",
+            "allocated_bytes": 186822656
+          },
+          {
+            "directory": "/mnt/ecs-tb4/archives/root-cold-20261102-v1/raw/tb4_scale315_quality_20261017_v1/p2-mp-T1-v1/payload/public-app",
+            "receipt": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/disk-and-base-repair-20261109/expanded-cache-reclamation/cache-011.json",
+            "allocated_bytes": 273063936
+          }
+        ],
+        "held": [],
+        "free_gib": 39.681556701660156
+      }
+    },
+    {
+      "path": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/disk-and-base-repair-20261109/request-cache-only/urgent-pass/journals/complete.json",
+      "sha256": "fdcb26833e08839592c802c0e1b057e37be34ebf4a2b0fd6378fbd54d5ac0d12",
+      "value": {
+        "files": 104204,
+        "net_freed_bytes": 3649028096,
+        "data_free_gib": 38.707828521728516,
+        "all_terminal_status_hashes_unchanged": true
+      }
+    },
+    {
+      "path": "/mnt/ecs-tb4/evaluations/qwen38-cli100-base-http-20261108-a1/recoveries/row-1500/result.json",
+      "sha256": "3ad6a7b63f0e01db85973c3e7c10b877a30e015b819ed4efdc3c89c85cb90092",
+      "value": {
+        "valid": true,
+        "binary_score": 1,
+        "normal_native_completion": true,
+        "interactions": 20,
+        "format_error_interactions": [
+          16
+        ],
+        "new_model_requests": 0
+      }
+    },
+    {
+      "path": "/mnt/ecs-tb4/evaluations/qwen38-cli100-base-http-20261108-a1/support/native-audit-recovery-20261109/regressions.json",
+      "sha256": "608116eb7a7ab08b9a14886dc124528d8fd033b681228cd37db119d10eaf3ec2",
+      "value": {
+        "passed": true,
+        "stdout": "",
+        "stderr": "......\n----------------------------------------------------------------------\nRan 6 tests in 1.352s\n\nOK\n",
+        "new_model_requests": 0
+      }
+    }
+  ],
+  "images_preserved": true,
+  "original_evidence_preserved": true,
+  "automatic_paid_retry": false,
+  "shared_docker_modified": false
+}
+
