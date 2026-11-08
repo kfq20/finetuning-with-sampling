@@ -1,0 +1,15 @@
+{
+  "checked_at": "2026-11-08T12:25:22+08:00",
+  "paired_by_source": {"cli-gym": 604, "swe-gym": 97},
+  "paired_total": 701,
+  "swe_pair_holds": 0,
+  "swe_supervised_tokens": {"method": 425294, "expert": 780552},
+  "full_tokenizer_and_loss_mask_validation_passed": true,
+  "export_runtime_files_sha_verified": 270,
+  "swe_selector_sha256": "e51e49a24fb9844ec5dd10c2d852ae45234c5fcf6c76938ef90f1c4c55e445b6",
+  "master_selector_sha256": "78ac9dac6e2469a269f42a07568745ac25f407bea281fe2e78ffc09cc264e0f2",
+  "cli_selector_unchanged": true,
+  "new_model_requests": 0,
+  "training_started": false,
+  "prior_releases_preserved": true
+}
