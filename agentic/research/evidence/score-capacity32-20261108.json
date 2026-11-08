@@ -1,0 +1,43 @@
+{
+  "checked_at": "2026-11-08T14:51:26.947504+08:00",
+  "authorization": "\u8bc4\u5206\u5e76\u53d1\u63d0\u9ad8\u523032\uff0c\u4efb\u52a1\u4fdd\u630116\uff1b\u4fdd\u7559\u5728\u9014\u4efb\u52a1\uff1b\u5931\u8d25\u4efb\u52a1\u4e0d\u91cd\u8dd1\uff1b\u670d\u52a1\u625b\u5f97\u4f4f\u518d\u8003\u865164",
+  "code_changed": false,
+  "frozen_runtime_files_verified": 248,
+  "existing_runtime": "score-capacity8-20261108/runtime",
+  "mixed_capacity_32_control_passed": true,
+  "coordinator": {
+    "pid": 701776,
+    "start_ticks": "649023016"
+  },
+  "producer": {
+    "pid": 701777,
+    "start_ticks": "649023016"
+  },
+  "task_capacity": 16,
+  "score_capacity": 32,
+  "adopted_paid_workers": 16,
+  "model_workers_signalled": 0,
+  "original_evidence_hashes_unchanged": 1719,
+  "automatic_solver_retries": false,
+  "automatic_64": false,
+  "baseline": {
+    "window_sec": 600,
+    "logical_completed_scores": 127,
+    "scores_per_min": 12.7,
+    "median_queue_sec": 228.1361536597833,
+    "p90_queue_sec": 323.6879496993497,
+    "median_request_sec": 9.296763586811721,
+    "p90_request_sec": 94.23664888180792,
+    "successful_scoring_attempts": 127,
+    "failed_scoring_attempts": 2,
+    "score_attempt_error_fraction": 0.015503875968992248,
+    "context_tokens_median": 9361
+  },
+  "initial_actual_worker_capacity_counts": {
+    "4": 3,
+    "8": 13,
+    "32": 0
+  },
+  "throughput_improvement_verified": false,
+  "note": "New dispatch inherits 32; adopted worker environments retain prior capacity. Compare throughput, queue and request latency, context length and API-attempt errors; raw episode timeouts remain separate."
+}
