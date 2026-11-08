@@ -21,10 +21,26 @@
     "actual_ecs_harbor_sdk_blockwise": 8,
     "actual_ecs_score_capacity_fifo": 4,
     "passed": true,
-    "provider_requests": 0
+    "provider_requests": 0,
+    "actual_ecs_lifecycle": 5
   },
-  "production_selected": false,
+  "production_selected": true,
   "config_flag": "exact_score_reuse",
   "default": false,
-  "support": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/exact-score-reuse-20261108"
+  "support": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/exact-score-reuse-20261108",
+  "selected_composite_identity": "selected-720746d+export-022b765+recovery-ada9fe3+lifecycle-e145656+score-reuse-a606d26",
+  "coordinator": {
+    "pid": 3578448,
+    "start_ticks": "647635815"
+  },
+  "producer": {
+    "pid": 3578449,
+    "start_ticks": "647635815"
+  },
+  "adopted_paid_workers": 16,
+  "original_evidence_hashes_unchanged": 871,
+  "actual_workers_postcheck": 16,
+  "new_config_workers_at_postcheck": 0,
+  "production_speedup_verified": false,
+  "checked_at": "2026-11-08T11:00:30.476972+08:00"
 }
