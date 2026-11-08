@@ -17,7 +17,7 @@ def identity(pid):
         if f[0] in {'Z','X','x'}:return None
         argv=(p/'cmdline').read_bytes()
         return {'pid':pid,'start_ticks':f[19],'command_sha256':hashlib.sha256(argv).hexdigest()},argv.split(b'\0')
-    except FileNotFoundError:return None
+    except (FileNotFoundError, ProcessLookupError):return None
 
 
 def retire_failed_workers(run,adopted,evidence,*,grace_sec=60):
@@ -50,7 +50,12 @@ def retire_failed_workers(run,adopted,evidence,*,grace_sec=60):
             with target.open('x') as f:json.dump(record,f,indent=2)
             current=identity(owner['pid'])
             if current and current[0]==owner:
-                os.kill(owner['pid'],signal.SIGTERM);record['signalled']=True;retired.append(out.name)
+                try:
+                    os.kill(owner['pid'],signal.SIGTERM)
+                except ProcessLookupError:
+                    record['exited_before_signal']=True
+                else:
+                    record['signalled']=True;retired.append(out.name)
             temp=target.with_suffix('.tmp');temp.write_text(json.dumps(record,indent=2)+'\n');temp.replace(target)
             break
     return retired
