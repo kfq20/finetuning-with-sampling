@@ -23,6 +23,17 @@ def write(path, value):
     tmp.replace(path)
 
 
+def scoring_environment(env, request):
+    """Preserve the selected pool; change capacity only when explicitly requested."""
+    result = dict(env)
+    if 'score_capacity' in request:
+        capacity = request['score_capacity']
+        if type(capacity) is not int or capacity < 1:
+            raise ValueError('Positive integer scoring capacity required')
+        result['APPEND_REWRITE_SCORE_CAPACITY'] = str(capacity)
+    return result
+
+
 def identity(pid):
     p = Path('/proc') / str(pid)
     fields = (p / 'stat').read_text().split(') ')[1].split()
@@ -94,6 +105,7 @@ def main(root, support_dir=None):
     x = support_dir or root / 'support/mint-im-switch-20261107'
     assert x.resolve().is_relative_to((root / 'support').resolve())
     request = read(x / 'handoff-request.json') if (x / 'handoff-request.json').exists() else {}
+    scoring_environment({}, request)  # Validate before any lifecycle mutation.
     runtime = Path(request.get('runtime', x / 'runtime'))
     binding = Path(request.get('runtime_binding', x / 'runtime-binding.json'))
     assert read(Path(request.get('probe_result', x / 'probe-result.json')))['passed']
@@ -186,7 +198,8 @@ def main(root, support_dir=None):
             argv[argv.index('--adopt-workers') + 1] = str(x / 'adopt-workers.json')
         else:
             argv += ['--adopt-workers', str(x / 'adopt-workers.json')]
-        env = dict(envs[1], PYTHONPATH=str(runtime / 'agentic/src'), PYTHONDONTWRITEBYTECODE='1')
+        env = scoring_environment(dict(envs[1], PYTHONPATH=str(runtime / 'agentic/src'),
+                                       PYTHONDONTWRITEBYTECODE='1'), request)
         if request.get('score_fifo') is True:
             env['APPEND_REWRITE_SCORE_FIFO'] = '1'
         if request.get('provider_gate'):
@@ -206,7 +219,8 @@ def main(root, support_dir=None):
         write(root / 'producer-handoff-selection.json', {
             'path': str(x / 'handoff.json'),
             'sha256': hashlib.sha256((x / 'handoff.json').read_bytes()).hexdigest()})
-        producer_argv, producer_env = producer['argv'].copy(), envs[0].copy()
+        producer_argv = producer['argv'].copy()
+        producer_env = scoring_environment(envs[0], request)
         if request.get('score_fifo') is True:
             producer_env['APPEND_REWRITE_SCORE_FIFO'] = '1'
         if request.get('producer_runtime'):

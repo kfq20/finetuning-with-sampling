@@ -27,7 +27,8 @@ class ScoreCapacityTests(unittest.TestCase):
                 score.assert_not_called()
 
     def test_explicit_capacity_and_legacy_default(self):
-        for setting,expected in [({},2),({'APPEND_REWRITE_SCORE_CAPACITY':'4'},4)]:
+        for setting,expected in [({},2),({'APPEND_REWRITE_SCORE_CAPACITY':'4'},4),
+                                 ({'APPEND_REWRITE_SCORE_CAPACITY':'8'},8)]:
             with patch.dict('os.environ',setting,clear=True),patch('append_rewrite.terminus.suffix_score.file_slot') as slot:
                 score_slot();slot.assert_called_once_with(None,expected)
 

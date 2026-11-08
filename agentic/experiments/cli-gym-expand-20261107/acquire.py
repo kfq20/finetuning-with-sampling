@@ -88,13 +88,16 @@ def main(root):
     assert hashlib.sha256(original).hexdigest() == baseline['train_sha256']
     assert len(baseline['records']) == goal['prior_valid_pairs'] == 531
     publish = runpy.run_path(str(source / 'agentic/experiments/cli-gym-scale-20261104/collect.py'))['publish']
+    score_capacity = int(os.environ.get('APPEND_REWRITE_SCORE_CAPACITY', '4'))
+    if score_capacity < 1:
+        raise ValueError('Positive scoring capacity required')
     env = {**os.environ, 'PYTHONPATH': str(source / 'agentic/src'),
            'PYTHONDONTWRITEBYTECODE': '1',
            'DOCKER_HOST': 'unix:///mnt/ecs-tb4/cli-gym-pilot-20261104/runtime/docker.sock',
            'DOCKER_API_VERSION': '1.44', 'DOCKER_CONFIG': str(prior / 'docker-config'),
            'APPEND_REWRITE_STUDENT_POOL': str(root / 'student-pool'),
            'APPEND_REWRITE_SCORE_POOL': str(root / 'score-pool'),
-           'APPEND_REWRITE_STUDENT_CAPACITY': '16', 'APPEND_REWRITE_SCORE_CAPACITY': '4',
+           'APPEND_REWRITE_STUDENT_CAPACITY': '16', 'APPEND_REWRITE_SCORE_CAPACITY': str(score_capacity),
            'APPEND_REWRITE_MIN_FREE_GIB': '40'}
 
     def launch(name, argv):
@@ -280,7 +283,7 @@ def main(root):
              'provider_holds': health.get('provider_holds', []),
              'valid_pairs': len(all_records), 'valid_by_source': counts, 'targets_by_source': targets,
              'new_pairs': len(new['records']), 'target': sum(targets.values()),
-             'published_tasks': len(items), 'worker_capacity': 16, 'score_capacity': 4,
+             'published_tasks': len(items), 'worker_capacity': 16, 'score_capacity': score_capacity,
              'heldout_tasks': 100, 'automatic_paid_retry': False})
         if coordinator is not None and coordinator.poll() is not None:
             dump(root / 'acquisition-finished.json', {'returncode': coordinator.returncode,
