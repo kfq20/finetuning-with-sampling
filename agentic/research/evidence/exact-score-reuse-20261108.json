@@ -1,0 +1,30 @@
+{
+  "date": "2026-11-08",
+  "scope": "Five preserved SWE student timeouts; no inference or paid replay",
+  "episode_timeout_sec": 6000,
+  "per_task_slowest_completed_score_queue_wait_sum_sec": [
+    4443.9,
+    4473.2,
+    3958.3,
+    4778.4,
+    4655.9
+  ],
+  "note": "Per-turn slowest completed scores; incomplete last turns and other overhead excluded. Not a complete wall-clock decomposition.",
+  "exact_input_census": {
+    "complete_blocks": 131,
+    "score_requests": 1048,
+    "unique_inputs": 927,
+    "avoidable_requests": 121,
+    "fraction": 0.11545801526717557
+  },
+  "regressions": {
+    "actual_ecs_harbor_sdk_blockwise": 8,
+    "actual_ecs_score_capacity_fifo": 4,
+    "passed": true,
+    "provider_requests": 0
+  },
+  "production_selected": false,
+  "config_flag": "exact_score_reuse",
+  "default": false,
+  "support": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/exact-score-reuse-20261108"
+}

@@ -5,6 +5,7 @@ A command batch is one block. All proposals share the identical public prefix.
 """
 
 import asyncio
+import hashlib
 import json
 from pathlib import Path
 import time
@@ -81,6 +82,9 @@ class BlockwiseLLM:
         base = self.root / f"turn-{self.turn:04d}"
         base.mkdir(mode=0o700)
         dump(base / "public-prefix.json", public)
+        # Scoped to one public prefix; equality includes text, token IDs, boundary
+        # and renderer identities. Every candidate is still generated separately.
+        score_futures = {}
 
         async def propose(index):
             started = time.monotonic()
@@ -142,14 +146,36 @@ class BlockwiseLLM:
                 )
                 dump(base / f"reused-score-{index}.json", {"source": str(old_score)})
             else:
-                score = await asyncio.to_thread(
-                    self.client.score, rendered, journal=base / f"score-{index}"
-                )
+                if self.client.config.get("exact_score_reuse", False):
+                    if rendered not in score_futures:
+                        score_futures[rendered] = (index, asyncio.create_task(
+                            asyncio.to_thread(
+                                self.client.score, rendered,
+                                journal=base / f"score-{index}",
+                            )
+                        ))
+                    owner, pending = score_futures[rendered]
+                    score = dict(await pending)
+                    if owner != index:
+                        item["reused_score_from_index"] = owner
+                        dump(base / f"reused-score-{index}.json", {
+                            "source": str(base / f"score-{owner}"),
+                            "score_sha256": digest(score),
+                            "rendered_text_sha256": hashlib.sha256(
+                                rendered.text.encode()
+                            ).hexdigest(),
+                            "new_scoring_requests": 0,
+                        })
+                else:
+                    score = await asyncio.to_thread(
+                        self.client.score, rendered, journal=base / f"score-{index}"
+                    )
             item.update(
                 status="scored",
                 score=score,
                 elapsed_sec=time.monotonic() - started,
-                scoring_input_tokens=len(rendered.input_ids),
+                scoring_input_tokens=0 if "reused_score_from_index" in item
+                else len(rendered.input_ids),
             )
             return item
 

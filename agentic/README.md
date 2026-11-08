@@ -19,6 +19,14 @@ with scripted responses, no provider calls. New real model trials use the explic
 Candidate scoring must use the raw assistant JSON under the public native prefix.
 Generated output logprobs are NOT a substitute for forced candidate logprobs.
 
+Optional student config `exact_score_reuse: true` shares a single validated
+logprob result between byte/token-identical candidates within one block only.
+All eight proposals are still generated. Text, token IDs, candidate boundary,
+history and tokenizer/template identities must match exactly; similar commands
+are scored independently. Reuse receipts bind the original score, and reused
+requests contribute zero additional scoring tokens. Disabled by default; enable
+only in an explicitly frozen prospective runtime, never by editing active runs.
+
 ## Data
 
 `append_rewrite.collect` indexes existing DeepSeek continuation receipts, checks
