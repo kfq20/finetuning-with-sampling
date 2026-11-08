@@ -42,5 +42,19 @@
   "actual_workers_postcheck": 16,
   "new_config_workers_at_postcheck": 0,
   "production_speedup_verified": false,
-  "checked_at": "2026-11-08T11:00:30.476972+08:00"
+  "checked_at": "2026-11-08T11:00:30.476972+08:00",
+  "prospective_observation": {
+    "checked_at": "2026-11-08T13:04:31.212636+08:00",
+    "unit": "swegym-python__mypy-14064",
+    "reuse_receipts": 1,
+    "reuse_receipt_sha256": "a772aff708b8db134d9ae7b79eb47dfc448d7c4dcc0cc3bb8a4656ec9939e9b9",
+    "reused_request_count": 1,
+    "source_rendered_text_sha_verified": true,
+    "terminal": "TimeoutError",
+    "completed_score_turns": 14,
+    "completed_score_requests": 109,
+    "slowest_completed_turn_queue_sum_sec": 4352.1073535317555,
+    "slowest_completed_turn_request_sum_sec": 501.9102899637073,
+    "note": "Partial completed scoring paths, not full wall-clock decomposition. A real reuse hit does not demonstrate sufficient production speedup. No solver replay."
+  }
 }
