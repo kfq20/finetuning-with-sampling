@@ -602,7 +602,16 @@ async def unit(args):
     out.mkdir(mode=0o700, parents=True, exist_ok=False)
     dump(out / "status.json", {"phase": "controls", "unit_id": spec["unit_id"]})
     try:
-        await asyncio.to_thread(controls, spec, args, out / "controls")
+        if spec.get('preflight_mode') == 'cli-build-only':
+            if spec['source']['kind'] != 'cli-gym':
+                raise ValueError('Build-only admission is limited to CLI-Gym')
+            (out / 'controls').mkdir()
+            dump(out / 'controls/receipt.json', {
+                'mode': 'cli-build-only', 'calibration_performed': False,
+                'reason': 'User selected direct Docker admission; final scoring unchanged',
+            })
+        else:
+            await asyncio.to_thread(controls, spec, args, out / "controls")
         teacher = out / "teacher"
         if spec.get("reuse_teacher"):
             reuse_teacher(spec, spec["reuse_teacher"], teacher)

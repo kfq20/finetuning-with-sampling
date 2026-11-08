@@ -207,7 +207,7 @@ def main(root):
             extra_scope = i in registry.get('extra_eligible_rows', [])
             assert (i in eligible or extra_scope) and i not in holdout and spec['solver_network'] == 'none'
             if extra_scope and i not in eligible:
-                assert item.get('unpaid_repair_proof')
+                assert item.get('unpaid_repair_proof') or spec.get('preflight_mode') == 'cli-build-only'
                 assert spec['source']['kind'] == 'cli-gym' and spec['source']['dataset_revision'] == selected['revision']
             if item.get('unpaid_repair_proof'):
                 proof_path = Path(item['unpaid_repair_proof'])

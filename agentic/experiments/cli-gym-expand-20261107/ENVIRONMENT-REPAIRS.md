@@ -1,5 +1,28 @@
 # CLI-Gym environment supply repair,2026-11-07
 
+## Selected CLI policy: direct Docker admission (2026-11-08)
+
+User superseded the expensive per-task CLI preflight policy. For never-paid,
+non-holdout CLI tasks, reuse an existing built package or build the published
+recipe, run a container startup smoke, and enqueue expert → eight-candidate
+student production. No gold/NOP/mutation calibration is required before inference.
+`prepare_cli_direct.py` supplies these tasks; specs explicitly select
+`preflight_mode=cli-build-only`. The control receipt records that calibration was
+not performed, and never fabricates a passed control. SWE admission is unchanged.
+
+Existing paid attempts and in-flight workers remain untouched. Direct candidates
+are deduplicated against prior paid/uncertain rows and the100-task holdout. Build
+or startup failures are recorded and skipped without per-task repair. Final
+expert/student full-success, fresh scoring, capture and SFT format checks remain
+in force; admission to a model experiment is not admission to training. Shared
+task capacity remains16 and scoring capacity32. The direct supplier publishes at
+most8 unclaimed tasks and waits below40GiB free disk; it does not delete images.
+
+Selected evidence: production root `support/cli-direct-20261108/` and
+`cli-direct-build-20261108/`; use active_runtime_selection.json for live identity.
+The older calibration workflow below is historical for CLI, still retained as
+evidence rather than the new dispatch prerequisite.
+
 ## Afternoon follow-up: supply and throughput
 
 The selected producer still uses5f808e2. The prospective coordinator now uses
