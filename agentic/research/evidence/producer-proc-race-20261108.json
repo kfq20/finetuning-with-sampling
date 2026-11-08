@@ -1,0 +1,27 @@
+{
+  "verified_at": "2026-11-08T08:22:27+08:00",
+  "root": "/mnt/ecs-tb4/cli-gym-expansion-20261107",
+  "support": "/mnt/ecs-tb4/cli-gym-expansion-20261107/support/producer-proc-race-20261108",
+  "original_producer_pid": 942280,
+  "failure": "ProcessLookupError reading /proc/<pid>/stat during lifecycle.identity scan",
+  "functional_patch_commit": "e145656",
+  "new_producer_pid": 2403592,
+  "new_producer_start_ticks": "646689218",
+  "coordinator_pid_preserved": 942279,
+  "model_runtime_changed": false,
+  "model_workers_signalled": 0,
+  "paid_attempts_replayed": 0,
+  "old_receipt_hashes_unchanged": 1167,
+  "linux_tests_passed": 5,
+  "permission_errors_still_propagate": true,
+  "active_workers": 16,
+  "queued": 16,
+  "provider_holds": [],
+  "acquisition_progress_age_sec": 7.83,
+  "production_health_age_sec": 2.01,
+  "valid_by_source": {
+    "cli-gym": 604,
+    "swe-gym": 78
+  },
+  "published_tasks": 809
+}
