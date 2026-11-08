@@ -369,9 +369,11 @@ def reference_attributions(history):
     return hits
 
 
-async def episode(spec, args, out, role, teacher=None):
+async def episode(spec, args, out, role, teacher=None, *, backend=None):
     from harbor.models.agent.context import AgentContext
 
+    if backend is not None and role != 'evaluation':
+        raise ValueError('Explicit evaluation backend requires evaluation role')
     out.mkdir(mode=0o700, parents=True, exist_ok=False)
     sb = None
     started = time.monotonic()
@@ -380,7 +382,9 @@ async def episode(spec, args, out, role, teacher=None):
     try:
         sb = restore(spec, args, "production-" + role)
         dump(out / "sandbox.json", {"sandbox_id": sb.sandbox_id})
-        if role == "teacher":
+        if backend is not None:
+            pass  # Plain evaluation: no expert conditioning or candidate selection.
+        elif role == "teacher":
             backend = DeepSeekTeacher(args.teacher_config, out / "requests")
         else:
             reference = json.dumps(
