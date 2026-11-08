@@ -1,0 +1,156 @@
+{
+  "checked_at": "2026-11-08T22:07:09.861428+08:00",
+  "sampling": {
+    "checked_at": 1794146823.2959764,
+    "phase": "rolling_acquisition",
+    "active_workers": 16,
+    "queued_units": 23,
+    "provider_holds": [],
+    "valid_pairs": 744,
+    "valid_by_source": {
+      "cli-gym": 606,
+      "swe-gym": 138
+    },
+    "targets_by_source": {
+      "cli-gym": 1000,
+      "swe-gym": 1000
+    },
+    "new_pairs": 213,
+    "target": 2000,
+    "published_tasks": 1011,
+    "worker_capacity": 16,
+    "score_capacity": 32,
+    "heldout_tasks": 100,
+    "automatic_paid_retry": false
+  },
+  "health": {
+    "checked_at": 1794146829.712418,
+    "active_workers": 16,
+    "queued": 23,
+    "phase": "running",
+    "provider_holds": [],
+    "automatic_benchmark_retry": false
+  },
+  "export": {
+    "at": 1794111922.3465812,
+    "schema": "source-separated-paired-exports.v1",
+    "sources": {
+      "cli-gym": {
+        "path": "/mnt/ecs-tb4/datasets/cli-gym-paired-20261108/SELECTED_RELEASE.json",
+        "sha256": "9e27772df04cfbfb3f99f1f01706ddcde16084d263f291e1ca1a8ab9aa610bcf",
+        "paired_count": 604
+      },
+      "swe-gym": {
+        "path": "/mnt/ecs-tb4/datasets/swegym-paired-20261108/SELECTED_RELEASE.json",
+        "sha256": "e51e49a24fb9844ec5dd10c2d852ae45234c5fcf6c76938ef90f1c4c55e445b6",
+        "paired_count": 97
+      }
+    },
+    "model_requests": 0,
+    "training_started": false,
+    "old_combined_selection_unchanged": true,
+    "reexported_cli_rows": 0
+  },
+  "recent_score10min": {
+    "window_start_epoch": 1794146229.8614278,
+    "window_end_epoch": 1794146829.8614278,
+    "logical_completed_scores": 347,
+    "logical_scores_per_min": 34.7,
+    "queue_sec": {
+      "median": 0.0004775887355208397,
+      "p90": 0.002679494209587574
+    },
+    "request_sec": {
+      "median": 10.09175643697381,
+      "p90": 95.5796681754291
+    },
+    "context_tokens": {
+      "median": 9709,
+      "p90": 25107
+    },
+    "successful_scoring_attempts": 347,
+    "failed_scoring_attempts": 7,
+    "scoring_attempt_errors": {
+      "None:TimeoutError": 7
+    },
+    "score_api_attempt_error_fraction": 0.01977401129943503
+  },
+  "actual_capacity32_workers": 16,
+  "manifest_sha256": "bf08f9f3634290c1add4fc04fa66e6053e62921a3cac4dc77a8fa1f765cc91ed",
+  "swe_epoch1": {
+    "planned_tasks": 300,
+    "admitted_tasks": 194,
+    "preflight_held": 106,
+    "finished_at": "2026-11-07T11:59:17.493021+08:00",
+    "arms": {
+      "base": {
+        "ended": 194,
+        "valid": 165,
+        "full": 95,
+        "errors_unknown": 29
+      },
+      "method": {
+        "ended": 194,
+        "valid": 183,
+        "full": 99,
+        "errors_unknown": 11
+      },
+      "expert": {
+        "ended": 194,
+        "valid": 134,
+        "full": 77,
+        "errors_unknown": 60
+      }
+    },
+    "common_valid": {
+      "tasks": 122,
+      "full": {
+        "base": 75,
+        "method": 72,
+        "expert": 74
+      },
+      "tasks_sha256": "1f98f26f26550d2cbd8f1f53fc0360efd834c837437a7def742e4a9aaa634852"
+    }
+  },
+  "cli_base": {
+    "selected": 100,
+    "prepared": 70,
+    "preparation_holds": {
+      "docker_build": 14,
+      "test_archive": 7,
+      "no_scoring_targets": 6,
+      "missing_build_context": 3
+    },
+    "attempted": 1,
+    "valid_completed": 0,
+    "errors": 1,
+    "phase": "canary_hold",
+    "error": "No native action JSON found",
+    "elapsed_sec": 283.4553475379944,
+    "new_model_replays": 0
+  },
+  "epoch2": {
+    "unique_rows_per_arm": 531,
+    "batch_size": 16,
+    "epochs": 2,
+    "total_updates": 68,
+    "examples_exposed_per_arm": 1062,
+    "method_completed": "2026-11-06T23:14:29.594231+08:00",
+    "expert_completed": "2026-11-06T23:13:01.293214+08:00",
+    "deployment_phase": "waiting_user_provided_Fleet_key",
+    "last_observed_http_status": 401,
+    "last_observed_detail": "invalid api key",
+    "last_auth_check": "2026-11-08T21:00:33+08:00",
+    "new_deployment_posts": 0
+  },
+  "scoring_baseline": {
+    "window_sec": 600,
+    "completed": 127,
+    "per_min": 12.7,
+    "queue_median_sec": 228.1361536598,
+    "queue_p90_sec": 323.6879496993,
+    "request_median_sec": 9.2967635868,
+    "success": 127,
+    "errors": 2
+  }
+}
