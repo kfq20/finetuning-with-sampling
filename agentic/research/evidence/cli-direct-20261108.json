@@ -1,0 +1,16 @@
+{
+  "selected_root": "/mnt/ecs-tb4/cli-gym-expansion-20261107",
+  "support": "support/cli-direct-20261108",
+  "patch_commit": "e9a529e",
+  "checked_at_epoch": 1794142412.0904186,
+  "published": 8,
+  "registered": 8,
+  "direct_claimed": 0,
+  "active": 16,
+  "queued": 24,
+  "score_capacity": 32,
+  "unchanged_evidence_files": 1774,
+  "sdk_regressions": 3,
+  "paid_retries": 0,
+  "cli_valid_pairs": 604
+}
