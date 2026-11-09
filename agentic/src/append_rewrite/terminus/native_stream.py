@@ -136,6 +136,8 @@ class NativeStreamClient(NativeClient):
         body = {'input_ids': ids, 'rid': rid, 'stream': streaming,
                 'return_logprob': False,
                 'sampling_params': {**sampling_params, 'max_new_tokens': maximum}}
+        if self.config.get('fleet_route_model'):
+            body['model'] = self.config['model_id']
         (journal / 'request.json').write_text(json.dumps(body))
         (journal / 'intent.json').write_text(json.dumps({
             'endpoint': self.endpoint, 'model_id': self.config['model_id'],

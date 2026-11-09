@@ -45,7 +45,8 @@ def prepare(row, index, output, *, canonicalize_selectors=False,
     dump(unit / "original-row.json", row)
     recipe = row["dockerfile"]
     base = re.search(r"^FROM\s+(\S+)", recipe, re.M).group(1)
-    if re.search(r"^COPY\s+(?!<<)", recipe, re.M):
+    copies = re.findall(r"^COPY[ \t]+[^\n]+", recipe, re.M)
+    if any(not re.match(r"^COPY[ \t]+(?:--\S+[ \t]+)*<<", line) for line in copies):
         raise ValueError("Unpublished build-context file")
     started = time.monotonic()
     with (unit / "pull.log").open("wb") as log:

@@ -44,7 +44,28 @@ Evidence:
 - `health.json`, `canary-selection.json`, `trials/*/result.json`, `summary.json`
 - `generation/*/turn-*/decision.json` for usage/context/latency
 
-Private endpoint credentials stay in `private.json` on the controller, outside
-solver and verifier inputs. The comparison Epoch2 deployment is independently
-held at `qwen38-cli100-epoch2-20261108-a1/HOLD.json` after Fleet returned401
-`invalid api key`; this base run does not clear that hold or substitute Epoch1.
+Private endpoint credentials stay in mode-0600 controller files, outside solver
+and verifier inputs.
+
+## Matched Fleet comparison
+
+The selected three-arm comparison is
+`/mnt/ecs-tb4/evaluations/qwen38-cli100-epoch2-fleet-20261109`. The historical
+401 receipt and direct HTTP Base evaluation remain separate records. The new
+Base and both step-68 adapters run on the same Fleet H20 cluster. The launcher
+checks the live deployment source, checkpoint and cluster for each arm, then
+tests the exact native streaming client with a pinned token prompt.
+
+`compare.py launch` accepts its private configuration on stdin. Each arm uses
+the same frozen 100-row selection, a common task manifest, one attempt per
+task, and two slots after its canary closes. The original 70 prepared specs are
+hash checked. `prepare_remaining.py` attempts targeted repairs for eligible
+preparation holds at one build at a time, with a 55 GiB free-space gate.
+Missing build context and recipes requiring a separate semantic repair stay
+explicitly held. Repair candidates enter all three arms through the same
+manifest. The inference controllers use the existing 40 GiB gate.
+
+`compare.py report` records raw arm totals and the three-way valid intersection,
+including binary success percentages on the same tasks. Final grading requires
+agreement between two fresh verifier worlds. A deployment probe has no task
+score, and an infrastructure hold remains outside the valid intersection.
